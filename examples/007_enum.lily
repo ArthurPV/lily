@@ -1,0 +1,12 @@
+type Name: enum =
+	Lily |
+	Elodie |
+	Juliette |
+end
+
+** defining with @<int> if has no variant
+type NameInt: enum @Uint8 =
+	Lily |
+	Elodie |
+	Juliette |
+end

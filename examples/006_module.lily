@@ -1,0 +1,6 @@
+module calc =
+	fun add(x, y) = x+y end
+	fun sub(x, y) = x-y end
+	fun mul(x, y) = x*y end
+	fun div(x, y) = x/y end
+end

@@ -1,0 +1,9 @@
+object Point: class =
+	@x Int32 
+	@y Int32
+
+	init(self, x, y) =>
+		self.x = x
+		self.y = y
+	end
+end

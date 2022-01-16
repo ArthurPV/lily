@@ -1,0 +1,12 @@
+object Point: class =
+	@x Int32 
+	@y Int32
+
+	init(self, x, y) =>
+		self.x = x
+		self.y = y
+	end
+
+	pub @get_x(self) => self.x end
+	pub @get_y(self) => self.y end
+end

@@ -1,0 +1,15 @@
+object Animal: class =
+	@name String
+
+	@init(self, name) =>
+		self.name = name
+	end
+
+	pub @get_name(self) => self.name end
+end
+
+object Wolf: trait =
+end
+
+object Wolf => [Animal]: class =
+end

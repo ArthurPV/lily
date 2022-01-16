@@ -1,0 +1,3 @@
+type buffer = {
+  filename: string;
+}

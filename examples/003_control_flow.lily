@@ -1,0 +1,5 @@
+fun is_zero(x) =
+	if x == 0 do True else False
+end
+
+fun get(x) = return x end

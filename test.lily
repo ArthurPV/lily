@@ -1,0 +1,40 @@
+A Int8 := 30
+B String := "Hello"
+C Int16 := fun(x=3, y=4) => x+y end
+D Char := 'h'
+
+module calc =
+	fun add(x, y) = x+y end
+	fun sub(x, y) = x-y end
+	fun mul(x, y) = x*y end
+	fun div(x, y) = x/y end
+end
+
+(* fun is_zero(x) =
+	if x == 0 do True else False end
+end *)
+
+fun is_zero(x) =
+  match x do
+	0 -> True |
+	_ -> False |
+  end
+end
+
+pub =
+  fun add(x,y) = x+y end
+end
+
+object Point: class =
+	pub @x Int32	
+	pub @y Int32
+
+  @init(self, x, y) =>
+    self.x = x
+    self.y = y
+  end
+
+	pub @get_x self => self.x end
+	pub @get_y self => self.y end
+	pub @mul_x_by_y self => self.x * self.y end
+end

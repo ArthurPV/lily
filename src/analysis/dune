@@ -1,0 +1,3 @@
+(library
+	(libraries lily_common lily_lexer lily_parser)
+	(name lily_analysis))

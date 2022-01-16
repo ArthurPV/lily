@@ -1,0 +1,5 @@
+(dirs analysis command common core lexer parser)
+
+(executable
+  (libraries lily_command)
+  (name lily))

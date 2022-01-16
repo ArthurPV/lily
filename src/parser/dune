@@ -1,0 +1,4 @@
+(library
+  (preprocess (pps ppx_deriving.show))
+  (libraries stdint lily_lexer)
+  (name lily_parser))

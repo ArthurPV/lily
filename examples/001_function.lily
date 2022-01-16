@@ -1,0 +1,9 @@
+** Standard function
+** Private function
+fun add(x, y) = x+y end
+
+** Anonymous function
+ADD Int16 := fun(x=3, y=3) => x+y end
+
+** Public function
+pub fun sub(x, y) = x-y end
