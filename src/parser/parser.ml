@@ -633,7 +633,8 @@ and parse_primary_expr parser =
     | Keyword Self ->
         next_token parser;
         parse_self_access parser
-    | Separator LeftParen -> assert false
+    | Separator LeftHook -> parse_array parser
+    | Separator LeftParen -> parse_tuple parser
     | _ ->
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token
@@ -1476,7 +1477,8 @@ and parse_import parser ~is_pub =
 
   next_token parser;
 
-  if parser.current_token = Keyword As then
+  if parser.current_token = Keyword As then (
+    next_token parser;
     let as_id =
       match parser.current_token with
       | Identifier s -> s
@@ -1489,7 +1491,8 @@ and parse_import parser ~is_pub =
               parser.current_location )
           |> raise
     in
-    Import { import = value; is_pub; _as = Some as_id }
+    next_token parser;
+    Import { import = value; is_pub; _as = Some as_id })
   else Import { import = value; is_pub; _as = None }
 
 and parse_pub_block parser =
