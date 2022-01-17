@@ -22,6 +22,7 @@ type data_type =
   | `GroupingDataType of data_type
   | `Generics of string
   | `CustomType of string * data_type array option ]
+[@@deriving show]
 
 type literal_ast =
   | Bool of bool
@@ -41,6 +42,7 @@ and argument = {
   id : string;
   kind : argument_kind;
   data_type : data_type option;
+  loc: location;
 }
 
 and argument_method = {
@@ -52,6 +54,7 @@ and argument_method = {
 and case = { expr : expr; body : (ast * location) array }
 and if_t = expr * (ast * location) array
 
+(* NOTE: ast option it used in analysis, but for the moment the value is None *)
 and expr =
   | Grouping of expr
   | Positive of expr
@@ -79,12 +82,12 @@ and expr =
   | DivAssign of expr * expr
   | ModAssign of expr * expr
   | ExpAssign of expr * expr
-  | FunctionCall of expr * ast array
-  | ClassCall of expr * ast array
-  | RecordCall of expr * (string * expr option) array
-  | Identifier of string
-  | IdentifierAccess of expr array
-  | SelfAccess of expr array
+  | FunctionCall of expr * (ast * ast option) array
+  | ClassCall of expr * (ast * ast option) array
+  | RecordCall of expr * (string * expr option * ast option) array
+  | Identifier of string * ast option
+  | IdentifierAccess of expr array * ast option
+  | SelfAccess of expr array * ast option
   | AnonymousFunction of argument array * (ast * location) array
   | In of string * ast
   | Tuple of expr array
