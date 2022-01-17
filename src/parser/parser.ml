@@ -239,8 +239,8 @@ and parse_assign parser loc =
   then
     let id =
       match node with
-      | Identifier id -> Identifier id
-      | IdentifierAccess ids -> IdentifierAccess ids
+      | Identifier (id, _) -> Identifier (id, None)
+      | IdentifierAccess (ids, _) -> IdentifierAccess (ids, None)
       | _ ->
           Location.end_location loc parser.current_location;
           Diagnostic.EmitDiagnostic
@@ -420,7 +420,7 @@ and parse_function_call parser ~id =
             Diagnostic.Error,
             parser.current_location )
         |> expect_token parser (Separator Comma);
-      loop ~args:(expr :: args) ())
+      loop ~args:((expr, None) :: args) ())
     else (
       next_token parser;
       FunctionCall (id, Array.of_list args))
@@ -431,8 +431,8 @@ and parse_class_call parser =
   let id =
     match parser.current_token with
     | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) ->
-        parse_identifier_access parser (Identifier s)
-    | Identifier s -> Identifier s
+        parse_identifier_access parser (Identifier (s, None))
+    | Identifier s -> Identifier (s, None)
     | _ ->
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token
@@ -471,9 +471,9 @@ and parse_record_call parser ~id =
 
       if parser.current_token = Separator Comma then (
         next_token parser;
-        loop ~args:((id, None) :: args) ())
+        loop ~args:((id, None, None) :: args) ())
       else if parser.current_token = Separator RightBrace then
-        loop ~args:((id, None) :: args) ()
+        loop ~args:((id, None, None) :: args) ()
       else if parser.current_token = Operator Eq then (
         next_token parser;
         let expr = parse_expr2 parser in
@@ -484,7 +484,7 @@ and parse_record_call parser ~id =
               Diagnostic.Error,
               parser.current_location )
           |> expect_token parser (Separator Comma);
-        loop ~args:((id, Some expr) :: args) ())
+        loop ~args:((id, Some expr, None) :: args) ())
       else
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token
@@ -517,21 +517,22 @@ and parse_identifier_access parser f_id =
     | Identifier s when peek_token parser ~n:1 = Some (Separator LeftParen)
       ->
         let access_ref = ref access in
-        access_ref := !access_ref @ [ Identifier s ];
+        access_ref := !access_ref @ [ Identifier (s, None) ];
         parse_function_call parser
-          ~id:(IdentifierAccess (Array.of_list !access_ref))
+          ~id:(IdentifierAccess (Array.of_list !access_ref, None))
     | Identifier s when peek_token parser ~n:1 = Some (Separator LeftBrace)
       ->
         let access_ref = ref access in
-        access_ref := !access_ref @ [ Identifier s ];
+        access_ref := !access_ref @ [ Identifier (s, None) ];
         parse_record_call parser
-          ~id:(IdentifierAccess (Array.of_list !access_ref))
+          ~id:(IdentifierAccess (Array.of_list !access_ref, None))
     | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) ->
         next_token parser;
         next_token parser;
-        loop ~access:(Identifier s :: access) ()
+        loop ~access:(Identifier (s, None) :: access) ()
     | Identifier s ->
-        IdentifierAccess (access @ [ Identifier s ] |> Array.of_list)
+        IdentifierAccess
+          (access @ [ Identifier (s, None) ] |> Array.of_list, None)
     | _ ->
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token
@@ -545,15 +546,16 @@ and parse_identifier_access parser f_id =
 and parse_self_access parser =
   match parser.current_token with
   | Identifier s when peek_token parser ~n:1 = Some (Separator LeftParen) ->
-      parse_function_call parser ~id:(SelfAccess [| Identifier s |])
+      parse_function_call parser
+        ~id:(SelfAccess ([| Identifier (s, None) |], None))
   | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) -> (
       next_token parser;
       next_token parser;
-      let f_id = Identifier s in
+      let f_id = Identifier (s, None) in
       match parse_identifier_access parser f_id with
-      | IdentifierAccess ids -> SelfAccess ids
+      | IdentifierAccess (ids, _) -> SelfAccess (ids, None)
       | _ -> failwith "unreachable")
-  | Identifier s -> IdentifierAccess [| Identifier s |]
+  | Identifier s -> IdentifierAccess ([| Identifier (s, None) |], None)
   | _ ->
       Diagnostic.EmitDiagnostic
         ( parser.current_token |> show_token
@@ -616,16 +618,20 @@ and parse_primary_expr parser =
     | Identifier s when String.lowercase_ascii s = s -> (
         match parser.current_token with
         | Separator LeftParen ->
-            parse_function_call parser ~id:(Identifier s)
-        | Separator Dot -> parse_identifier_access parser (Identifier s)
-        | _ -> Identifier s)
+            parse_function_call parser ~id:(Identifier (s, None))
+        | Separator Dot ->
+            parse_identifier_access parser (Identifier (s, None))
+        | _ -> Identifier (s, None))
     | Identifier s when Char.uppercase_ascii s.[0] = s.[0] -> (
         match parser.current_token with
-        | Separator Dot -> parse_identifier_access parser (Identifier s)
-        | Separator LeftBrace -> parse_record_call parser ~id:(Identifier s)
-        | Separator LeftParen -> parse_variant parser ~id:(Identifier s)
-        | _ -> Identifier s)
-    | Identifier s -> Identifier s
+        | Separator Dot ->
+            parse_identifier_access parser (Identifier (s, None))
+        | Separator LeftBrace ->
+            parse_record_call parser ~id:(Identifier (s, None))
+        | Separator LeftParen ->
+            parse_variant parser ~id:(Identifier (s, None))
+        | _ -> Identifier (s, None))
+    | Identifier s -> Identifier (s, None)
     | Keyword New -> parse_class_call parser
     | Keyword Fun -> parse_anonymous_function parser
     | Keyword Undef -> Undef
@@ -653,7 +659,8 @@ and parse_expr2 parser =
 
 and parse_variable parser ~id ~is_mut =
   if parser.current_token <> Operator ColonEq then (
-    if parser |> is_data_type ~n:0 |> Bool.not then Expr (Identifier id)
+    if parser |> is_data_type ~n:0 |> Bool.not then
+      Expr (Identifier (id, None))
     else
       let dt = Some (parse_data_type parser) in
       Diagnostic.EmitDiagnostic
@@ -678,7 +685,8 @@ and parse_variable parser ~id ~is_mut =
       (Variable { id; expr = parse_expr2 parser; data_type = None; is_mut }))
 
 and parse_constant parser ~id ~is_pub =
-  if parser |> is_data_type ~n:0 |> Bool.not then Expr (Identifier id)
+  if parser |> is_data_type ~n:0 |> Bool.not then
+    Expr (Identifier (id, None))
   else
     let dt = parse_data_type parser in
     Diagnostic.EmitDiagnostic
@@ -1210,9 +1218,7 @@ and parse_enum parser id poly_args ~is_pub =
                 parser.current_location )
             |> expect_token parser (Separator Bar);
           Location.end_location loc parser.current_location;
-          loop
-            ~variants:(({ id; data_type = Some dt }, loc) :: variants)
-            ())
+          loop ~variants:(({ id; data_type = Some dt }, loc) :: variants) ())
       else (
         Location.end_location loc parser.current_location;
         loop ~variants:(({ id; data_type = None }, loc) :: variants) ()))
@@ -1745,6 +1751,7 @@ and parse_argument parser =
     let args = ref [] in
     let rec loop () =
       if parser.current_token <> Separator RightParen then (
+        let loc = Location.copy_location parser.current_location in
         let id =
           match parser.current_token with
           | Identifier s when String.lowercase_ascii s = s -> s
@@ -1769,7 +1776,8 @@ and parse_argument parser =
         if is_data_type parser ~n:0 then
           let dt = parse_data_type parser in
 
-          if matches parser (Operator Eq) then
+          if matches parser (Operator Eq) then (
+            Location.end_location loc parser.current_location;
             args :=
               !args
               @ [
@@ -1777,10 +1785,15 @@ and parse_argument parser =
                     id;
                     kind = Default (Expr (parse_expr2 parser));
                     data_type = Some dt;
+                    loc;
                   };
-                ]
-          else args := !args @ [ { id; kind = Normal; data_type = Some dt } ]
-        else if matches parser (Operator Eq) then
+                ])
+          else (
+            Location.end_location loc parser.current_location;
+            args :=
+              !args @ [ { id; kind = Normal; data_type = Some dt; loc } ])
+        else if matches parser (Operator Eq) then (
+          Location.end_location loc parser.current_location;
           args :=
             !args
             @ [
@@ -1788,9 +1801,12 @@ and parse_argument parser =
                   id;
                   kind = Default (Expr (parse_expr2 parser));
                   data_type = None;
+                  loc;
                 };
-              ]
-        else args := !args @ [ { id; kind = Normal; data_type = None } ];
+              ])
+        else (
+          Location.end_location loc parser.current_location;
+          args := !args @ [ { id; kind = Normal; data_type = None; loc } ]);
         if parser.current_token <> Separator RightParen then
           Diagnostic.EmitDiagnostic
             ( parser.current_token |> show_token
@@ -2065,7 +2081,7 @@ and parse_match parser =
           {
             expr;
             case = Array.of_list case;
-            else_case = Some { expr = Identifier s; body };
+            else_case = Some { expr = Identifier (s, None); body };
           }
     | Keyword End ->
         next_token parser;
