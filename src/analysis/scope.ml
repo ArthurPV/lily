@@ -1,6 +1,7 @@
 open Lily_common.Common
 open Lily_lexer.Location
 open Lily_parser.Ast
+module Diagnostic = Lily_lexer.Diagnostic
 module Parser = Lily_parser.Parser
 
 type from_access =
@@ -43,7 +44,7 @@ let new_scope parser =
 
 [@@@warning "-27"]
 
-(* IMPROVE: reanme local rec function *)
+(* IMPROVE: rename local rec function *)
 let rec get_global_access scope nodes ~p_pub =
   let rec loop ?(access = []) ?(i = 0) () =
     if i < Array.length nodes then
@@ -64,40 +65,26 @@ let rec get_global_access scope nodes ~p_pub =
           if p_pub && is_pub then
             loop
               ~access:
-                (`Fun
-                   ( `Fun,
-                     id,
-                     args,
-                     match nodes.(i) with _, l -> l )
+                (`Fun (`Fun, id, args, match nodes.(i) with _, l -> l)
                 :: access)
               ~i:(i + 1) ()
           else
             loop
               ~access:
-                (`Fun
-                   ( `Fun,
-                     id,
-                     args,
-                     match nodes.(i) with _, l -> l )
+                (`Fun (`Fun, id, args, match nodes.(i) with _, l -> l)
                 :: access)
               ~i:(i + 1) ()
       | Decl (Constant { id; data_type; expr; is_pub }) ->
           if p_pub && is_pub then
             loop
               ~access:
-                (`Identifier
-                   ( `Constant,
-                     id,
-                     match nodes.(i) with _, l -> l )
+                (`Identifier (`Constant, id, match nodes.(i) with _, l -> l)
                 :: access)
               ~i:(i + 1) ()
           else
             loop
               ~access:
-                (`Identifier
-                   ( `Constant,
-                     id,
-                     match nodes.(i) with _, l -> l )
+                (`Identifier (`Constant, id, match nodes.(i) with _, l -> l)
                 :: access)
               ~i:(i + 1) ()
       | Decl (Module { id = id_m; body; is_pub; is_test }) ->
@@ -127,8 +114,7 @@ let rec get_global_access scope nodes ~p_pub =
                               `Identifier
                                 ( `Module,
                                   id_m,
-                                  match nodes.(i) with
-                                  | _, l -> l );
+                                  match nodes.(i) with _, l -> l );
                               `Fun
                                 ( `Fun,
                                   id_f,
@@ -150,8 +136,7 @@ let rec get_global_access scope nodes ~p_pub =
                             `Identifier
                               ( `Module,
                                 id_m,
-                                match nodes.(i) with _, l -> l
-                              );
+                                match nodes.(i) with _, l -> l );
                           ]
                           @ !m_access;
                         m_access :=
@@ -176,8 +161,7 @@ let rec get_global_access scope nodes ~p_pub =
                               `Identifier
                                 ( `Module,
                                   id_m,
-                                  match nodes.(i) with
-                                  | _, l -> l );
+                                  match nodes.(i) with _, l -> l );
                               `Identifier
                                 ( `Module,
                                   id_m2,
@@ -199,20 +183,14 @@ let rec get_global_access scope nodes ~p_pub =
             loop
               ~access:
                 (`Type
-                   ( `Alias,
-                     id,
-                     poly_args,
-                     match nodes.(i) with _, l -> l )
+                   (`Alias, id, poly_args, match nodes.(i) with _, l -> l)
                 :: access)
               ~i:(i + 1) ()
           else
             loop
               ~access:
                 (`Type
-                   ( `Alias,
-                     id,
-                     poly_args,
-                     match nodes.(i) with _, l -> l )
+                   (`Alias, id, poly_args, match nodes.(i) with _, l -> l)
                 :: access)
               ~i:(i + 1) ()
       | Decl (Record { id; poly_args; fields; is_pub }) ->
@@ -236,10 +214,7 @@ let rec get_global_access scope nodes ~p_pub =
             loop
               ~access:
                 (`Type
-                   ( `Record,
-                     id,
-                     poly_args,
-                     match nodes.(i) with _, l -> l )
+                   (`Record, id, poly_args, match nodes.(i) with _, l -> l)
                 :: access)
               ~i:(i + 1) ())
           else (
@@ -247,10 +222,7 @@ let rec get_global_access scope nodes ~p_pub =
             loop
               ~access:
                 (`Type
-                   ( `Record,
-                     id,
-                     poly_args,
-                     match nodes.(i) with _, l -> l )
+                   (`Record, id, poly_args, match nodes.(i) with _, l -> l)
                 :: access)
               ~i:(i + 1) ())
       | Decl (Enum { id; poly_args; variants; is_pub }) ->
@@ -265,10 +237,7 @@ let rec get_global_access scope nodes ~p_pub =
                         `IdentifierAddr
                           [|
                             `Identifier
-                              ( `Enum,
-                                id,
-                                match nodes.(i) with _, l -> l
-                              );
+                              (`Enum, id, match nodes.(i) with _, l -> l);
                             `Identifier
                               ( `Variant,
                                 id_f,
@@ -281,11 +250,7 @@ let rec get_global_access scope nodes ~p_pub =
           access_ref :=
             !access_ref
             @ [
-                `Type
-                  ( `Enum,
-                    id,
-                    poly_args,
-                    match nodes.(i) with _, l -> l );
+                `Type (`Enum, id, poly_args, match nodes.(i) with _, l -> l);
               ];
           loop ~access:!access_ref ~i:(i + 1) ()
       | Decl (Pub body_pub) ->
@@ -308,10 +273,184 @@ let rec get_global_access scope nodes ~p_pub =
   in
   loop ()
 
-let verify_if_same_access scope scopes = assert false
-let if_verify_scope_value expr = assert false
-let check_expr scope access = assert false
-let check_fun_scope scope args access nodes = assert false
+let verify_if_same_access scope scopes =
+  let count_errors = ref 0 in
+  let rec loop ?(i = 0) () =
+    if i < Array.length scopes then
+      match scopes.(i) with
+      | `Fun (_, id, _, _) ->
+          let rec loop_fun ?(j = i + 1) () =
+            if j < Array.length scopes then
+              match scopes.(j) with
+              | `Fun (_, id2, _, loc) when id = id2 ->
+                  count_errors := !count_errors + 1;
+                  loc
+                  |> Parser.new_diagnostic scope.parser Diagnostic.Error
+                       (Printf.sprintf
+                          "you cannot define the same function name in this \
+                           scope: `%s`"
+                          id)
+                  |> Diagnostic.emit_diagnostic;
+                  loop_fun ~j:(j + 1) ()
+              | _ -> loop_fun ~j:(j + 1) ()
+          in
+          loop_fun ();
+          loop ~i:(i + 1) ()
+      | `Type (_, id, _, _) ->
+          let rec loop_type ?(j = i + 1) () =
+            if j < Array.length scopes then
+              match scopes.(j) with
+              | `Type (_, id2, _, loc) when id = id2 ->
+                  count_errors := !count_errors + 1;
+                  loc
+                  |> Parser.new_diagnostic scope.parser Diagnostic.Error
+                       (Printf.sprintf
+                          "you cannot define the same type (record, enum, \
+                           alias) name in this scope: `%s`"
+                          id2)
+                  |> Diagnostic.emit_diagnostic;
+                  loop_type ~j:(j + 1) ()
+              | _ -> loop_type ~j:(j + 1) ()
+          in
+          loop_type ();
+          loop ~i:(i + 1) ()
+      | `Identifier (_, id, _) ->
+          let rec loop_id ?(j = i + 1) () =
+            if j < Array.length scopes then
+              match scopes.(j) with
+              | `Identifier (_, id2, loc) when id = id2 ->
+                  count_errors := !count_errors + 1;
+                  loc
+                  |> Parser.new_diagnostic scope.parser Diagnostic.Error
+                       (Printf.sprintf
+                          "you cannot define the same pattern (constant, \
+                           module, ...) name in this scope: `%s`"
+                          id2)
+                  |> Diagnostic.emit_diagnostic;
+                  loop_id ~j:(j + 1) ()
+              | _ -> loop_id ~j:(j + 1) ()
+          in
+          loop_id ();
+          loop ~i:(i + 1) ()
+      | `IdentifierAddr id ->
+          let rec loop_id_addr ?(j = i + 1) () =
+            if j < Array.length scopes then
+              match scopes.(j) with
+              | `IdentifierAddr id2 when id = id2 ->
+                  count_errors := !count_errors + 1;
+                  (match id2.(Array.length id2 - 1) with
+                  | `Identifier (_, _, loc)
+                  | `Type (_, _, _, loc)
+                  | `Fun (_, _, _, loc)
+                  | `Variant (_, _, loc) ->
+                      loc
+                  | _ -> failwith "unreachable")
+                  |> Parser.new_diagnostic scope.parser Diagnostic.Error
+                       (Printf.sprintf
+                          "you cannot define the same pattern (constant, \
+                           module, ...) name in this scope: `%s`"
+                          "hello")
+                  |> Diagnostic.emit_diagnostic;
+                  loop_id_addr ~j:(j + 1) ()
+              | _ -> loop_id_addr ~j:(j + 1) ()
+          in
+          loop_id_addr ();
+          loop ~i:(i + 1) ()
+      | _ -> loop ~i:(i + 1) ()
+  in
+  loop ();
+  !count_errors
+
+let rec is_verify_scope_value expr =
+  match expr with
+  | Expr (Literal _) -> (false, [||])
+  | Expr (Negative l) | Expr (Positive l) | Expr (Not l) | Expr (Grouping l)
+    ->
+      let try_l = is_verify_scope_value (Expr l) in
+      if match try_l with b, _ -> b then (true, match try_l with _, e -> e)
+      else (false, [||])
+  | Expr (Add (l, r))
+  | Expr (Sub (l, r))
+  | Expr (Mul (l, r))
+  | Expr (Div (l, r))
+  | Expr (Mod (l, r))
+  | Expr (Exp (l, r))
+  | Expr (Range (l, r))
+  | Expr (Lt (l, r))
+  | Expr (Gt (l, r))
+  | Expr (Le (l, r))
+  | Expr (Ge (l, r))
+  | Expr (And (l, r))
+  | Expr (Or (l, r))
+  | Expr (Eq (l, r))
+  | Expr (Ne (l, r)) ->
+      let try_l = is_verify_scope_value (Expr l) in
+      let try_r = is_verify_scope_value (Expr r) in
+      if (match try_l with b, _ -> b) || match try_r with b, _ -> b then (
+        let to_verify = ref (match try_l with _, e -> e) in
+        to_verify := Array.append !to_verify (match try_r with _, e -> e);
+        (true, !to_verify))
+      else (false, [||])
+  | Expr _ -> (true, [| expr |])
+  | _ -> failwith "unreachable"
+
+let check_expr scope access =
+  (* TODO: modify expr reference *)
+  ()
+
+let check_fun_scope scope args access nodes =
+  let rec loop ?(i = 0) ?(access_in = []) () =
+    if i < Array.length args then
+      match args.(i) with
+      | { id; kind; data_type; loc } ->
+          loop ~i:(i + 1)
+            ~access_in:(`Identifier (`None, id, loc) :: access_in)
+            ()
+    else access_in |> Array.of_list
+  in
+
+  let access_in = ref [| loop () |] in
+  let rec loop_body ?(i = 0) () =
+    if i < Array.length nodes then
+      match match nodes.(i) with t, _ -> t with
+      | Decl (Variable { id; data_type; expr; is_mut }) ->
+          let result = is_verify_scope_value (Expr expr) in
+          if match result with b, _ -> b then (
+            let new_access = ref access in
+            new_access := Array.append !new_access !access_in;
+            let rec iter_result ?(j = 0) () =
+              if j < Array.length (match result with _, r -> r) then (
+                check_expr (match result with _, r -> r.(j)) !new_access;
+                iter_result ~j:(j + 1) ())
+            in
+            iter_result ();
+            access_in :=
+              Array.append !access_in
+                [|
+                  [|
+                    `Identifier (`None, id, match nodes.(i) with _, l -> l);
+                  |];
+                |];
+            loop_body ~i:(i + 1) ())
+      | Stmt (If { if_; elif_; else_ }) -> loop_body ~i:(i + 1) ()
+      | Stmt (While { cond; body }) -> loop_body ~i:(i + 1) ()
+      | Stmt (For { expr; body }) -> loop_body ~i:(i + 1) ()
+      | Stmt (Match { expr; case; else_case }) -> loop_body ~i:(i + 1) ()
+      | Stmt (Return expr) ->
+          let result = is_verify_scope_value (Expr expr) in
+          if match result with b, _ -> b then (
+            let rec iter_result ?(j = 0) () =
+              if j < Array.length (match result with _, r -> r) then (
+                check_expr (match result with _, r -> r.(j)) !access_in;
+                iter_result ~j:(j + 1) ())
+            in
+            iter_result ();
+            loop_body ~i:(i + 1) ())
+      | _ -> failwith "unreachable"
+  in
+  loop_body ();
+  ()
+
 let check_alias_scope scope nodes = assert false
 let check_record_scope scope nodes = assert false
 let check_enum_scope scope nodes = assert false
@@ -323,4 +462,5 @@ let check_scope scope nodes = assert false
 
 let run scope =
   scope.global <- get_global_access scope scope.parser.nodes ~p_pub:false;
-  scope.global_pub <- get_global_access scope scope.parser.nodes ~p_pub:true
+  scope.global_pub <- get_global_access scope scope.parser.nodes ~p_pub:true;
+  if verify_if_same_access scope scope.global > 0 then exit 1
