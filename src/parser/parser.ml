@@ -420,7 +420,7 @@ and parse_function_call parser ~id =
             Diagnostic.Error,
             parser.current_location )
         |> expect_token parser (Separator Comma);
-      loop ~args:((expr, None) :: args) ())
+      loop ~args:(expr :: args) ())
     else (
       next_token parser;
       FunctionCall (id, Array.of_list args))
@@ -471,9 +471,9 @@ and parse_record_call parser ~id =
 
       if parser.current_token = Separator Comma then (
         next_token parser;
-        loop ~args:((id, None, None) :: args) ())
+        loop ~args:((id, None) :: args) ())
       else if parser.current_token = Separator RightBrace then
-        loop ~args:((id, None, None) :: args) ()
+        loop ~args:((id, None) :: args) ()
       else if parser.current_token = Operator Eq then (
         next_token parser;
         let expr = parse_expr2 parser in
@@ -484,7 +484,7 @@ and parse_record_call parser ~id =
               Diagnostic.Error,
               parser.current_location )
           |> expect_token parser (Separator Comma);
-        loop ~args:((id, Some expr, None) :: args) ())
+        loop ~args:((id, Some expr) :: args) ())
       else
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token

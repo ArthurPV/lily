@@ -9,10 +9,10 @@ let () =
   let open Alcotest in
   run "Lexer"
     [
-      ("comment", [ test_case "Test comment" `Quick Comment.test ]);
-      ("identifier", [ test_case "Test identifier" `Quick Identifier.test ]);
-      ("keyword", [ test_case "Test keyword" `Quick Keyword.test ]);
-      ("literal", [ test_case "Test literal" `Quick Literal.test ]);
-      ("operator", [ test_case "Test operator" `Quick Operator.test ]);
-      ("separator", [ test_case "Test separator" `Quick Separator.test ]);
+      ("comment", [ test_case "Comments test" `Quick Comment.test ]);
+      ("identifier", [ test_case "Identifiers test" `Quick Identifier.test ]);
+      ("keyword", [ test_case "Keywords test" `Quick Keyword.test ]);
+      ("literal", [ test_case "Literals test" `Quick Literal.test ]);
+      ("operator", [ test_case "Operators test" `Quick Operator.test ]);
+      ("separator", [ test_case "Separators test" `Quick Separator.test ]);
     ]
