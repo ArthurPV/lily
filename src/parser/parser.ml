@@ -251,32 +251,32 @@ and parse_assign parser loc =
     in
 
     match parser.previous_token with
-    | Operator PlusEq -> AddAssign (id, parse_logical_or parser)
-    | Operator MinusEq -> SubAssign (id, parse_logical_or parser)
-    | Operator StarEq -> MulAssign (id, parse_logical_or parser)
-    | Operator SlashEq -> DivAssign (id, parse_logical_or parser)
-    | Operator PercentageEq -> ModAssign (id, parse_logical_or parser)
-    | Operator HatEq -> ExpAssign (id, parse_logical_or parser)
-    | Operator Eq -> Assign (id, parse_logical_or parser)
+    | Operator PlusEq -> AddAssign (id, parse_assign parser loc)
+    | Operator MinusEq -> SubAssign (id, parse_assign parser loc)
+    | Operator StarEq -> MulAssign (id, parse_assign parser loc)
+    | Operator SlashEq -> DivAssign (id, parse_assign parser loc)
+    | Operator PercentageEq -> ModAssign (id, parse_assign parser loc)
+    | Operator HatEq -> ExpAssign (id, parse_assign parser loc)
+    | Operator Eq -> Assign (id, parse_assign parser loc)
     | _ -> failwith "unreachable"
   else node
 
 and parse_logical_or parser =
   let node = parse_logical_and parser in
-  if matches parser (Keyword Or) then Or (node, parse_logical_and parser)
+  if matches parser (Keyword Or) then Or (node, parse_logical_or parser)
   else node
 
 and parse_logical_and parser =
   let node = parse_equality parser in
-  if matches parser (Keyword And) then And (node, parse_equality parser)
+  if matches parser (Keyword And) then And (node, parse_logical_and parser)
   else node
 
 and parse_equality parser =
   let node = parse_comparison parser in
   if matches parser (Operator EqEq) || matches parser (Operator BangEq) then
     match parser.previous_token with
-    | Operator EqEq -> Eq (node, parse_comparison parser)
-    | Operator BangEq -> Ne (node, parse_comparison parser)
+    | Operator EqEq -> Eq (node, parse_equality parser)
+    | Operator BangEq -> Ne (node, parse_equality parser)
     | _ -> failwith "unreachable"
   else node
 
@@ -289,24 +289,24 @@ and parse_comparison parser =
     || matches parser (Operator RightShiftEq)
   then
     match parser.previous_token with
-    | Operator LeftShift -> Lt (node, parse_range parser)
-    | Operator RightShift -> Gt (node, parse_range parser)
-    | Operator LeftShiftEq -> Le (node, parse_range parser)
-    | Operator RightShiftEq -> Ge (node, parse_range parser)
+    | Operator LeftShift -> Lt (node, parse_comparison parser)
+    | Operator RightShift -> Gt (node, parse_comparison parser)
+    | Operator LeftShiftEq -> Le (node, parse_comparison parser)
+    | Operator RightShiftEq -> Ge (node, parse_comparison parser)
     | _ -> failwith "unreachable"
   else node
 
 and parse_range parser =
   let node = parse_term parser in
-  if matches parser (Operator DotDot) then Range (node, parse_term parser)
+  if matches parser (Operator DotDot) then Range (node, parse_range parser)
   else node
 
 and parse_term parser =
   let node = parse_factor parser in
   if matches parser (Operator Plus) || matches parser (Operator Minus) then
     match parser.previous_token with
-    | Operator Plus -> Add (node, parse_factor parser)
-    | Operator Minus -> Sub (node, parse_factor parser)
+    | Operator Plus -> Add (node, parse_term parser)
+    | Operator Minus -> Sub (node, parse_term parser)
     | _ -> failwith "unreachable"
   else node
 
@@ -318,15 +318,15 @@ and parse_factor parser =
     || matches parser (Operator Percentage)
   then
     match parser.previous_token with
-    | Operator Star -> Mul (node, parse_exp parser)
-    | Operator Slash -> Div (node, parse_exp parser)
-    | Operator Percentage -> Mod (node, parse_exp parser)
+    | Operator Star -> Mul (node, parse_factor parser)
+    | Operator Slash -> Div (node, parse_factor parser)
+    | Operator Percentage -> Mod (node, parse_factor parser)
     | _ -> failwith "unreachable"
   else node
 
 and parse_exp parser =
   let node = parse_unary parser in
-  if matches parser (Operator Hat) then Exp (node, parse_unary parser)
+  if matches parser (Operator Hat) then Exp (node, parse_exp parser)
   else node
 
 and parse_unary parser =
