@@ -522,3 +522,6 @@ let run lexer =
     show_errors ();
 
     if Array.length lexer.errors > 0 then exit 1)
+  else
+    lexer.tokens <-
+      [| (Separator Eof, lexer.loc) |] |> Array.append lexer.tokens
