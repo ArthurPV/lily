@@ -15,6 +15,9 @@ type parser = {
   mutable previous_location : Location.location;
 }
 
+let ast_of_nodes parser ~idx = match parser.nodes.(idx) with n, _ -> n
+let loc_of_nodes parser ~idx = match parser.nodes.(idx) with _, l -> l
+
 let new_parser lexer =
   Lexer.run lexer;
   {
@@ -22,10 +25,10 @@ let new_parser lexer =
     pos = 0;
     nodes = [||];
     errors = [||];
-    current_token = (match lexer.tokens.(0) with t, _ -> t);
-    previous_token = (match lexer.tokens.(0) with t, _ -> t);
-    current_location = (match lexer.tokens.(0) with _, l -> l);
-    previous_location = (match lexer.tokens.(0) with _, l -> l);
+    current_token = Lexer.tok_of_tokens lexer ~idx:0;
+    previous_token = Lexer.tok_of_tokens lexer ~idx:0;
+    current_location = Lexer.loc_of_tokens lexer ~idx:0;
+    previous_location = Lexer.loc_of_tokens lexer ~idx:0;
   }
 
 let new_diagnostic parser kind msg loc =
@@ -34,38 +37,36 @@ let new_diagnostic parser kind msg loc =
 let advance parser ~add_pos =
   if add_pos && parser.pos < Array.length parser.lexer.tokens - 1 then
     parser.pos <- parser.pos + 1;
-  parser.current_token <-
-    (match parser.lexer.tokens.(parser.pos) with t, _ -> t);
-  parser.current_location <-
-    (match parser.lexer.tokens.(parser.pos) with _, l -> l);
-  match match parser.lexer.tokens.(parser.pos - 1) with t, _ -> t with
+  parser.current_token <- Lexer.tok_of_tokens parser.lexer ~idx:parser.pos;
+  parser.current_location <- Lexer.loc_of_tokens parser.lexer ~idx:parser.pos;
+  match Lexer.tok_of_tokens parser.lexer ~idx:(parser.pos - 1) with
   | Comment _ -> ()
   | _ ->
     parser.previous_location <-
-      (match parser.lexer.tokens.(parser.pos - 1) with _, l -> l);
+      Lexer.loc_of_tokens parser.lexer ~idx:(parser.pos - 1);
     parser.previous_token <-
-      (match parser.lexer.tokens.(parser.pos - 1) with t, _ -> t)
+      Lexer.tok_of_tokens parser.lexer ~idx:(parser.pos - 1)
 
 let next_token parser =
-  (match match parser.lexer.tokens.(parser.pos) with t, _ -> t with
-     | Comment (Doc s) ->
-       parser.nodes <-
-         Array.append parser.nodes
-           [|
-             (Doc s, match parser.lexer.tokens.(parser.pos) with _, l -> l);
-           |];
-       advance parser ~add_pos:true
-     | _ -> advance parser ~add_pos:true);
+  (match Lexer.tok_of_tokens parser.lexer ~idx:parser.pos with
+   | Comment (Doc s) ->
+     parser.nodes <-
+       Array.append parser.nodes
+         [|
+           (Doc s, Lexer.loc_of_tokens parser.lexer ~idx:parser.pos);
+         |];
+     advance parser ~add_pos:true
+   | _ -> advance parser ~add_pos:true);
   match parser.current_token with
   | Comment _ ->
     let rec loop () =
       if parser.pos < Array.length parser.lexer.tokens - 1 then
-        match match parser.lexer.tokens.(parser.pos) with t, _ -> t with
+        match Lexer.tok_of_tokens parser.lexer ~idx:parser.pos with
         | Comment (Doc s) ->
           parser.nodes <-
             [|
               ( Doc s,
-                match parser.lexer.tokens.(parser.pos) with _, l -> l );
+                Lexer.loc_of_tokens parser.lexer ~idx:parser.pos );
             |]
             |> Array.append parser.nodes;
           parser.pos <- parser.pos + 1;
@@ -98,7 +99,7 @@ let is_eof parser =
 
 let peek_token parser ~n =
   if parser.pos + n < Array.length parser.lexer.tokens - 1 then
-    Some (match parser.lexer.tokens.(parser.pos + n) with t, _ -> t)
+    Some (Lexer.tok_of_tokens parser.lexer ~idx:(parser.pos + n))
   else None
 
 let parse_data_type parser =

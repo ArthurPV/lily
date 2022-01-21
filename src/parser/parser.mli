@@ -17,6 +17,9 @@ type parser = {
 
 val new_parser : lexer -> parser
 
+val ast_of_nodes : parser -> idx:int -> ast
+val loc_of_nodes : parser -> idx:int -> location
+
 val new_diagnostic :
   parser ->
   Diagnostic.diagnostic_kind ->
