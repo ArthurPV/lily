@@ -11,6 +11,8 @@ type lexer = {
 }
 
 val new_lexer : source -> lexer
+val tok_of_tokens : lexer -> idx:int -> token
+val loc_of_tokens : lexer -> idx:int -> location
 val get_keyword : string -> token
 val next_char : lexer -> unit
 val previous_char : lexer -> unit

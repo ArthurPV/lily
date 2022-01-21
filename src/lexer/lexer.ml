@@ -11,6 +11,8 @@ type lexer = {
 }
 
 let new_lexer src = { src; loc = new_location; tokens = [||]; errors = [||] }
+let tok_of_tokens lexer ~idx = match lexer.tokens.(idx) with t, _ -> t
+let loc_of_tokens lexer ~idx = match lexer.tokens.(idx) with _, l -> l
 
 let get_keyword id =
   match id with
