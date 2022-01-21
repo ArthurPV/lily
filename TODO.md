@@ -1,11 +1,192 @@
 # Lily's Todo
 
+- [x] Syntax
 - [x] Lexer
 - [ ] Parser
 - [ ] Analysis
 - [ ] Compiler
 - [ ] Bytecode
 - [ ] Transpiler
+
+## Syntax
+
+### Lily's inspiration
+
+- Scala
+- Ruby
+- OCaml
+- Go
+- Python
+- C
+- Rust
+
+### Comment
+
+> Define a one line comment
+```
+** this is a comment
+```
+
+> Define a multi line comment
+```
+(* this is a comment *)
+```
+
+> Define a doc comment
+```
+*** this is a comment doc
+```
+
+### Function
+
+> Defining a function with operator like name.
+```
+fun (+)(x, y) =
+	x+y
+end
+```
+
+> Defining a function without specifying types.
+```
+fun sum(x, y) =
+	x+y
+end
+```
+
+> Define a function by defining the types of the parameters and the return type of the function.
+```
+fun sum(x Int8, y Int8) Int8 = 
+	x+y 
+end
+```
+
+> Public function.
+```
+pub fun sum(x, y) =
+	x+y
+end
+```
+
+> Async function.
+```
+async fun sum(x, y) =
+	x+y
+end
+```
+
+### Module
+
+```
+module calc =
+	fun add(x, y) = x+y end
+	fun sub(x, y) = x-y end
+	fun mul(x, y) = x*y end
+	fun div(x, y) = x/y end
+end
+```
+
+### Constant
+
+> Define a simple constant.
+```
+A Int8 := 30
+```
+
+> Define a function in constant.
+```
+SUM Int8 := fun(x, y) => x+y end
+```
+
+### Variable
+
+> Defining a simple variable.
+```
+fun add_and_sub_one(x) =
+	a := x-1
+	b := x+1
+	(a, b)
+end
+```
+
+### Alias
+
+> Defining a simple alias
+```
+type IntInt: alias = (Int8, Int8)
+```
+
+### Record
+
+> Defining a simple record
+```
+type Person: record =
+	pub mut name String
+	pub mut age Uint8
+end
+
+PERSON := Person { name = "Olivier", age = 25 }
+```
+
+### Enum
+
+> Defining a simple enum
+```
+type Tree: enum =
+	Leaf |
+	Node(Tree, Tree)
+end
+```
+
+> Defining an enum with int data type
+```
+type Car: enum(@Uint8) =
+	Car1 |
+	Car2 |
+	Car3 |
+	Car4 |
+	Car5 |
+end
+```
+
+### Class
+
+### Trait
+
+### Method
+
+### Property
+
+### Return statement
+
+```
+fun add(x) = return x end
+```
+
+### If condition
+
+> Defining a simple condition
+```
+fun is_zero(x) =
+	if x == 0 do 
+		True
+	** elif <cond> do .. elif <cond> do .. else
+	else 
+		False
+	end
+end
+```
+
+### Match
+
+> Defining a simple match
+```
+fun is_zero(x) =
+	match x do
+	0 -> True |
+	_ -> False
+	end
+end
+```
 
 ## Lexer
 
