@@ -1,2 +1,4 @@
 fun fib =
 end
+
+fun main = end

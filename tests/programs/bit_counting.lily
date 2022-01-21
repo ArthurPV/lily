@@ -1,2 +1,4 @@
 fun bit_counting =
 end
+
+fun main = end

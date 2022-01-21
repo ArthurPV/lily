@@ -1,2 +1,4 @@
 fun count_duplicates =
 end
+
+fun main = end

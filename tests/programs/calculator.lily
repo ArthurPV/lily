@@ -1,2 +1,4 @@
 fun calculator =
 end
+
+fun main = end

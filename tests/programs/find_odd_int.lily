@@ -1,2 +1,4 @@
 fun find_odd_int =
 end
+
+fun main = end

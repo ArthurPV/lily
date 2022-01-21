@@ -1,2 +1,4 @@
 fun hello_world =
 end
+
+fun main = end

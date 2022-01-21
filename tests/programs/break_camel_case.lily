@@ -1,2 +1,4 @@
 fun break_camel_case =
 end
+
+fun main = end
