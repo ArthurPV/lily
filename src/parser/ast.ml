@@ -251,10 +251,7 @@ and expr =
           let rec loop ?(i = 0) ?(l = []) () =
             if i < Array.length tp_arr then
               loop ~i:(i + 1)
-                ~l:
-                  (Printf.sprintf "%s, "
-                     (show_ast tp_arr.(i))
-                  :: l)
+                ~l:(Printf.sprintf "%s, " (show_ast tp_arr.(i)) :: l)
                 ()
             else l |> List.rev |> String.concat ""
           in
@@ -267,10 +264,7 @@ and expr =
           let rec loop ?(i = 0) ?(l = []) () =
             if i < Array.length tp_arr then
               loop ~i:(i + 1)
-                ~l:
-                  (Printf.sprintf "%s, "
-                     (show_ast tp_arr.(i))
-                  :: l)
+                ~l:(Printf.sprintf "%s, " (show_ast tp_arr.(i)) :: l)
                 ()
             else l |> List.rev |> String.concat ""
           in
@@ -538,6 +532,8 @@ and decl =
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
   | Property of string * data_type * bool
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
+  | Include of expr
+      [@printer fun fmt e -> fprintf fmt "include %s" (show_expr e)]
   | Import of {
       import : string; [@printer fun fmt s -> fprintf fmt "%s" s]
       is_pub : bool;
