@@ -423,7 +423,7 @@ let rec is_verify_scope_value expr =
   | Expr _ -> (true, [| expr |])
   | _ -> failwith "unreachable"
 
-let check_expr scope access =
+let check_expr node access =
   let rec loop ?(i = 0) () =
     if i < Array.length access then (
       let rec loop2 ?(j = 0) () =
@@ -432,11 +432,48 @@ let check_expr scope access =
       loop2 ();
       loop ~i:(i + 1) ())
   in
-  loop ()
+  loop ();
+  Expr (Literal (String "Hello"))
+
+let modify_expr expr ~l ~r =
+  match expr with
+  | Negative _ -> Negative l
+  | Positive _ -> Positive l
+  | Not _ -> Not l
+  | Grouping _ -> Grouping l
+  | Add (_, _) ->
+      Add (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Sub (_, _) ->
+      Sub (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Mul (_, _) ->
+      Mul (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Div (_, _) ->
+      Div (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Mod (_, _) ->
+      Mod (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Exp (_, _) ->
+      Exp (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Range (_, _) ->
+      Range (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Lt (_, _) ->
+      Lt (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Gt (_, _) ->
+      Gt (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Le (_, _) ->
+      Le (l, match r with Some e -> e | None -> failwith "unreachable")
+  | And (_, _) ->
+      And (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Or (_, _) ->
+      Or (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Eq (_, _) ->
+      Eq (l, match r with Some e -> e | None -> failwith "unreachable")
+  | Ne (_, _) ->
+      Ne (l, match r with Some e -> e | None -> failwith "unreachable")
+  | _ -> failwith "unreachable"
 
 let rec check_fun_scope scope args access nodes =
   (* List all used access in array *)
-  let used_access_in = ref [||] in
+  (* let used_access_in = ref [||] in *)
   (* Add function parameter in access_in *)
   let rec loop ?(i = 0) ?(access_in = []) () =
     if i < Array.length args then
@@ -461,19 +498,19 @@ let rec check_fun_scope scope args access nodes =
                 check_expr (match result with _, r -> r.(j)) !new_access;
                 iter_result ~j:(j + 1) ())
             in
-            iter_result ();
-            access_in :=
-              Array.append !access_in
+            iter_result ());
+          access_in :=
+            Array.append !access_in
+              [|
                 [|
-                  [|
-                    `Identifier
-                      ( `None,
-                        id,
-                        (match nodes.(i) with _, l -> l),
-                        Some (match nodes.(i) with n, _ -> n) );
-                  |];
+                  `Identifier
+                    ( `None,
+                      id,
+                      (match nodes.(i) with _, l -> l),
+                      Some (match nodes.(i) with n, _ -> n) );
                 |];
-            loop_body ~i:(i + 1) ())
+              |];
+          loop_body ~i:(i + 1) ()
       | Stmt (If { if_; elif_; else_ }) ->
           (* IF *)
           check_expr (match if_ with e, _ -> e) !access_in;

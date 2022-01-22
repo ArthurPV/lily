@@ -50,7 +50,8 @@ val is_contain_main_fun : scope -> bool * int
 (* check scope *)
 (* add reference of value in nodes *)
 val is_verify_scope_value : ast -> bool * ast array
-val check_expr : scope -> scope_access array array -> unit
+val modify_expr : expr -> l:expr -> r:expr option -> ast
+val check_expr : ast -> scope_access array array -> ast
 
 val check_fun_scope :
   scope ->
