@@ -390,85 +390,133 @@ let is_contain_main_fun scope =
   in
   loop ()
 
-let rec is_verify_scope_value expr =
+let add_ref_on_node expr v =
+  (* TODO *)
   match expr with
-  | Expr (Literal _) -> (false, [||])
-  | Expr (Negative l) | Expr (Positive l) | Expr (Not l) | Expr (Grouping l)
-    ->
-      let try_l = is_verify_scope_value (Expr l) in
-      if match try_l with b, _ -> b then (true, match try_l with _, e -> e)
-      else (false, [||])
-  | Expr (Add (l, r))
-  | Expr (Sub (l, r))
-  | Expr (Mul (l, r))
-  | Expr (Div (l, r))
-  | Expr (Mod (l, r))
-  | Expr (Exp (l, r))
-  | Expr (Range (l, r))
-  | Expr (Lt (l, r))
-  | Expr (Gt (l, r))
-  | Expr (Le (l, r))
-  | Expr (Ge (l, r))
-  | Expr (And (l, r))
-  | Expr (Or (l, r))
-  | Expr (Eq (l, r))
-  | Expr (Ne (l, r)) ->
-      let try_l = is_verify_scope_value (Expr l) in
-      let try_r = is_verify_scope_value (Expr r) in
-      if (match try_l with b, _ -> b) || match try_r with b, _ -> b then (
-        let to_verify = ref (match try_l with _, e -> e) in
-        to_verify := Array.append !to_verify (match try_r with _, e -> e);
-        (true, !to_verify))
-      else (false, [||])
-  | Expr _ -> (true, [| expr |])
+  | Identifier (s, _) -> Identifier (s, v)
   | _ -> failwith "unreachable"
 
-let check_expr node access =
-  let rec loop ?(i = 0) () =
-    if i < Array.length access then (
-      let rec loop2 ?(j = 0) () =
-        if j < Array.length access.(i) then loop2 ~j:(j + 1) ()
+let rec check_expr scope node loc access =
+  (* let result = is_verify_scope_value !node in *)
+  let matched = ref false in
+  match !node with
+  | Expr (Literal _) | Expr Undef | Expr Nil -> !node
+  | Expr (Identifier (s, _)) ->
+      let rec loop ?(i = 0) () =
+        if i < Array.length access && !matched |> Bool.not then (
+          let rec loop2 ?(j = 0) () =
+            if j < Array.length access.(i) && !matched |> Bool.not then
+              if
+                Some s
+                =
+                match access.(i).(j) with
+                | `Identifier (_, s2, _, _) -> Some s2
+                | _ -> None
+              then matched := true (* TODO *)
+              else loop2 ~j:(j + 1) ()
+          in
+          loop2 ();
+          loop ~i:(i + 1) ())
       in
-      loop2 ();
-      loop ~i:(i + 1) ())
-  in
-  loop ();
-  Expr (Literal (String "Hello"))
-
-let modify_expr expr ~l ~r =
-  match expr with
-  | Negative _ -> Negative l
-  | Positive _ -> Positive l
-  | Not _ -> Not l
-  | Grouping _ -> Grouping l
-  | Add (_, _) ->
-      Add (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Sub (_, _) ->
-      Sub (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Mul (_, _) ->
-      Mul (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Div (_, _) ->
-      Div (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Mod (_, _) ->
-      Mod (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Exp (_, _) ->
-      Exp (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Range (_, _) ->
-      Range (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Lt (_, _) ->
-      Lt (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Gt (_, _) ->
-      Gt (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Le (_, _) ->
-      Le (l, match r with Some e -> e | None -> failwith "unreachable")
-  | And (_, _) ->
-      And (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Or (_, _) ->
-      Or (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Eq (_, _) ->
-      Eq (l, match r with Some e -> e | None -> failwith "unreachable")
-  | Ne (_, _) ->
-      Ne (l, match r with Some e -> e | None -> failwith "unreachable")
+      loop ();
+      if !matched |> Bool.not then
+        loc
+        |> Parser.new_diagnostic scope.parser Diagnostic.Error
+             (Printf.sprintf "identifier not exists: `%s`" s)
+        |> Diagnostic.emit_diagnostic;
+      !node
+  | Expr (IdentifierAccess (_, _)) | Expr (SelfAccess (_, _)) ->
+      failwith "todo"
+  | Expr (FunctionCall (_, _)) -> failwith "todo"
+  | Expr (RecordCall (_, _)) -> failwith "todo"
+  | Expr (ClassCall (_, _)) -> failwith "todo"
+  | Expr (AnonymousFunction (_, _)) -> failwith "todo"
+  | Expr (Negative l) ->
+      Expr
+        (Negative (ast_to_expr (check_expr scope (Expr l |> ref) loc access)))
+  | Expr (Positive l) ->
+      Expr
+        (Positive (ast_to_expr (check_expr scope (Expr l |> ref) loc access)))
+  | Expr (Not l) ->
+      Expr (Not (ast_to_expr (check_expr scope (Expr l |> ref) loc access)))
+  | Expr (Grouping l) ->
+      Expr
+        (Grouping (ast_to_expr (check_expr scope (Expr l |> ref) loc access)))
+  | Expr (Add (l, r)) ->
+      Expr
+        (Add
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Sub (l, r)) ->
+      Expr
+        (Sub
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Mul (l, r)) ->
+      Expr
+        (Mul
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Div (l, r)) ->
+      Expr
+        (Div
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Mod (l, r)) ->
+      Expr
+        (Mod
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Exp (l, r)) ->
+      Expr
+        (Exp
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Range (l, r)) ->
+      Expr
+        (Range
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Lt (l, r)) ->
+      Expr
+        (Lt
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Gt (l, r)) ->
+      Expr
+        (Gt
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Le (l, r)) ->
+      Expr
+        (Le
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Ge (l, r)) ->
+      Expr
+        (Ge
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (And (l, r)) ->
+      Expr
+        (And
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Or (l, r)) ->
+      Expr
+        (Or
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Eq (l, r)) ->
+      Expr
+        (Eq
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+  | Expr (Ne (l, r)) ->
+      Expr
+        (Eq
+           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
+             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
   | _ -> failwith "unreachable"
 
 let rec check_fun_scope scope args access nodes =
@@ -489,16 +537,13 @@ let rec check_fun_scope scope args access nodes =
     if i < Array.length nodes then
       match match nodes.(i) with t, _ -> t with
       | Decl (Variable { id; expr; _ }) ->
-          let result = is_verify_scope_value (Expr expr) in
-          if match result with b, _ -> b then (
-            let new_access = ref access in
-            new_access := Array.append !new_access !access_in;
-            let rec iter_result ?(j = 0) () =
-              if j < Array.length (match result with _, r -> r) then (
-                check_expr (match result with _, r -> r.(j)) !new_access;
-                iter_result ~j:(j + 1) ())
-            in
-            iter_result ());
+          (* let result = is_verify_scope_value (Expr expr) in if match
+             result with b, _ -> b then ( let new_access = ref access in
+             new_access := Array.append !new_access !access_in; let rec
+             iter_result ?(j = 0) () = if j < Array.length (match result with
+             _, r -> r) then ( check_expr (ref (match result with _, r ->
+             r.(j))) !new_access; iter_result ~j:(j + 1) ()) in iter_result
+             ()); *)
           access_in :=
             Array.append !access_in
               [|
@@ -513,7 +558,7 @@ let rec check_fun_scope scope args access nodes =
           loop_body ~i:(i + 1) ()
       | Stmt (If { if_; elif_; else_ }) ->
           (* IF *)
-          check_expr (match if_ with e, _ -> e) !access_in;
+          (* check_expr (match if_ with e, _ -> e) !access_in; *)
           (* check condition *)
           let access_in_ref = access_in in
           check_fun_scope scope [||] !access_in_ref
@@ -524,7 +569,7 @@ let rec check_fun_scope scope args access nodes =
               let rec loop_elif ?(i = 0) () =
                 if i < Array.length el then (
                   (* check condition *)
-                  check_expr (match el.(i) with e, _ -> e) !access_in;
+                  (* check_expr (match el.(i) with e, _ -> e) !access_in; *)
                   check_fun_scope scope [||] !access_in_ref
                     (match el.(i) with _, b -> b);
                   loop_elif ~i:(i + 1) ())
@@ -539,15 +584,12 @@ let rec check_fun_scope scope args access nodes =
       | Stmt (For { expr; body }) -> loop_body ~i:(i + 1) ()
       | Stmt (Match { expr; case; else_case }) -> loop_body ~i:(i + 1) ()
       | Stmt (Return expr) ->
-          let result = is_verify_scope_value (Expr expr) in
-          if match result with b, _ -> b then (
-            let rec iter_result ?(j = 0) () =
-              if j < Array.length (match result with _, r -> r) then (
-                check_expr (match result with _, r -> r.(j)) !access_in;
-                iter_result ~j:(j + 1) ())
-            in
-            iter_result ();
-            loop_body ~i:(i + 1) ())
+          (* let result = is_verify_scope_value (Expr expr) in if match
+             result with b, _ -> b then ( let rec iter_result ?(j = 0) () =
+             if j < Array.length (match result with _, r -> r) then (*
+             check_expr (match result with _, r -> r.(j)) !access_in; *)
+             iter_result ~j:(j + 1) () in iter_result (); *)
+          loop_body ~i:(i + 1) ()
       | _ -> failwith "unreachable"
   in
   loop_body ();

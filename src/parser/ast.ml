@@ -19,46 +19,46 @@ type data_type =
   | `Unit [@printer fun fmt _ -> fprintf fmt "Unit"]
   | `SelfArg [@printer fun fmt _ -> fprintf fmt "self"]
   | `Tuple of data_type array
-    [@printer
-      fun fmt dt_arr ->
-        let rec loop ?(i = 0) ?(dt = []) () =
-          if i < Array.length dt_arr then
-            loop ~i:(i + 1)
-              ~dt:(Printf.sprintf "%s " (show_data_type dt_arr.(i)) :: dt)
-              ()
-          else dt |> List.rev |> String.concat ""
-        in
-        let tp_s = loop () in
-        fprintf fmt "(%s)" (String.length tp_s - 2 |> String.sub tp_s 0)]
+              [@printer
+                fun fmt dt_arr ->
+                  let rec loop ?(i = 0) ?(dt = []) () =
+                    if i < Array.length dt_arr then
+                      loop ~i:(i + 1)
+                        ~dt:(Printf.sprintf "%s " (show_data_type dt_arr.(i)) :: dt)
+                        ()
+                    else dt |> List.rev |> String.concat ""
+                  in
+                  let tp_s = loop () in
+                  fprintf fmt "(%s)" (String.length tp_s - 2 |> String.sub tp_s 0)]
   | `GroupingDataType of data_type
-    [@printer fun fmt dt -> fprintf fmt "%s" (show_data_type dt)]
+                         [@printer fun fmt dt -> fprintf fmt "%s" (show_data_type dt)]
   | `Generics of string [@printer fun fmt s -> fprintf fmt "%s" s]
   | `CustomType of string * data_type array option
-    [@printer
-      fun fmt (s, dt_arr) ->
-        match dt_arr with
-        | Some arr ->
-            let rec loop ?(i = 0) ?(dt = []) () =
-              if i < Array.length arr then
-                loop ~i:(i + 1)
-                  ~dt:(Printf.sprintf "%s, " (show_data_type arr.(i)) :: dt)
-                  ()
-              else dt |> List.rev |> String.concat ""
-            in
-            let dt = loop () in
-            fprintf fmt "%s[%s]" s (String.length dt - 2 |> String.sub dt 0)
-        | None -> fprintf fmt "%s" s] ]
+                   [@printer
+                     fun fmt (s, dt_arr) ->
+                       match dt_arr with
+                       | Some arr ->
+                         let rec loop ?(i = 0) ?(dt = []) () =
+                           if i < Array.length arr then
+                             loop ~i:(i + 1)
+                               ~dt:(Printf.sprintf "%s, " (show_data_type arr.(i)) :: dt)
+                               ()
+                           else dt |> List.rev |> String.concat ""
+                         in
+                         let dt = loop () in
+                         fprintf fmt "%s[%s]" s (String.length dt - 2 |> String.sub dt 0)
+                       | None -> fprintf fmt "%s" s] ]
 [@@deriving show]
 
 type literal_ast =
   | Bool of bool
-      [@printer
-        fun fmt b -> if b then fprintf fmt "True" else fprintf fmt "False"]
+            [@printer
+              fun fmt b -> if b then fprintf fmt "True" else fprintf fmt "False"]
   | Char of char [@printer fun fmt c -> fprintf fmt "%c" c]
   | Int of Stdint.int64
-      [@printer fun fmt i -> fprintf fmt "%s" (Stdint.Int64.to_string i)]
+           [@printer fun fmt i -> fprintf fmt "%s" (Stdint.Int64.to_string i)]
   | Float of float
-      [@printer fun fmt f -> fprintf fmt "%s" (Float.to_string f)]
+             [@printer fun fmt f -> fprintf fmt "%s" (Float.to_string f)]
   | String of string [@printer fun fmt s -> fprintf fmt "%s" s]
   | Unit [@printer fun fmt _ -> fprintf fmt "()"]
 [@@deriving show]
@@ -68,81 +68,81 @@ type literal_ast =
 type field = {
   id : string; [@printer fun fmt s -> fprintf fmt "%s" s]
   data_type : data_type;
-      [@printer fun fmt dt -> fprintf fmt "%s" (show_data_type dt)]
+  [@printer fun fmt dt -> fprintf fmt "%s" (show_data_type dt)]
   is_pub : bool;
-      [@printer
-        fun fmt b -> if b then fprintf fmt "True" else fprintf fmt "False"]
+  [@printer
+    fun fmt b -> if b then fprintf fmt "True" else fprintf fmt "False"]
 }
 [@@deriving show]
 
 type variant = {
   id : string; [@printer fun fmt s -> fprintf fmt "%s" s]
   data_type : data_type option;
-      [@printer
-        fun fmt dt_op ->
-          match dt_op with
-          | Some dt -> fprintf fmt "%s" (show_data_type dt)
-          | None -> fprintf fmt "None"]
+  [@printer
+    fun fmt dt_op ->
+      match dt_op with
+      | Some dt -> fprintf fmt "%s" (show_data_type dt)
+      | None -> fprintf fmt "None"]
 }
 [@@deriving show]
 
 type argument_kind =
   | Default of ast
-      [@printer fun fmt a -> fprintf fmt "Default: %s" (show_ast a)]
+               [@printer fun fmt a -> fprintf fmt "Default: %s" (show_ast a)]
   | Normal [@printer fun fmt _ -> fprintf fmt "Normal"]
 [@@deriving show]
 
 and argument = {
   id : string; [@printer fun fmt -> fprintf fmt "%s"]
   kind : argument_kind;
-      [@printer fun fmt k -> fprintf fmt "%s" (show_argument_kind k)]
+  [@printer fun fmt k -> fprintf fmt "%s" (show_argument_kind k)]
   data_type : data_type option;
-      [@printer
-        fun fmt dt ->
-          match dt with
-          | Some d -> fprintf fmt "%s" (show_data_type d)
-          | None -> fprintf fmt "None"]
+  [@printer
+    fun fmt dt ->
+      match dt with
+      | Some d -> fprintf fmt "%s" (show_data_type d)
+      | None -> fprintf fmt "None"]
   loc : location;
-      [@printer fun fmt loc -> fprintf fmt "%s" (show_location loc)]
+  [@printer fun fmt loc -> fprintf fmt "%s" (show_location loc)]
 }
 [@@deriving show]
 
 and argument_method = {
   id_mth : string option;
-      [@printer
-        fun fmt id ->
-          match id with
-          | Some s -> fprintf fmt "%s" s
-          | None -> fprintf fmt "None"]
+  [@printer
+    fun fmt id ->
+      match id with
+      | Some s -> fprintf fmt "%s" s
+      | None -> fprintf fmt "None"]
   kind_mth : argument_kind;
-      [@printer fun fmt k -> fprintf fmt "%s" (show_argument_kind k)]
+  [@printer fun fmt k -> fprintf fmt "%s" (show_argument_kind k)]
   data_type_mth : data_type option;
-      [@printer
-        fun fmt dt ->
-          match dt with
-          | Some d -> fprintf fmt "%s" (show_data_type d)
-          | None -> fprintf fmt "None"]
+  [@printer
+    fun fmt dt ->
+      match dt with
+      | Some d -> fprintf fmt "%s" (show_data_type d)
+      | None -> fprintf fmt "None"]
 }
 [@@deriving show]
 
 and case = {
   expr : expr; [@printer fun fmt e -> fprintf fmt "%s" (show_expr e)]
   body : (ast * location) array;
-      [@printer
-        fun fmt body_arr ->
-          let rec loop ?(i = 0) ?(body = []) () =
-            if i < Array.length body_arr then
-              loop ~i:(i + 1)
-                ~body:
-                  (Printf.sprintf "(%s, %s), "
-                     (show_ast (match body_arr.(i) with a, _ -> a))
-                     (show_location (match body_arr.(i) with _, l -> l))
-                  :: body)
-                ()
-            else body |> List.rev |> String.concat ""
-          in
-          let s = loop () in
-          fprintf fmt "[%s]" (String.length s - 2 |> String.sub s 0)]
+  [@printer
+    fun fmt body_arr ->
+      let rec loop ?(i = 0) ?(body = []) () =
+        if i < Array.length body_arr then
+          loop ~i:(i + 1)
+            ~body:
+              (Printf.sprintf "(%s, %s), "
+                 (show_ast (match body_arr.(i) with a, _ -> a))
+                 (show_location (match body_arr.(i) with _, l -> l))
+               :: body)
+            ()
+        else body |> List.rev |> String.concat ""
+      in
+      let s = loop () in
+      fprintf fmt "[%s]" (String.length s - 2 |> String.sub s 0)]
 }
 [@@deriving show]
 
@@ -156,307 +156,307 @@ and expr =
   | Negative of expr [@printer fun fmt e -> fprintf fmt "-%s" (show_expr e)]
   | Not of expr [@printer fun fmt e -> fprintf fmt "not %s" (show_expr e)]
   | Mul of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s * %s" (show_expr e1) (show_expr e2)]
+           [@printer
+             fun fmt (e1, e2) ->
+               fprintf fmt "%s * %s" (show_expr e1) (show_expr e2)]
   | Div of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s / %s" (show_expr e1) (show_expr e2)]
+           [@printer
+             fun fmt (e1, e2) ->
+               fprintf fmt "%s / %s" (show_expr e1) (show_expr e2)]
   | Mod of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s %% %s" (show_expr e1) (show_expr e2)]
+           [@printer
+             fun fmt (e1, e2) ->
+               fprintf fmt "%s %% %s" (show_expr e1) (show_expr e2)]
   | Add of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s + %s" (show_expr e1) (show_expr e2)]
+           [@printer
+             fun fmt (e1, e2) ->
+               fprintf fmt "%s + %s" (show_expr e1) (show_expr e2)]
   | Sub of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s - %s" (show_expr e1) (show_expr e2)]
+           [@printer
+             fun fmt (e1, e2) ->
+               fprintf fmt "%s - %s" (show_expr e1) (show_expr e2)]
   | Exp of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s ^ %s" (show_expr e1) (show_expr e2)]
+           [@printer
+             fun fmt (e1, e2) ->
+               fprintf fmt "%s ^ %s" (show_expr e1) (show_expr e2)]
   | Range of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s..%s" (show_expr e1) (show_expr e2)]
+             [@printer
+               fun fmt (e1, e2) ->
+                 fprintf fmt "%s..%s" (show_expr e1) (show_expr e2)]
   | Lt of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s < %s" (show_expr e1) (show_expr e2)]
+          [@printer
+            fun fmt (e1, e2) ->
+              fprintf fmt "%s < %s" (show_expr e1) (show_expr e2)]
   | Gt of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s > %s" (show_expr e1) (show_expr e2)]
+          [@printer
+            fun fmt (e1, e2) ->
+              fprintf fmt "%s > %s" (show_expr e1) (show_expr e2)]
   | Le of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s <= %s" (show_expr e1) (show_expr e2)]
+          [@printer
+            fun fmt (e1, e2) ->
+              fprintf fmt "%s <= %s" (show_expr e1) (show_expr e2)]
   | Ge of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s >= %s" (show_expr e1) (show_expr e2)]
+          [@printer
+            fun fmt (e1, e2) ->
+              fprintf fmt "%s >= %s" (show_expr e1) (show_expr e2)]
   | Eq of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s == %s" (show_expr e1) (show_expr e2)]
+          [@printer
+            fun fmt (e1, e2) ->
+              fprintf fmt "%s == %s" (show_expr e1) (show_expr e2)]
   | Ne of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s != %s" (show_expr e1) (show_expr e2)]
+          [@printer
+            fun fmt (e1, e2) ->
+              fprintf fmt "%s != %s" (show_expr e1) (show_expr e2)]
   | And of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s and %s" (show_expr e1) (show_expr e2)]
+           [@printer
+             fun fmt (e1, e2) ->
+               fprintf fmt "%s and %s" (show_expr e1) (show_expr e2)]
   | Or of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s or %s" (show_expr e1) (show_expr e2)]
+          [@printer
+            fun fmt (e1, e2) ->
+              fprintf fmt "%s or %s" (show_expr e1) (show_expr e2)]
   | Assign of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s = %s" (show_expr e1) (show_expr e2)]
+              [@printer
+                fun fmt (e1, e2) ->
+                  fprintf fmt "%s = %s" (show_expr e1) (show_expr e2)]
   | AddAssign of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s += %s" (show_expr e1) (show_expr e2)]
+                 [@printer
+                   fun fmt (e1, e2) ->
+                     fprintf fmt "%s += %s" (show_expr e1) (show_expr e2)]
   | SubAssign of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s -= %s" (show_expr e1) (show_expr e2)]
+                 [@printer
+                   fun fmt (e1, e2) ->
+                     fprintf fmt "%s -= %s" (show_expr e1) (show_expr e2)]
   | MulAssign of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s *= %s" (show_expr e1) (show_expr e2)]
+                 [@printer
+                   fun fmt (e1, e2) ->
+                     fprintf fmt "%s *= %s" (show_expr e1) (show_expr e2)]
   | DivAssign of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s /= %s" (show_expr e1) (show_expr e2)]
+                 [@printer
+                   fun fmt (e1, e2) ->
+                     fprintf fmt "%s /= %s" (show_expr e1) (show_expr e2)]
   | ModAssign of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s %%= %s" (show_expr e1) (show_expr e2)]
+                 [@printer
+                   fun fmt (e1, e2) ->
+                     fprintf fmt "%s %%= %s" (show_expr e1) (show_expr e2)]
   | ExpAssign of expr * expr
-      [@printer
-        fun fmt (e1, e2) ->
-          fprintf fmt "%s ^= %s" (show_expr e1) (show_expr e2)]
+                 [@printer
+                   fun fmt (e1, e2) ->
+                     fprintf fmt "%s ^= %s" (show_expr e1) (show_expr e2)]
   | FunctionCall of expr * ast array
-      (* TODO: create a function for convert to string expr * (ast * ast
-         option) array if it's possible *)
-      [@printer
-        fun fmt (e, tp_arr) ->
-          let rec loop ?(i = 0) ?(l = []) () =
-            if i < Array.length tp_arr then
-              loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s, " (show_ast tp_arr.(i)) :: l)
-                ()
-            else l |> List.rev |> String.concat ""
-          in
-          let tp_s = loop () in
-          fprintf fmt "%s(%s)" (show_expr e)
-            (String.length tp_s - 2 |> String.sub tp_s 0)]
+  (* TODO: create a function for convert to string expr * (ast * ast
+     option) array if it's possible *)
+                    [@printer
+                      fun fmt (e, tp_arr) ->
+                        let rec loop ?(i = 0) ?(l = []) () =
+                          if i < Array.length tp_arr then
+                            loop ~i:(i + 1)
+                              ~l:(Printf.sprintf "%s, " (show_ast tp_arr.(i)) :: l)
+                              ()
+                          else l |> List.rev |> String.concat ""
+                        in
+                        let tp_s = loop () in
+                        fprintf fmt "%s(%s)" (show_expr e)
+                          (String.length tp_s - 2 |> String.sub tp_s 0)]
   | ClassCall of expr * ast array
-      [@printer
-        fun fmt (e, tp_arr) ->
-          let rec loop ?(i = 0) ?(l = []) () =
-            if i < Array.length tp_arr then
-              loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s, " (show_ast tp_arr.(i)) :: l)
-                ()
-            else l |> List.rev |> String.concat ""
-          in
-          let tp_s = loop () in
-          fprintf fmt "new %s(%s)" (show_expr e)
-            (String.length tp_s - 2 |> String.sub tp_s 0)]
+                 [@printer
+                   fun fmt (e, tp_arr) ->
+                     let rec loop ?(i = 0) ?(l = []) () =
+                       if i < Array.length tp_arr then
+                         loop ~i:(i + 1)
+                           ~l:(Printf.sprintf "%s, " (show_ast tp_arr.(i)) :: l)
+                           ()
+                       else l |> List.rev |> String.concat ""
+                     in
+                     let tp_s = loop () in
+                     fprintf fmt "new %s(%s)" (show_expr e)
+                       (String.length tp_s - 2 |> String.sub tp_s 0)]
   | RecordCall of expr * (string * expr option) array
-      [@printer
-        fun fmt (e, tp_arr) ->
-          let rec loop ?(i = 0) ?(l = []) () =
-            if i < Array.length tp_arr then
-              loop ~i:(i + 1)
-                ~l:
-                  (Printf.sprintf "(%s, %s), "
-                     (match tp_arr.(i) with s, _ -> s)
-                     (match match tp_arr.(i) with _, e_op -> e_op with
-                     | Some expr -> show_expr expr
-                     | None -> "None")
-                  :: l)
-                ()
-            else l |> List.rev |> String.concat ""
-          in
-          let tp_s = loop () in
-          fprintf fmt "%s { %s }" (show_expr e)
-            (String.length tp_s - 2 |> String.sub tp_s 0)]
+                  [@printer
+                    fun fmt (e, tp_arr) ->
+                      let rec loop ?(i = 0) ?(l = []) () =
+                        if i < Array.length tp_arr then
+                          loop ~i:(i + 1)
+                            ~l:
+                              (Printf.sprintf "(%s, %s), "
+                                 (match tp_arr.(i) with s, _ -> s)
+                                 (match match tp_arr.(i) with _, e_op -> e_op with
+                                    | Some expr -> show_expr expr
+                                    | None -> "None")
+                               :: l)
+                            ()
+                        else l |> List.rev |> String.concat ""
+                      in
+                      let tp_s = loop () in
+                      fprintf fmt "%s { %s }" (show_expr e)
+                        (String.length tp_s - 2 |> String.sub tp_s 0)]
   | Identifier of string * ast option
-      [@printer
-        fun fmt (s, a_op) ->
-          fprintf fmt "(%s, %s)" s
-            (match a_op with Some a -> show_ast a | None -> "None")]
+                  [@printer
+                    fun fmt (s, a_op) ->
+                      fprintf fmt "(%s, %s)" s
+                        (match a_op with Some a -> show_ast a | None -> "None")]
   | IdentifierAccess of expr array * ast option
-      [@printer
-        fun fmt (s_arr, a_op) ->
-          let rec loop ?(i = 0) ?(l = []) () =
-            if i < Array.length s_arr then
-              loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s." (show_expr s_arr.(i)) :: l)
-                ()
-            else l |> List.rev |> String.concat ""
-          in
-          let s = loop () in
-          fprintf fmt "(%s, %s)"
-            (String.length s - 1 |> String.sub s 0)
-            (match a_op with Some a -> show_ast a | None -> "None")]
+                        [@printer
+                          fun fmt (s_arr, a_op) ->
+                            let rec loop ?(i = 0) ?(l = []) () =
+                              if i < Array.length s_arr then
+                                loop ~i:(i + 1)
+                                  ~l:(Printf.sprintf "%s." (show_expr s_arr.(i)) :: l)
+                                  ()
+                              else l |> List.rev |> String.concat ""
+                            in
+                            let s = loop () in
+                            fprintf fmt "(%s, %s)"
+                              (String.length s - 1 |> String.sub s 0)
+                              (match a_op with Some a -> show_ast a | None -> "None")]
   | SelfAccess of expr array * ast option
-      [@printer
-        fun fmt (s_arr, a_op) ->
-          let rec loop ?(i = 0) ?(l = []) () =
-            if i < Array.length s_arr then
-              loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s." (show_expr s_arr.(i)) :: l)
-                ()
-            else l |> List.rev |> String.concat ""
-          in
-          let s = loop () in
-          fprintf fmt "(self.%s, %s)"
-            (String.length s - 1 |> String.sub s 0)
-            (match a_op with Some a -> show_ast a | None -> "None")]
+                  [@printer
+                    fun fmt (s_arr, a_op) ->
+                      let rec loop ?(i = 0) ?(l = []) () =
+                        if i < Array.length s_arr then
+                          loop ~i:(i + 1)
+                            ~l:(Printf.sprintf "%s." (show_expr s_arr.(i)) :: l)
+                            ()
+                        else l |> List.rev |> String.concat ""
+                      in
+                      let s = loop () in
+                      fprintf fmt "(self.%s, %s)"
+                        (String.length s - 1 |> String.sub s 0)
+                        (match a_op with Some a -> show_ast a | None -> "None")]
   | AnonymousFunction of argument array * (ast * location) array
-      [@printer
-        fun fmt (args, body) ->
-          let rec loop_args ?(i = 0) ?(l = []) () =
-            if i < Array.length args then
-              loop_args ~i:(i + 1)
-                ~l:(Printf.sprintf "%s, " (show_argument args.(i)) :: l)
-                ()
-            else l |> List.rev |> String.concat ""
-          in
-          let args_s = loop_args () in
-          let rec loop_body ?(i = 0) ?(l = []) () =
-            if i < Array.length body then
-              loop_body ~i:(i + 1)
-                ~l:
-                  (Printf.sprintf "(%s, %s)\n"
-                     (show_ast (match body.(i) with a, _ -> a))
-                     (show_location (match body.(i) with _, l -> l))
-                  :: l)
-                ()
-            else l |> List.rev |> String.concat ""
-          in
-          let body_s = loop_body () in
-          fprintf fmt "fun(%s) =>\n%send"
-            (String.length args_s - 2 |> String.sub args_s 0)
-            body_s]
+                         [@printer
+                           fun fmt (args, body) ->
+                             let rec loop_args ?(i = 0) ?(l = []) () =
+                               if i < Array.length args then
+                                 loop_args ~i:(i + 1)
+                                   ~l:(Printf.sprintf "%s, " (show_argument args.(i)) :: l)
+                                   ()
+                               else l |> List.rev |> String.concat ""
+                             in
+                             let args_s = loop_args () in
+                             let rec loop_body ?(i = 0) ?(l = []) () =
+                               if i < Array.length body then
+                                 loop_body ~i:(i + 1)
+                                   ~l:
+                                     (Printf.sprintf "(%s, %s)\n"
+                                        (show_ast (match body.(i) with a, _ -> a))
+                                        (show_location (match body.(i) with _, l -> l))
+                                      :: l)
+                                   ()
+                               else l |> List.rev |> String.concat ""
+                             in
+                             let body_s = loop_body () in
+                             fprintf fmt "fun(%s) =>\n%send"
+                               (String.length args_s - 2 |> String.sub args_s 0)
+                               body_s]
   | In of string * ast
-      [@printer fun fmt (s, a) -> fprintf fmt "(%s, %s)" s (show_ast a)]
+          [@printer fun fmt (s, a) -> fprintf fmt "(%s, %s)" s (show_ast a)]
   (* TODO: replace string by expr *)
   | Tuple of expr array
-      [@printer
-        fun fmt arr ->
-          let rec loop ?(i = 0) ?(l = []) () =
-            if i < Array.length arr then
-              loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s, " (show_expr arr.(i)) :: l)
-                ()
-            else l |> List.rev |> String.concat ""
-          in
-          let s = loop () in
-          fprintf fmt "(%s)" (String.sub s 0 (String.length s - 2))]
+             [@printer
+               fun fmt arr ->
+                 let rec loop ?(i = 0) ?(l = []) () =
+                   if i < Array.length arr then
+                     loop ~i:(i + 1)
+                       ~l:(Printf.sprintf "%s, " (show_expr arr.(i)) :: l)
+                       ()
+                   else l |> List.rev |> String.concat ""
+                 in
+                 let s = loop () in
+                 fprintf fmt "(%s)" (String.sub s 0 (String.length s - 2))]
   | Array of expr array
-      [@printer
-        fun fmt arr ->
-          let rec loop ?(i = 0) ?(l = []) () =
-            if i < Array.length arr then
-              loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s, " (show_expr arr.(i)) :: l)
-                ()
-            else l |> List.rev |> String.concat ""
-          in
-          let s = loop () in
-          fprintf fmt "[%s]" (String.sub s 0 (String.length s - 2))]
+             [@printer
+               fun fmt arr ->
+                 let rec loop ?(i = 0) ?(l = []) () =
+                   if i < Array.length arr then
+                     loop ~i:(i + 1)
+                       ~l:(Printf.sprintf "%s, " (show_expr arr.(i)) :: l)
+                       ()
+                   else l |> List.rev |> String.concat ""
+                 in
+                 let s = loop () in
+                 fprintf fmt "[%s]" (String.sub s 0 (String.length s - 2))]
   | Variant of expr * expr option
-      [@printer
-        fun fmt (s, e_op) ->
-          fprintf fmt "%s%s" (show_expr s)
-            (match e_op with Some e -> show_expr e | None -> "")]
+               [@printer
+                 fun fmt (s, e_op) ->
+                   fprintf fmt "%s%s" (show_expr s)
+                     (match e_op with Some e -> show_expr e | None -> "")]
   | Undef [@printer fun fmt _ -> fprintf fmt "undef"]
   | Nil [@printer fun fmt _ -> fprintf fmt "nil"]
   | Literal of literal_ast
-      [@printer fun fmt l -> fprintf fmt "%s" (show_literal_ast l)]
+               [@printer fun fmt l -> fprintf fmt "%s" (show_literal_ast l)]
 [@@deriving show]
 
 and decl =
   | Fun of {
       id : string; [@printer fun fmt s -> fprintf fmt "%s" s]
       poly_args : data_type array;
-          [@printer
-            fun fmt poly_args_arr ->
-              let rec loop_poly_args ?(i = 0) ?(l = []) () =
-                if i < Array.length poly_args_arr then
-                  loop_poly_args ~i:(i + 1)
-                    ~l:
-                      (Printf.sprintf "%s, "
-                         (show_data_type poly_args_arr.(i))
-                      :: l)
-                    ()
-                else l |> List.rev |> String.concat ""
-              in
-              let poly_args = loop_poly_args () in
-              fprintf fmt "[%s]"
-                (String.length poly_args - 2 |> String.sub poly_args 0)]
+      [@printer
+        fun fmt poly_args_arr ->
+          let rec loop_poly_args ?(i = 0) ?(l = []) () =
+            if i < Array.length poly_args_arr then
+              loop_poly_args ~i:(i + 1)
+                ~l:
+                  (Printf.sprintf "%s, "
+                     (show_data_type poly_args_arr.(i))
+                   :: l)
+                ()
+            else l |> List.rev |> String.concat ""
+          in
+          let poly_args = loop_poly_args () in
+          fprintf fmt "[%s]"
+            (String.length poly_args - 2 |> String.sub poly_args 0)]
       args : argument array;
-          [@printer
-            fun fmt args_arr ->
-              let rec loop_args ?(i = 0) ?(l = []) () =
-                if i < Array.length args_arr then
-                  loop_args ~i:(i + 1)
-                    ~l:
-                      (Printf.sprintf "%s, " (show_argument args_arr.(i))
-                      :: l)
-                    ()
-                else l |> List.rev |> String.concat ""
-              in
-              let args = loop_args () in
-              fprintf fmt "[%s]" (String.length args - 2 |> String.sub args 0)]
+      [@printer
+        fun fmt args_arr ->
+          let rec loop_args ?(i = 0) ?(l = []) () =
+            if i < Array.length args_arr then
+              loop_args ~i:(i + 1)
+                ~l:
+                  (Printf.sprintf "%s, " (show_argument args_arr.(i))
+                   :: l)
+                ()
+            else l |> List.rev |> String.concat ""
+          in
+          let args = loop_args () in
+          fprintf fmt "[%s]" (String.length args - 2 |> String.sub args 0)]
       return_type : data_type option;
-          [@printer
-            fun fmt dt_op ->
-              fprintf fmt "%s"
-                (match dt_op with
-                | Some dt -> show_data_type dt
-                | None -> "None")]
+      [@printer
+        fun fmt dt_op ->
+          fprintf fmt "%s"
+            (match dt_op with
+             | Some dt -> show_data_type dt
+             | None -> "None")]
       body : (ast * location) array;
-          [@printer
-            fun fmt body_arr ->
-              let rec loop_body ?(i = 0) ?(l = []) () =
-                if i < Array.length body_arr then
-                  loop_body ~i:(i + 1)
-                    ~l:
-                      (Printf.sprintf "(%s, %s), "
-                         (show_ast (match body_arr.(i) with n, _ -> n))
-                         (show_location
-                            (match body_arr.(i) with _, l -> l))
-                      :: l)
-                    ()
-                else l |> List.rev |> String.concat ""
-              in
-              let body_s = loop_body () in
-              fprintf fmt "[%s]"
-                (String.length body_s - 2 |> String.sub body_s 0)]
+      [@printer
+        fun fmt body_arr ->
+          let rec loop_body ?(i = 0) ?(l = []) () =
+            if i < Array.length body_arr then
+              loop_body ~i:(i + 1)
+                ~l:
+                  (Printf.sprintf "(%s, %s), "
+                     (show_ast (match body_arr.(i) with n, _ -> n))
+                     (show_location
+                        (match body_arr.(i) with _, l -> l))
+                   :: l)
+                ()
+            else l |> List.rev |> String.concat ""
+          in
+          let body_s = loop_body () in
+          fprintf fmt "[%s]"
+            (String.length body_s - 2 |> String.sub body_s 0)]
       is_pub : bool;
-          [@printer
-            fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
+      [@printer
+        fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
       is_async : bool;
-          [@printer
-            fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
+      [@printer
+        fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
       is_test : bool;
-          [@printer
-            fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
+      [@printer
+        fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
       is_export : bool;
-          [@printer
-            fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
+      [@printer
+        fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
     }
   | Variable of {
       id : string;
@@ -470,11 +470,11 @@ and decl =
   | Constant of {
       id : string; [@printer fun fmt s -> fprintf fmt "%s" s]
       data_type : data_type;
-          [@printer fun fmt dt -> fprintf fmt "%s" (show_data_type dt)]
+      [@printer fun fmt dt -> fprintf fmt "%s" (show_data_type dt)]
       expr : expr; [@printer fun fmt e -> fprintf fmt "%s" (show_expr e)]
       is_pub : bool;
-          [@printer
-            fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
+      [@printer
+        fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
     }
   | Module of {
       id : string;
@@ -533,17 +533,17 @@ and decl =
   | Property of string * data_type * bool
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
   | Include of expr
-      [@printer fun fmt e -> fprintf fmt "include %s" (show_expr e)]
+               [@printer fun fmt e -> fprintf fmt "include %s" (show_expr e)]
   | Import of {
       import : string; [@printer fun fmt s -> fprintf fmt "%s" s]
       is_pub : bool;
-          [@printer
-            fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
+      [@printer
+        fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]
       _as : string option;
-          [@printer
-            fun fmt s_op ->
-              fprintf fmt "%s"
-                (match s_op with Some s -> s | None -> "None")]
+      [@printer
+        fun fmt s_op ->
+          fprintf fmt "%s"
+            (match s_op with Some s -> s | None -> "None")]
     }
 [@@deriving show]
 
@@ -578,3 +578,7 @@ and ast =
   | Stmt of stmt [@printer fun fmt s -> fprintf fmt "%s" (show_stmt s)]
   | Doc of string [@printer fun fmt -> fprintf fmt "%s"]
 [@@deriving show]
+
+let ast_to_expr = function
+  | Expr e -> e
+  | _ -> failwith "unreachable"
