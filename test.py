@@ -18,7 +18,7 @@ def is_lily_ext(file: str) -> bool:
 def run_command(cmd, **cmd_args):
     return subprocess.run(cmd, **cmd_args)
 
-def error_to_str(is_ok) -> str:
+def test_to_str(is_ok) -> str:
     if is_ok: return Fore.GREEN + "ok" + Style.RESET_ALL
     return Fore.RED + "failed" + Style.RESET_ALL
 
@@ -32,19 +32,19 @@ class Test:
     
     def __str__(self):
         s = ""
-        s += file + " ... " + error_to_str(self.is_ok)
+        s += file + " ... " + test_to_str(self.is_ok)
         return s
 
-def run_test(file: str) -> bool:
+def run_test(file: str, nb_tests: int, count: int) -> bool:
     is_ok = True
     command = run_command(["./_build/default/src/lily.exe", "run", file], capture_output=True)
 
     if command.returncode == 1:
         is_ok = False
-        print(Test(file, is_ok))
+        print(str(count) + "/" + str(nb_tests) + " test " + str(Test(file, is_ok)))
         return is_ok
     
-    print(Test(file, is_ok))
+    print(str(count) + "/" + str(nb_tests) + " test " + str(Test(file, is_ok)))
     return is_ok
 
 @dataclass
@@ -80,12 +80,16 @@ def get_files_in_dirs(dirs: List[str]) -> List[str]:
 if __name__ == "__main__":
     run_command("make")
     files = get_files_in_dirs(["tests/programs"])
+    nb_tests = len(list(filter(lambda f: is_lily_ext(f), files)))
     is_ok = []
     start = time.time()
-    
+
+    count = 1
     for file in files:
         if not is_lily_ext(file): continue
-        else: is_ok.append(run_test(file))
+        else:
+            is_ok.append(run_test(file, nb_tests, count))
+            count += 1
     
     end = time.time()
 
