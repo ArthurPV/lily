@@ -406,14 +406,11 @@ let rec check_expr scope node loc access =
         if i < Array.length access && !matched |> Bool.not then (
           let rec loop2 ?(j = 0) () =
             if j < Array.length access.(i) && !matched |> Bool.not then
-              if
-                Some s
-                =
-                match access.(i).(j) with
-                | `Identifier (_, s2, _, _) -> Some s2
-                | _ -> None
-              then matched := true (* TODO *)
-              else loop2 ~j:(j + 1) ()
+              match access.(i).(j) with
+              | `Identifier (_, s2, _, ast) when s = s2 ->
+                  matched := true;
+                  node := Expr (Identifier (s, ast))
+              | _ -> loop2 ~j:(j + 1) ()
           in
           loop2 ();
           loop ~i:(i + 1) ())
@@ -422,7 +419,7 @@ let rec check_expr scope node loc access =
       if !matched |> Bool.not then
         loc
         |> Parser.new_diagnostic scope.parser Diagnostic.Error
-             (Printf.sprintf "identifier not exists: `%s`" s)
+             (Printf.sprintf "identifier do not exists: `%s`" s)
         |> Diagnostic.emit_diagnostic;
       !node
   | Expr (IdentifierAccess (_, _)) | Expr (SelfAccess (_, _)) ->
@@ -537,13 +534,8 @@ let rec check_fun_scope scope args access nodes =
     if i < Array.length nodes then
       match match nodes.(i) with t, _ -> t with
       | Decl (Variable { id; expr; _ }) ->
-          (* let result = is_verify_scope_value (Expr expr) in if match
-             result with b, _ -> b then ( let new_access = ref access in
-             new_access := Array.append !new_access !access_in; let rec
-             iter_result ?(j = 0) () = if j < Array.length (match result with
-             _, r -> r) then ( check_expr (ref (match result with _, r ->
-             r.(j))) !new_access; iter_result ~j:(j + 1) ()) in iter_result
-             ()); *)
+          (* let new_expr = check_expr scope (expr_to_ast expr |> ref) (match
+             nodes.(i) with _, l -> l) !access_in in *)
           access_in :=
             Array.append !access_in
               [|

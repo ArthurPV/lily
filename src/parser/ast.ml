@@ -582,3 +582,5 @@ and ast =
 let ast_to_expr = function
   | Expr e -> e
   | _ -> failwith "unreachable"
+
+let expr_to_ast = function e -> Expr e
