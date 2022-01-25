@@ -533,9 +533,27 @@ let rec check_fun_scope scope args access nodes =
   let rec loop_body ?(i = 0) () =
     if i < Array.length nodes then
       match match nodes.(i) with t, _ -> t with
-      | Decl (Variable { id; expr; _ }) ->
-          (* let new_expr = check_expr scope (expr_to_ast expr |> ref) (match
-             nodes.(i) with _, l -> l) !access_in in *)
+      | Decl (Variable { id; data_type; expr; is_mut }) ->
+          let checked_expr =
+            check_expr scope (Expr expr |> ref)
+              (match nodes.(i) with _, l -> l)
+              !access_in
+          in
+          nodes.(i) <-
+            (match nodes.(i) with
+            | _, l ->
+                ( Decl
+                    (Variable
+                       {
+                         id;
+                         data_type;
+                         expr =
+                           (match checked_expr with
+                           | Expr e -> e
+                           | _ -> failwith "unreachable");
+                         is_mut;
+                       }),
+                  l ));
           access_in :=
             Array.append !access_in
               [|
