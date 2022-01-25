@@ -427,93 +427,93 @@ let rec check_expr scope node loc access =
   | Expr (FunctionCall (_, _)) -> failwith "todo"
   | Expr (RecordCall (_, _)) -> failwith "todo"
   | Expr (ClassCall (_, _)) -> failwith "todo"
-  | Expr (AnonymousFunction (_, _)) -> failwith "todo"
+  | Expr (AnonymousFunction (_, _)) -> failwith "topdo"
   | Expr (Negative l) ->
       Expr
-        (Negative (ast_to_expr (check_expr scope (Expr l |> ref) loc access)))
+        (Negative (check_expr scope (Expr l |> ref) loc access |> ast_to_expr))
   | Expr (Positive l) ->
       Expr
-        (Positive (ast_to_expr (check_expr scope (Expr l |> ref) loc access)))
+        (Positive (check_expr scope (Expr l |> ref) loc access |> ast_to_expr))
   | Expr (Not l) ->
-      Expr (Not (ast_to_expr (check_expr scope (Expr l |> ref) loc access)))
+      Expr (Not (check_expr scope (Expr l |> ref) loc access |> ast_to_expr))
   | Expr (Grouping l) ->
       Expr
-        (Grouping (ast_to_expr (check_expr scope (Expr l |> ref) loc access)))
+        (Grouping (check_expr scope (Expr l |> ref) loc access |> ast_to_expr))
   | Expr (Add (l, r)) ->
       Expr
         (Add
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Sub (l, r)) ->
       Expr
         (Sub
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Mul (l, r)) ->
       Expr
         (Mul
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Div (l, r)) ->
       Expr
         (Div
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Mod (l, r)) ->
       Expr
         (Mod
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Exp (l, r)) ->
       Expr
         (Exp
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Range (l, r)) ->
       Expr
         (Range
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Lt (l, r)) ->
       Expr
         (Lt
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Gt (l, r)) ->
       Expr
         (Gt
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Le (l, r)) ->
       Expr
         (Le
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Ge (l, r)) ->
       Expr
         (Ge
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (And (l, r)) ->
       Expr
         (And
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Or (l, r)) ->
       Expr
         (Or
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Eq (l, r)) ->
       Expr
         (Eq
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | Expr (Ne (l, r)) ->
       Expr
-        (Eq
-           ( ast_to_expr (check_expr scope (Expr l |> ref) loc access),
-             ast_to_expr (check_expr scope (Expr r |> ref) loc access) ))
+        (Ne
+           ( check_expr scope (Expr l |> ref) loc access |> ast_to_expr,
+             check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | _ -> failwith "unreachable"
 
 let rec check_fun_scope scope args access nodes =
