@@ -547,10 +547,7 @@ let rec check_fun_scope scope args access nodes =
                        {
                          id;
                          data_type;
-                         expr =
-                           (match checked_expr with
-                           | Expr e -> e
-                           | _ -> failwith "unreachable");
+                         expr = ast_to_expr checked_expr;
                          is_mut;
                        }),
                   l ));
@@ -567,9 +564,14 @@ let rec check_fun_scope scope args access nodes =
               |];
           loop_body ~i:(i + 1) ()
       | Stmt (If { if_; elif_; else_ }) ->
-          (* IF *)
-          (* check_expr (match if_ with e, _ -> e) !access_in; *)
           (* check condition *)
+          let checked_if_cond =
+            check_expr scope
+              (Expr (match if_ with e, _ -> e) |> ref)
+              (match nodes.(i) with _, l -> l)
+              (* TODO: add location on if expr *)
+              !access_in
+          in
           let access_in_ref = access_in in
           check_fun_scope scope [||] !access_in_ref
             (match if_ with _, b -> b);
@@ -589,16 +591,32 @@ let rec check_fun_scope scope args access nodes =
           (* ELSE *)
           check_fun_scope scope [||] !access_in_ref
             (match else_ with Some e -> e | None -> [||]);
+          nodes.(i) <-
+            (match nodes.(i) with
+            | _, l -> (Stmt (If { if_; elif_; else_ }), l));
           loop_body ~i:(i + 1) ()
-      | Stmt (While { cond; body }) -> loop_body ~i:(i + 1) ()
-      | Stmt (For { expr; body }) -> loop_body ~i:(i + 1) ()
+      | Stmt (While { cond; body }) ->
+          (* CHECK condition *)
+          let check_while_cond =
+            check_expr scope (Expr cond |> ref)
+              (match nodes.(i) with _, l -> l)
+              (* TODO: add location on expression *)
+              !access_in
+          in
+          let access_in_ref = access_in in
+          check_fun_scope scope args !access_in_ref body;
+          loop_body ~i:(i + 1) ()
+      | Stmt (For { expr; body }) -> loop_body ~i:(i + 1) () (* TODO *)
       | Stmt (Match { expr; case; else_case }) -> loop_body ~i:(i + 1) ()
       | Stmt (Return expr) ->
-          (* let result = is_verify_scope_value (Expr expr) in if match
-             result with b, _ -> b then ( let rec iter_result ?(j = 0) () =
-             if j < Array.length (match result with _, r -> r) then (*
-             check_expr (match result with _, r -> r.(j)) !access_in; *)
-             iter_result ~j:(j + 1) () in iter_result (); *)
+          let check_return_expr =
+            check_expr scope (Expr expr |> ref)
+              (match nodes.(i) with _, l -> l)
+              !access_in
+          in
+          nodes.(i) <-
+            (match nodes.(i) with
+            | _, l -> (Stmt (Return (check_return_expr |> ast_to_expr)), l));
           loop_body ~i:(i + 1) ()
       | _ -> failwith "unreachable"
   in
