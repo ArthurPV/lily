@@ -1,11 +1,11 @@
 open Lily_common.Cli
 
 type source = {
-    filename: string;
-    content: string;
-    mutable c: char;
-    len: int;
-    mutable pos: int;
+  filename : string;
+  content : string;
+  mutable c : char;
+  len : int;
+  mutable pos : int;
 }
 
 val new_source : string -> string -> source

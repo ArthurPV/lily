@@ -1,3 +1,1 @@
-type buffer = {
-  filename: string;
-}
+type buffer = { filename : string }

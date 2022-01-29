@@ -16,7 +16,6 @@ type parser = {
 }
 
 val new_parser : lexer -> parser
-
 val ast_of_nodes : parser -> idx:int -> ast
 val loc_of_nodes : parser -> idx:int -> location
 
@@ -58,7 +57,7 @@ val parse_anonymous_function : parser -> expr
 val parse_identifier_access : parser -> expr -> expr
 val parse_self_access : parser -> expr
 val parse_tuple : parser -> expr
-val parse_array : parser -> expr  
+val parse_array : parser -> expr
 val parse_variant : parser -> id:expr -> expr
 val parse_primary_expr : parser -> expr
 val parse_expr2 : parser -> expr
@@ -91,7 +90,10 @@ val parse_enum : parser -> string -> data_type array -> is_pub:bool -> decl
 val parse_object : parser -> is_pub:bool -> decl
 val parse_property : parser -> is_pub:bool -> decl
 val parse_body_class : parser -> string -> (ast * location) array
-val parse_class : parser -> string -> data_type array -> string array -> is_pub:bool -> decl
+
+val parse_class :
+  parser -> string -> data_type array -> string array -> is_pub:bool -> decl
+
 val parse_method : parser -> string -> is_pub:bool -> decl
 val parse_trait : parser -> string -> data_type array -> is_pub:bool -> decl
 val parse_import : parser -> is_pub:bool -> decl

@@ -13,3 +13,5 @@ end
 
 object Wolf => [Animal]: class =
 end
+
+fun main = end

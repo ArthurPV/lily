@@ -27,10 +27,13 @@ val is_bin : lexer -> bool
 val is_num : lexer -> bool
 
 val new_diagnostic :
-  lexer -> Diagnostic.diagnostic_kind -> string -> location -> Diagnostic.diagnostic
+  lexer ->
+  Diagnostic.diagnostic_kind ->
+  string ->
+  location ->
+  Diagnostic.diagnostic
 
 val get_escape : lexer -> c:char -> string
-
 val scan_comment_one : lexer -> token
 val scan_comment_multi : lexer -> token
 val scan_comment_doc : lexer -> token

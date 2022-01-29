@@ -10,3 +10,5 @@ object Point: class =
 	pub @get_x(self) => self.x end
 	pub @get_y(self) => self.y end
 end
+
+fun main = end

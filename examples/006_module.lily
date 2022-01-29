@@ -4,3 +4,5 @@ module calc =
 	fun mul(x, y) = x*y end
 	fun div(x, y) = x/y end
 end
+
+fun main = end

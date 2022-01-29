@@ -129,8 +129,7 @@ type token =
       [@printer fun fmt o -> fprintf fmt "%s" (show_operator o)]
   | Keyword of keyword
       [@printer fun fmt k -> fprintf fmt "%s" (show_keyword k)]
-  | Identifier of string
-      [@printer fun fmt s -> fprintf fmt "%s" s]
+  | Identifier of string [@printer fun fmt s -> fprintf fmt "%s" s]
   | Literal of literal
       [@printer fun fmt l -> fprintf fmt "%s" (show_literal l)]
   | Comment of comment

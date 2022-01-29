@@ -1,9 +1,3 @@
-type argument = {
-    argc: int;
-    argv: string array;
-}
+type argument = { argc : int; argv : string array }
 
-let new_argument = {
-    argc = Array.length Sys.argv;
-    argv = Sys.argv;
-}
+let new_argument = { argc = Array.length Sys.argv; argv = Sys.argv }

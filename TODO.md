@@ -1,3 +1,13 @@
+# Features
+
+- Dynamic scoping
+- Statically typed
+- Type inference
+- Type safety
+- Polymorphic type
+- Functional
+- Object oriented
+
 # Lily's Todo
 
 - [x] Syntax

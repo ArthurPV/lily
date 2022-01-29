@@ -10,3 +10,5 @@ type NameInt: enum @Uint8 =
 	Elodie |
 	Juliette |
 end
+
+fun main = end

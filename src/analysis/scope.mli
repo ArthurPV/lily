@@ -18,24 +18,25 @@ type scope_access =
   [ `Fun of from_access * string * argument array * location * ast option
   | (* function access => function call *)
     `Identifier of
-      from_access * string * location * ast option
+    from_access * string * location * ast option
   | (* identifier => (variable access, constant access module access, type
        access) *)
     `Type of
-      from_access * string * data_type array * location * ast option
+    from_access * string * data_type array * location * ast option
   | (* type access => alias, record, enum, class *)
     `Variant of
-      from_access * string array * location * variant
+    from_access * string array * location * variant
   | (* variant access => variant call *)
     `IdentifierAddr of
-      scope_access array
-      (* identifier addr => identifier access *) ]
+    scope_access array
+    (* identifier addr => identifier access *) ]
 
 type scope = {
   parser : parser;
   mutable global : scope_access array;
   mutable global_pub : scope_access array;
   mutable used : scope_access array;
+  mutable idx_of_main_fun : int;
 }
 
 val new_scope : parser -> scope
@@ -50,7 +51,9 @@ val is_contain_main_fun : scope -> bool * int
 (* check scope *)
 (* add reference of value in nodes *)
 val add_ref_on_node : expr -> ast option -> expr
-val check_expr : scope -> ast ref -> location -> scope_access array array -> ast
+
+val check_expr :
+  scope -> ast ref -> location -> scope_access array array -> ast
 
 val check_fun_scope :
   scope ->

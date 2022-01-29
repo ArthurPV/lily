@@ -16,7 +16,10 @@ type opcode =
   | LoadNil
   | LoadTrue
   | LoadFalse
-  | LoadConstant of Stdint.uint8 [@printer fun fmt n -> fprintf fmt "LoadConstant(%s)" (Stdint.Uint8.to_string n)]
+  | LoadConstant of Stdint.uint8
+      [@printer
+        fun fmt n ->
+          fprintf fmt "LoadConstant(%s)" (Stdint.Uint8.to_string n)]
   | LoadSelf
   | Closure
   | Push
@@ -35,7 +38,9 @@ type opcode =
   | And
   | Or
   | Not
-  | Return of Stdint.uint8 [@printer fun fmt n -> fprintf fmt "Return(%s)" (Stdint.Uint8.to_string n)]
+  | Return of Stdint.uint8
+      [@printer
+        fun fmt n -> fprintf fmt "Return(%s)" (Stdint.Uint8.to_string n)]
 [@@deriving show]
 
 val opcode_to_u8 : opcode -> Stdint.uint8

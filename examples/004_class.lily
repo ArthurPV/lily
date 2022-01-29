@@ -7,3 +7,5 @@ object Point: class =
 		self.y = y
 	end
 end
+
+fun main = end

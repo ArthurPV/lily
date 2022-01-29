@@ -3,3 +3,5 @@ fun is_zero(x) =
 end
 
 fun get(x) = return x end
+
+fun main = end

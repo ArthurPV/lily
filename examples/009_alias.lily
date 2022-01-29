@@ -1,3 +1,5 @@
 type IntInt: alias = (Int8, Int8)
 
 type IntString: alias = (Int8, String)
+
+fun main = end

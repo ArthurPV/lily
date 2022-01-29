@@ -26,5 +26,4 @@ let diagnostic_to_string dgn =
 [@@@warning "-27"]
 
 let get_line_error dgn = failwith "todo"
-
 let emit_diagnostic dgn = Printf.printf "%s" (diagnostic_to_string dgn)

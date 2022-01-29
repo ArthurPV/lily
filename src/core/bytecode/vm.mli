@@ -2,10 +2,7 @@ open Opcode
 open Compile
 
 module Chunk : sig
-  type t = {
-    code : opcode array;
-    constants : LIR.t array; (* change that *)
-  }
+  type t = { code : opcode array; constants : LIR.t array (* change that *) }
 
   val new_chunk : t
   val get_constant : t -> int -> LIR.t

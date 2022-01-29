@@ -3,3 +3,5 @@ A String := "Hello, World"
 (A String, B String) := ("Hello", "Hi")
 
 C Int8 := 1
+
+fun main = end

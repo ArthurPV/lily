@@ -1,25 +1,38 @@
 open Lily_parser.Ast
 open Lily_analysis.Scope
 
+(* Lily IR -> LIR *)
 module LIR = struct
   type t =
     | Int of Stdint.int64
         [@printer
           fun fmt i -> fprintf fmt "Int(%s)" (Stdint.Int64.to_string i)]
-    | Float of float
+    | Float of float [@printer fun fmt f -> fprintf fmt "Float(%f)" f]
     | Bool of bool
-    | String of string
-    | Char of char
-    | Unit
-    | Object
+        [@printer
+          fun fmt b -> fprintf fmt "Bool(%s)" (if b then "True" else "False")]
+    | String of string [@printer fun fmt s -> fprintf fmt "String(%s)" s]
+    | Char of char [@printer fun fmt c -> fprintf fmt "Char(%c)" c]
+    | Unit [@printer fun fmt _ -> fprintf fmt "Unit"]
+    | Object [@printer fun fmt _ -> fprintf fmt "Object"]
+    | Array of t array
+        [@printer
+          fun fmt arr ->
+            let rec loop ?(i = 0) ?(l = []) () =
+              if i < Array.length arr then
+                loop ~i:(i + 1) ~l:(show arr.(i) :: l) ()
+              else String.concat ", " l
+            in
+            fprintf fmt "Array(%s)" (loop ())]
+    | Tuple of t array
     | Fun of string * t array (* TODO: add args *)
     | Variable of string * t
     | Constant of string * t
     | Block of t option * t array
     | Call of t array * t
-    | Ret of t
-    | Undef
-    | Nil
+    | Ret of t [@printer fun fmt v -> fprintf fmt "Ret(%s)" (show v)]
+    | Undef [@printer fun fmt _ -> fprintf fmt "Undef"]
+    | Nil [@printer fun fmt _ -> fprintf fmt "Nil"]
   [@@deriving show]
 
   let to_int = function Int i -> i | _ -> failwith "unreachable"
@@ -33,6 +46,7 @@ type compiler = { scope : scope; nodes_value : LIR.t array }
 
 [@@@warning "-27"]
 
+(* EVAL expression *)
 let rec compile_expr node =
   match node with
   | Expr (Literal (Int i)) -> LIR.Int i
@@ -73,11 +87,18 @@ let rec compile_expr node =
   | Stmt (Return expr) -> LIR.Ret (compile_expr (Expr expr))
   | _ -> failwith "not implemented"
 
+let compile_decl node = assert false
 let compile_fun decl = assert false
 let compile_class = assert false
 
 let run compiler =
-  let rec loop ?(i = 0) () =
-    if i < Array.length compiler.scope.parser.nodes then loop ~i:(i + 1) ()
-  in
-  loop ()
+  let main = compiler.scope.parser.nodes.(compiler.scope.idx_of_main_fun) in
+  match match main with n, _ -> n with
+  | Decl (Fun { body; _ }) ->
+      let rec loop ?(i = 0) () =
+        if i < Array.length body then (
+          Printf.printf "Hello";
+          loop ~i:(i + 1) ())
+      in
+      loop ()
+  | _ -> failwith "unreachable"

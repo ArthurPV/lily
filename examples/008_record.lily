@@ -2,3 +2,5 @@ type Person: record =
 	name String
 	age Uint8
 end
+
+fun main = end
