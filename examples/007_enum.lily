@@ -4,11 +4,4 @@ type Name: enum =
 	Juliette |
 end
 
-** defining with @<int> if has no variant
-type NameInt: enum @Uint8 =
-	Lily |
-	Elodie |
-	Juliette |
-end
-
 fun main = end

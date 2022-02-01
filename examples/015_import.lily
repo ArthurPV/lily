@@ -1,0 +1,4 @@
+import "std.io"
+
+** import and store access in module
+import "std.fmt" as fmt
