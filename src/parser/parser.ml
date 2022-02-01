@@ -214,15 +214,10 @@ let rec run parser =
         |> Array.append parser.errors;
       next_token parser;
       run parser)
-  else
-    let rec show_errors ?(i = 0) () =
-      if i < Array.length parser.errors then (
-        Diagnostic.emit_diagnostic parser.errors.(i);
-        show_errors ~i:(i + 1) ())
-    in
-    show_errors ();
+  else (
+    parser.errors |> Array.iter (fun x -> Diagnostic.emit_diagnostic x);
 
-    if Array.length parser.errors > 0 then exit 1
+    if Array.length parser.errors > 0 then exit 1)
 
 and parse_assign parser loc =
   let node = parse_logical_or parser in
