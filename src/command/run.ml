@@ -2,6 +2,7 @@ module Cli = Lily_common.Cli
 module Lexer = Lily_lexer.Lexer
 module Source = Lily_lexer.Source
 module Token = Lily_lexer.Token
+module Ast = Lily_parser.Ast
 module Parser = Lily_parser.Parser
 module Scope = Lily_analysis.Scope
 
@@ -16,5 +17,8 @@ let run_bytecode filename =
       in
       Scope.run scope;
       Printf.printf "Compilation time in %f secs\n"
-        (Sys.time () -. compile_time)
+        (Sys.time () -. compile_time);
+      Array.iter
+        (fun n -> Printf.printf "%s\n" (Ast.show_ast n))
+        (scope.parser.nodes |> Array.map (fun (x, _) -> x))
   | Error err -> Cli.print_cli_error (Cli.show_cli_error_kind err)

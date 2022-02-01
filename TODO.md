@@ -450,3 +450,40 @@ type scope = {
 - [ ] VM
 - [ ] Chunk
 - [x] Opcode
+
+## Library organization
+
+- Core
+- Std
+
+### Core
+
+- Array
+- Bool
+- Char
+- Float32
+- Float64
+- Int8
+- Int16
+- Int32
+- Int64
+- String
+- Tuple
+- Uint8
+- Uint16
+- Uint32
+- Uint64
+- Unit
+
+### Std
+
+- Ascii
+- Char
+- Collections
+- Fmt
+- Fs
+- Os
+- Process
+- Test
+- Time
+- Vec

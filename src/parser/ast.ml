@@ -23,13 +23,11 @@ type data_type =
       fun fmt dt_arr ->
         let rec loop ?(i = 0) ?(dt = []) () =
           if i < Array.length dt_arr then
-            loop ~i:(i + 1)
-              ~dt:(Printf.sprintf "%s " (show_data_type dt_arr.(i)) :: dt)
-              ()
-          else dt |> List.rev |> String.concat ""
+            loop ~i:(i + 1) ~dt:(show_data_type dt_arr.(i) :: dt) ()
+          else dt |> List.rev |> String.concat ", "
         in
         let tp_s = loop () in
-        fprintf fmt "(%s)" (String.length tp_s - 2 |> String.sub tp_s 0)]
+        fprintf fmt "(%s)" tp_s]
   | `GroupingDataType of data_type
     [@printer fun fmt dt -> fprintf fmt "%s" (show_data_type dt)]
   | `Generics of string [@printer fun fmt s -> fprintf fmt "%s" s]
@@ -40,13 +38,11 @@ type data_type =
         | Some arr ->
             let rec loop ?(i = 0) ?(dt = []) () =
               if i < Array.length arr then
-                loop ~i:(i + 1)
-                  ~dt:(Printf.sprintf "%s, " (show_data_type arr.(i)) :: dt)
-                  ()
-              else dt |> List.rev |> String.concat ""
+                loop ~i:(i + 1) ~dt:(show_data_type arr.(i) :: dt) ()
+              else dt |> List.rev |> String.concat ", "
             in
             let dt = loop () in
-            fprintf fmt "%s[%s]" s (String.length dt - 2 |> String.sub dt 0)
+            fprintf fmt "%s[%s]" s dt
         | None -> fprintf fmt "%s" s] ]
 [@@deriving show]
 
@@ -134,15 +130,15 @@ and case = {
             if i < Array.length body_arr then
               loop ~i:(i + 1)
                 ~body:
-                  (Printf.sprintf "(%s, %s), "
+                  (Printf.sprintf "(%s, %s)"
                      (show_ast (match body_arr.(i) with a, _ -> a))
                      (show_location (match body_arr.(i) with _, l -> l))
                   :: body)
                 ()
-            else body |> List.rev |> String.concat ""
+            else body |> List.rev |> String.concat ", "
           in
           let s = loop () in
-          fprintf fmt "[%s]" (String.length s - 2 |> String.sub s 0)]
+          fprintf fmt "[%s]" s]
 }
 [@@deriving show]
 
@@ -250,27 +246,23 @@ and expr =
         fun fmt (e, tp_arr) ->
           let rec loop ?(i = 0) ?(l = []) () =
             if i < Array.length tp_arr then
-              loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s, " (show_ast tp_arr.(i)) :: l)
-                ()
-            else l |> List.rev |> String.concat ""
+              loop ~i:(i + 1) ~l:(show_ast tp_arr.(i) :: l) ()
+            else l |> List.rev |> String.concat ", "
           in
           let tp_s = loop () in
-          fprintf fmt "%s(%s)" (show_expr e)
-            (String.length tp_s - 2 |> String.sub tp_s 0)]
+          fprintf fmt "%s(%s)" (show_expr e) tp_s]
   | ClassCall of expr * ast array
       [@printer
         fun fmt (e, tp_arr) ->
           let rec loop ?(i = 0) ?(l = []) () =
             if i < Array.length tp_arr then
               loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s, " (show_ast tp_arr.(i)) :: l)
+                ~l:(Printf.sprintf "%s" (show_ast tp_arr.(i)) :: l)
                 ()
-            else l |> List.rev |> String.concat ""
+            else l |> List.rev |> String.concat ", "
           in
           let tp_s = loop () in
-          fprintf fmt "new %s(%s)" (show_expr e)
-            (String.length tp_s - 2 |> String.sub tp_s 0)]
+          fprintf fmt "new %s(%s)" (show_expr e) tp_s]
   | RecordCall of expr * (string * expr option) array
       [@printer
         fun fmt (e, tp_arr) ->
@@ -278,18 +270,17 @@ and expr =
             if i < Array.length tp_arr then
               loop ~i:(i + 1)
                 ~l:
-                  (Printf.sprintf "(%s, %s), "
+                  (Printf.sprintf "(%s, %s)"
                      (match tp_arr.(i) with s, _ -> s)
                      (match match tp_arr.(i) with _, e_op -> e_op with
                      | Some expr -> show_expr expr
                      | None -> "None")
                   :: l)
                 ()
-            else l |> List.rev |> String.concat ""
+            else l |> List.rev |> String.concat ", "
           in
           let tp_s = loop () in
-          fprintf fmt "%s { %s }" (show_expr e)
-            (String.length tp_s - 2 |> String.sub tp_s 0)]
+          fprintf fmt "%s { %s }" (show_expr e) tp_s]
   | Identifier of string * ast option
       [@printer
         fun fmt (s, a_op) ->
@@ -300,14 +291,11 @@ and expr =
         fun fmt (s_arr, a_op) ->
           let rec loop ?(i = 0) ?(l = []) () =
             if i < Array.length s_arr then
-              loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s." (show_expr s_arr.(i)) :: l)
-                ()
-            else l |> List.rev |> String.concat ""
+              loop ~i:(i + 1) ~l:(show_expr s_arr.(i) :: l) ()
+            else l |> List.rev |> String.concat "."
           in
           let s = loop () in
-          fprintf fmt "(%s, %s)"
-            (String.length s - 1 |> String.sub s 0)
+          fprintf fmt "(%s, %s)" s
             (match a_op with Some a -> show_ast a | None -> "None")]
   | SelfAccess of expr array * ast option
       [@printer
@@ -315,13 +303,12 @@ and expr =
           let rec loop ?(i = 0) ?(l = []) () =
             if i < Array.length s_arr then
               loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s." (show_expr s_arr.(i)) :: l)
+                ~l:(Printf.sprintf "%s" (show_expr s_arr.(i)) :: l)
                 ()
-            else l |> List.rev |> String.concat ""
+            else l |> List.rev |> String.concat "."
           in
           let s = loop () in
-          fprintf fmt "(self.%s, %s)"
-            (String.length s - 1 |> String.sub s 0)
+          fprintf fmt "(self.%s, %s)" s
             (match a_op with Some a -> show_ast a | None -> "None")]
   | AnonymousFunction of argument array * (ast * location) array
       [@printer
@@ -329,9 +316,9 @@ and expr =
           let rec loop_args ?(i = 0) ?(l = []) () =
             if i < Array.length args then
               loop_args ~i:(i + 1)
-                ~l:(Printf.sprintf "%s, " (show_argument args.(i)) :: l)
+                ~l:(Printf.sprintf "%s" (show_argument args.(i)) :: l)
                 ()
-            else l |> List.rev |> String.concat ""
+            else l |> List.rev |> String.concat ", "
           in
           let args_s = loop_args () in
           let rec loop_body ?(i = 0) ?(l = []) () =
@@ -346,9 +333,7 @@ and expr =
             else l |> List.rev |> String.concat ""
           in
           let body_s = loop_body () in
-          fprintf fmt "fun(%s) =>\n%send"
-            (String.length args_s - 2 |> String.sub args_s 0)
-            body_s]
+          fprintf fmt "fun(%s) =>\n%send" args_s body_s]
   | In of string * ast
       [@printer fun fmt (s, a) -> fprintf fmt "(%s, %s)" s (show_ast a)]
   (* TODO: replace string by expr *)
@@ -358,24 +343,24 @@ and expr =
           let rec loop ?(i = 0) ?(l = []) () =
             if i < Array.length arr then
               loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s, " (show_expr arr.(i)) :: l)
+                ~l:(Printf.sprintf "%s" (show_expr arr.(i)) :: l)
                 ()
-            else l |> List.rev |> String.concat ""
+            else l |> List.rev |> String.concat ", "
           in
           let s = loop () in
-          fprintf fmt "(%s)" (String.sub s 0 (String.length s - 2))]
+          fprintf fmt "(%s)" s]
   | Array of expr array
       [@printer
         fun fmt arr ->
           let rec loop ?(i = 0) ?(l = []) () =
             if i < Array.length arr then
               loop ~i:(i + 1)
-                ~l:(Printf.sprintf "%s, " (show_expr arr.(i)) :: l)
+                ~l:(Printf.sprintf "%s" (show_expr arr.(i)) :: l)
                 ()
-            else l |> List.rev |> String.concat ""
+            else l |> List.rev |> String.concat ", "
           in
           let s = loop () in
-          fprintf fmt "[%s]" (String.sub s 0 (String.length s - 2))]
+          fprintf fmt "[%s]" s]
   | Variant of expr * expr option
       [@printer
         fun fmt (s, e_op) ->
@@ -396,30 +381,24 @@ and decl =
               let rec loop_poly_args ?(i = 0) ?(l = []) () =
                 if i < Array.length poly_args_arr then
                   loop_poly_args ~i:(i + 1)
-                    ~l:
-                      (Printf.sprintf "%s, "
-                         (show_data_type poly_args_arr.(i))
-                      :: l)
+                    ~l:(show_data_type poly_args_arr.(i) :: l)
                     ()
-                else l |> List.rev |> String.concat ""
+                else l |> List.rev |> String.concat ", "
               in
               let poly_args = loop_poly_args () in
-              fprintf fmt "[%s]"
-                (String.length poly_args - 2 |> String.sub poly_args 0)]
+              fprintf fmt "[%s]" poly_args]
       args : argument array;
           [@printer
             fun fmt args_arr ->
               let rec loop_args ?(i = 0) ?(l = []) () =
                 if i < Array.length args_arr then
                   loop_args ~i:(i + 1)
-                    ~l:
-                      (Printf.sprintf "%s, " (show_argument args_arr.(i))
-                      :: l)
+                    ~l:(show_argument args_arr.(i) :: l)
                     ()
-                else l |> List.rev |> String.concat ""
+                else l |> List.rev |> String.concat ", "
               in
               let args = loop_args () in
-              fprintf fmt "[%s]" (String.length args - 2 |> String.sub args 0)]
+              fprintf fmt "[%s]" args]
       return_type : data_type option;
           [@printer
             fun fmt dt_op ->
@@ -434,17 +413,16 @@ and decl =
                 if i < Array.length body_arr then
                   loop_body ~i:(i + 1)
                     ~l:
-                      (Printf.sprintf "(%s, %s), "
+                      (Printf.sprintf "(%s, %s)"
                          (show_ast (match body_arr.(i) with n, _ -> n))
                          (show_location
                             (match body_arr.(i) with _, l -> l))
                       :: l)
                     ()
-                else l |> List.rev |> String.concat ""
+                else l |> List.rev |> String.concat ", "
               in
               let body_s = loop_body () in
-              fprintf fmt "[%s]"
-                (String.length body_s - 2 |> String.sub body_s 0)]
+              fprintf fmt "[%s]" body_s]
       is_pub : bool;
           [@printer
             fun fmt b -> fprintf fmt "%s" (if b then "True" else "False")]

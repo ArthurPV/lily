@@ -13,4 +13,12 @@ type buffer = {
 
 val new_buffer : buffer
 val is_same_filename : buffer -> string -> bool
-val push_buffer : buffer -> filename:string -> content:string -> token array -> ast array -> scope -> unit
+
+val push_buffer :
+  buffer ->
+  filename:string ->
+  content:string ->
+  token array ->
+  ast array ->
+  scope ->
+  unit

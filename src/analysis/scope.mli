@@ -13,6 +13,7 @@ type from_access =
   | `Class
   | `Trait
   | `None ]
+[@@deriving show]
 
 type scope_access =
   [ `Fun of from_access * string * argument array * location * ast option
