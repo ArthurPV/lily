@@ -38,3 +38,5 @@ object Point: class =
 	pub @get_y self => self.y end
 	pub @mul_x_by_y self => self.x * self.y end
 end
+
+fun main = end
