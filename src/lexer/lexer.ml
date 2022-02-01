@@ -516,12 +516,9 @@ let run lexer =
     in
     loop ();
 
-    let rec show_errors ?(i = 0) () =
-      if i < Array.length lexer.errors then (
-        Printf.printf "%s" (Diagnostic.diagnostic_to_string lexer.errors.(i));
-        show_errors ~i:(i + 1) ())
-    in
-    show_errors ();
+    lexer.errors
+    |> Array.iter (fun x ->
+           Printf.printf "%s" (Diagnostic.diagnostic_to_string x));
 
     if Array.length lexer.errors > 0 then exit 1)
   else
