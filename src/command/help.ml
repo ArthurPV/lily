@@ -20,4 +20,9 @@ Commands:
     version             Print lily's version
 |}
 
-let run_help = "Help"
+let run_help = {|Usage: lily run [options] <INPUT>
+
+Options:
+
+    -h, --help          Print run help
+|}

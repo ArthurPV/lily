@@ -3,6 +3,7 @@
 open Argument
 open Lily_common.Error
 open Lily_command.Run
+open Lily_command.Help
 
 module BuildOptions = struct
   type path = string
@@ -126,7 +127,7 @@ module RunOptions = struct
     get_error t;
     if i < Array.length t.op_arr then
       match t.op_arr.(i) with
-      | Help -> Printf.printf "Help"
+      | Help -> Printf.printf "%s" run_help
       | Input p -> run_bytecode p
       | None -> ()
       | _ -> failwith "unreachable"
