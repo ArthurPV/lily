@@ -1,0 +1,4 @@
+(library
+  (preprocess (pps ppx_deriving.show))
+  (libraries lily_command lily_common)
+  (name lily_cli))
