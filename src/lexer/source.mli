@@ -1,4 +1,4 @@
-open Lily_common.Cli
+open Lily_common.Error
 
 type source = {
   filename : string;

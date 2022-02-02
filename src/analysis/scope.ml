@@ -356,17 +356,11 @@ let rec get_global_access scope nodes ~p_pub =
           loop_pub ();
           loop ~access:!access_ref ~i:(i + 1) ()
       | Decl (Class { id; poly_args; is_pub; body; _ }) ->
-          (*let rec loop ?(i = 0) () =
-            if i < Array.length body then
-              let a =
-                match match body.(i) with n, _ -> n with
-                | Decl (Property (id, _, _)) -> failwith "todo"
-                | Decl (Method { id; _ }) -> failwith "todo"
-                | _ -> failwith "unreachable"
-              in
-              loop ~i:(i + 1) ()
-          in
-          let arr = loop () in*)
+          (*let rec loop ?(i = 0) () = if i < Array.length body then let a =
+            match match body.(i) with n, _ -> n with | Decl (Property (id, _,
+            _)) -> failwith "todo" | Decl (Method { id; _ }) -> failwith
+            "todo" | _ -> failwith "unreachable" in loop ~i:(i + 1) () in let
+            arr = loop () in*)
           loop ~i:(i + 1) ()
       | Doc _ -> loop ~i:(i + 1) ()
       | _ -> failwith "unreachable"
