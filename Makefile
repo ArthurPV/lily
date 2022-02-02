@@ -10,6 +10,8 @@ watch:
 format:
 	ocamlformat --inplace src/analysis/*.ml
 	ocamlformat --inplace src/analysis/*.mli
+	ocamlformat --inplace src/cli/*.ml
+	ocamlformat --inplace src/cli/*.mli
 	ocamlformat --inplace src/command/*.ml
 	# ocamlformat --inplace src/command/*.mli
 	ocamlformat --inplace src/core/bytecode/*.ml
