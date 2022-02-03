@@ -50,6 +50,8 @@ let run arg res =
       | Run -> RunOptions.parse |> RunOptions.run arg RunOptions.new_t
       | Test -> TestOptions.parse |> TestOptions.run arg TestOptions.new_t
       | To -> ToOptions.parse |> ToOptions.run arg ToOptions.new_t
-      | Version -> Printf.printf "lily v%s\n" lily_version)
+      | Version ->
+          Printf.printf "lily v%s on %s %s\n" lily_version (get_os ())
+            (get_arch ()))
   | Ok None -> ()
   | Error e -> e |> show_cli_error_kind |> print_cli_error
