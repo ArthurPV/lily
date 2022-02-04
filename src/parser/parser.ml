@@ -189,10 +189,8 @@ let rec run parser =
     let loc = Location.copy_location parser.current_location in
     try
       let node = parse_decl parser in
-
       Location.end_location loc parser.previous_location;
       parser.nodes <- [| (node, loc) |] |> Array.append parser.nodes;
-
       if parser.current_token <> Separator Eof then
         if
           parser.previous_location.line = parser.current_location.line
@@ -216,7 +214,6 @@ let rec run parser =
       run parser)
   else (
     parser.errors |> Array.iter (fun x -> Diagnostic.emit_diagnostic x);
-
     if Array.length parser.errors > 0 then exit 1)
 
 and parse_assign parser loc =
@@ -242,7 +239,6 @@ and parse_assign parser loc =
               loc )
           |> raise
     in
-
     match parser.previous_token with
     | Operator PlusEq -> AddAssign (id, parse_assign parser loc)
     | Operator MinusEq -> SubAssign (id, parse_assign parser loc)
@@ -350,7 +346,6 @@ and parse_grouping parser ~is_mut =
         loop ())
     in
     loop ();
-
     if peek_token parser ~n:(!i + 1) = Some (Operator ColonEq) then (
       let ids = parse_multiple parser in
       if match ids with _, cond -> cond then (
@@ -369,7 +364,6 @@ and parse_grouping parser ~is_mut =
             push_vars ~i:(i + 1) ())
         in
         push_vars ();
-
         if Array.length vars = 0 then vars.(0)
         else vars.(Array.length vars - 1))
       else
@@ -388,7 +382,6 @@ and parse_grouping parser ~is_mut =
             push_consts ~i:(i + 1) ())
         in
         push_consts ();
-
         if Array.length consts = 0 then consts.(0)
         else consts.(Array.length consts - 1))
     else
@@ -402,6 +395,7 @@ and parse_grouping parser ~is_mut =
       Expr expr
 
 and parse_function_call parser ~id =
+  next_token parser;
   next_token parser;
   let rec loop ?(args = []) () =
     if parser.current_token <> Separator RightParen then (
@@ -434,14 +428,12 @@ and parse_class_call parser =
             parser.current_location )
         |> raise
   in
-
   Diagnostic.EmitDiagnostic
     ( parser.current_token |> show_token
       |> Printf.sprintf "expected `(`, found `%s`",
       Diagnostic.Error,
       parser.current_location )
   |> expect_token parser (Separator LeftParen);
-
   match parse_function_call parser ~id with
   | FunctionCall (id, args) -> ClassCall (id, args)
   | _ -> failwith "unreachable"
@@ -461,7 +453,6 @@ and parse_record_call parser ~id =
                 parser.current_location )
             |> raise
       in
-
       if parser.current_token = Separator Comma then (
         next_token parser;
         loop ~args:((id, None) :: args) ())
@@ -499,7 +490,6 @@ and parse_anonymous_function parser =
       Diagnostic.Error,
       parser.current_location )
   |> expect_token parser (Separator FatArrow);
-
   let body = parse_body parser ~closure:(Some (Keyword End), None, None) in
   AnonymousFunction (args, body)
 
@@ -509,21 +499,41 @@ and parse_identifier_access parser f_id =
     match parser.current_token with
     | Identifier s when peek_token parser ~n:1 = Some (Separator LeftParen)
       ->
+        (* TODO: review the code to see if there are any other bugs. *)
         let access_ref = ref access in
-        access_ref := !access_ref @ [ Identifier (s, None) ];
-        parse_function_call parser
-          ~id:(IdentifierAccess (Array.of_list !access_ref, None))
+        access_ref := [ Identifier (s, None) ] @ !access_ref;
+        (* next_token parser; *)
+        let call =
+          parse_function_call parser
+            ~id:
+              (IdentifierAccess
+                 (!access_ref |> List.rev |> Array.of_list, None))
+        in
+        if parser.current_token = Separator Dot then (
+          next_token parser;
+          loop
+            ~access:
+              ((match call with
+               | FunctionCall (e, vals) ->
+                   FunctionCall (Identifier (s, None), vals)
+               | _ -> failwith "unreachable")
+              :: access)
+            ())
+        else call
     | Identifier s when peek_token parser ~n:1 = Some (Separator LeftBrace)
       ->
+        (* TODO: fix bug *)
         let access_ref = ref access in
         access_ref := !access_ref @ [ Identifier (s, None) ];
         parse_record_call parser
           ~id:(IdentifierAccess (Array.of_list !access_ref, None))
     | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) ->
+        (* TODO: fix bug *)
         next_token parser;
         next_token parser;
         loop ~access:(Identifier (s, None) :: access) ()
     | Identifier s ->
+        (* TODO: fix bug *)
         IdentifierAccess
           (access @ [ Identifier (s, None) ] |> Array.of_list, None)
     | _ ->
@@ -727,7 +737,6 @@ and parse_multiple parser =
             |> raise
       in
       next_token parser;
-
       if is_data_type parser ~n:0 then (
         let dt = parse_data_type parser in
         if parser.current_token <> Separator RightParen then
@@ -907,7 +916,6 @@ and parse_function parser ~is_pub ~is_async ~is_test ~is_export =
         |> raise
   in
   next_token parser;
-
   if Separator LeftHook |> matches parser then
     let poly_args = parse_polymorphic_argument parser in
     let args = parse_argument parser in
@@ -1040,9 +1048,7 @@ and parse_module parser ~is_pub ~is_test =
             parser.current_location )
         |> raise
   in
-
   next_token parser;
-
   Diagnostic.EmitDiagnostic
     ( parser.current_token |> show_token
       |> Printf.sprintf "expected `=`, found `%s`",
@@ -1077,7 +1083,6 @@ and parse_type parser ~is_pub =
         |> raise
   in
   next_token parser;
-
   let poly_args = ref [] in
   if parser.current_token = Separator LeftHook then (
     next_token parser;
@@ -1090,16 +1095,13 @@ and parse_type parser ~is_pub =
       parser.current_location )
   |> expect_token parser (Separator Colon);
   next_token parser;
-
   let kw = parser.previous_token in
-
   Diagnostic.EmitDiagnostic
     ( parser.current_token |> show_token
       |> Printf.sprintf "expected `=`, found `%s`",
       Diagnostic.Error,
       parser.current_location )
   |> expect_token parser (Operator Eq);
-
   match kw with
   | Keyword Alias ->
       !poly_args |> Array.of_list |> parse_alias parser id ~is_pub
@@ -1124,11 +1126,9 @@ and parse_record parser id poly_args ~is_pub =
     if parser.current_token <> Keyword End then (
       let loc = Location.copy_location parser.current_location in
       let is_field_pub = ref false in
-
       if parser.current_token = Keyword Pub then (
         is_field_pub := true;
         next_token parser);
-
       let id =
         match parser.current_token with
         | Identifier s when String.lowercase_ascii s = s -> s
@@ -1151,9 +1151,7 @@ and parse_record parser id poly_args ~is_pub =
                    Diagnostic.Error,
                    parser.current_location ))
       in
-
       next_token parser;
-
       let dt = parse_data_type parser in
       Location.end_location loc parser.current_location;
       loop
@@ -1193,16 +1191,13 @@ and parse_enum parser id poly_args ~is_pub =
                    Diagnostic.Error,
                    parser.current_location ))
       in
-
       next_token parser;
-
       if parser.current_token <> Keyword End then (
         if matches parser (Separator Bar) then (
           Location.end_location loc parser.current_location;
           loop ~variants:(({ id; data_type = None }, loc) :: variants) ())
         else
           let dt = parse_data_type parser in
-
           if parser.current_token <> Keyword End then
             Diagnostic.EmitDiagnostic
               ( parser.current_token |> show_token
@@ -1246,16 +1241,13 @@ and parse_object parser ~is_pub =
             parser.current_location )
         |> raise
   in
-
   next_token parser;
-
   let poly_args = ref [] in
   let inh = ref [] in
   if parser.current_token = Separator LeftHook then (
     next_token parser;
     poly_args :=
       !poly_args @ (parser |> parse_polymorphic_argument |> Array.to_list));
-
   if parser.current_token = Separator FatArrow then (
     next_token parser;
     Diagnostic.EmitDiagnostic
@@ -1278,7 +1270,6 @@ and parse_object parser ~is_pub =
               |> raise
         in
         next_token parser;
-
         if parser.current_token <> Separator RightHook then
           Diagnostic.EmitDiagnostic
             ( parser.current_token |> show_token
@@ -1292,7 +1283,6 @@ and parse_object parser ~is_pub =
         inh := l)
     in
     parse_inh ());
-
   Diagnostic.EmitDiagnostic
     ( parser.current_token |> show_token
       |> Printf.sprintf "expected `:`, found `%s`",
@@ -1300,16 +1290,13 @@ and parse_object parser ~is_pub =
       parser.current_location )
   |> expect_token parser (Separator Colon);
   next_token parser;
-
   let kw = parser.previous_token in
-
   Diagnostic.EmitDiagnostic
     ( parser.current_token |> show_token
       |> Printf.sprintf "expected `=`, found `%s`",
       Diagnostic.Error,
       parser.current_location )
   |> expect_token parser (Operator Eq);
-
   match kw with
   | Keyword Class ->
       !inh |> Array.of_list
@@ -1473,9 +1460,7 @@ and parse_import parser ~is_pub =
             parser.current_location )
         |> raise
   in
-
   next_token parser;
-
   if parser.current_token = Keyword As then (
     next_token parser;
     let as_id =
@@ -1765,10 +1750,8 @@ and parse_argument parser =
               |> raise
         in
         next_token parser;
-
         if is_data_type parser ~n:0 then
           let dt = parse_data_type parser in
-
           if matches parser (Operator Eq) then (
             Location.end_location loc parser.current_location;
             args :=
@@ -1807,7 +1790,6 @@ and parse_argument parser =
               Diagnostic.Error,
               parser.current_location )
           |> expect_token parser (Separator Comma);
-
         loop ())
     in
     loop ();
@@ -1835,7 +1817,6 @@ and parse_method_argument parser =
           Diagnostic.Error,
           parser.current_location )
       |> expect_token parser (Separator Comma);
-
       let args = ref [] in
       let rec loop () =
         if parser.current_token <> Separator RightParen then (
@@ -1859,10 +1840,8 @@ and parse_method_argument parser =
                 |> raise
           in
           next_token parser;
-
           if is_data_type parser ~n:0 then
             let dt = parse_data_type parser in
-
             if matches parser (Operator Eq) then
               args :=
                 !args
@@ -1903,7 +1882,6 @@ and parse_method_argument parser =
                     data_type_mth = None;
                   };
                 ];
-
           if parser.current_token <> Separator RightParen then
             Diagnostic.EmitDiagnostic
               ( parser.current_token |> show_token
@@ -1911,7 +1889,6 @@ and parse_method_argument parser =
                 Diagnostic.Error,
                 parser.current_location )
             |> expect_token parser (Separator Comma);
-
           loop ())
         else next_token parser
       in
@@ -1929,7 +1906,6 @@ and parse_method_argument parser =
 and parse_decl parser =
   let loc = Location.copy_location parser.current_location in
   next_token parser;
-
   let node =
     match parser.previous_token with
     | Identifier s when String.uppercase_ascii s = s ->
@@ -1995,7 +1971,6 @@ and parse_if parser =
     parse_body parser
       ~closure:(Some (Keyword Elif), Some (Keyword Else), Some (Keyword End))
   in
-
   if parser.previous_token = Keyword End then
     If { if_ = (cond, if_); elif_ = None; else_ = None }
   else if parser.previous_token = Keyword Elif then
@@ -2051,7 +2026,6 @@ and parse_match parser =
       Diagnostic.Error,
       parser.current_location )
   |> expect_token parser (Keyword Do);
-
   let rec loop ?(case = []) () =
     match parser.current_token with
     | Identifier s ->
