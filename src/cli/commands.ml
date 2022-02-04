@@ -2,6 +2,7 @@ open Argument
 open Options
 open Lily_common.Error
 open Lily_command.Help
+open Lily_command.Repl
 open Lily_command.Version
 
 type command =
@@ -46,7 +47,7 @@ let run arg res =
       | Help -> Printf.printf "%s" main_help
       | Init -> InitOptions.parse |> InitOptions.run arg InitOptions.new_t
       | New -> NewOptions.parse |> NewOptions.run arg NewOptions.new_t
-      | Repl -> Printf.printf "repl"
+      | Repl -> new_repl () |> run_repl
       | Run -> RunOptions.parse |> RunOptions.run arg RunOptions.new_t
       | Test -> TestOptions.parse |> TestOptions.run arg TestOptions.new_t
       | To -> ToOptions.parse |> ToOptions.run arg ToOptions.new_t

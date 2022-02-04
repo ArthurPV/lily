@@ -1,4 +1,5 @@
+(dirs c)
 (library
   (preprocess (pps ppx_deriving.show))
-  (libraries lily_analysis lily_common lily_lexer lily_parser lily_platform)
+  (libraries lily_analysis lily_common lily_lexer lily_parser lily_platform lily_repl)
   (name lily_command))
