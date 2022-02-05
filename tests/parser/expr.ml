@@ -219,17 +219,43 @@ end
 module CallExpr = struct
   let test () =
     let parser =
-      "A Int8 := add(3, 4)\n" |> Source.new_source "" |> Lexer.new_lexer
-      |> Parser.new_parser
+      "A Int8 := add(3, 4)\n\
+       B Person := Person { name = \"Theresa\", age = 20 }\n\
+       C Animal := new Animal(\"Tiger\")\n\
+       D Int8 := Calc.add(3,4)\n\
+       E Animal := new R.Animal(\"Tiger\")\n" |> Source.new_source ""
+      |> Lexer.new_lexer |> Parser.new_parser
     in
     Parser.run parser;
     let nodes = parser.nodes |> Array.map (fun (n, _) -> n) in
 
     Alcotest.(check string)
       "same string"
-      "Ast.Constant {id = A; data_type = `I8; expr = (add, None)(4, 3);\n\
+      "Ast.Constant {id = A; data_type = `I8; expr = (add, None)(3, 4);\n\
       \  is_pub = False}"
-      (show_ast nodes.(0))
+      (show_ast nodes.(0));
+
+    Alcotest.(check string)
+      "same string"
+      "Ast.Constant {id = B; data_type = `CustomType ((\"Person\", None));\n\
+      \  expr = (Person, None) { (name, Theresa), (age, 20) }; is_pub = \
+       False}"
+      (show_ast nodes.(1));
+
+    Alcotest.(check string)
+      "same string"
+      "Ast.Constant {id = C; data_type = `CustomType ((\"Animal\", None));\n  expr = new (Animal, None)(Tiger); is_pub = False}"
+      (show_ast nodes.(2));
+
+    Alcotest.(check string)
+      "same string"
+      "Ast.Constant {id = D; data_type = `I8;\n  expr = ((Calc, None).(add, None), None)(3, 4); is_pub = False}"
+      (show_ast nodes.(3));
+
+    Alcotest.(check string)
+      "same string"
+      "Ast.Constant {id = E; data_type = `CustomType ((\"Animal\", None));\n  expr = new ((R, None), None)(Tiger); is_pub = False}"
+      (show_ast nodes.(4))
 end
 
 module AnonymousFunExpr = struct
@@ -249,7 +275,7 @@ end
 
 module IdentifierExpr = struct
   let test () =
-        let parser =
+    let parser =
       "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
       |> Parser.new_parser
     in
@@ -263,8 +289,8 @@ module IdentifierExpr = struct
 end
 
 module TupleExpr = struct
-    let test () =
-        let parser =
+  let test () =
+    let parser =
       "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
       |> Parser.new_parser
     in
@@ -278,8 +304,8 @@ module TupleExpr = struct
 end
 
 module ArrayExpr = struct
-    let test () =
-        let parser =
+  let test () =
+    let parser =
       "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
       |> Parser.new_parser
     in
@@ -293,8 +319,8 @@ module ArrayExpr = struct
 end
 
 module VariantExpr = struct
-    let test () =
-        let parser =
+  let test () =
+    let parser =
       "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
       |> Parser.new_parser
     in
@@ -309,7 +335,7 @@ end
 
 module LiteralExpr = struct
   let test () =
-        let parser =
+    let parser =
       "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
       |> Parser.new_parser
     in
@@ -323,8 +349,8 @@ module LiteralExpr = struct
 end
 
 module OtherExpr = struct
-    let test () =
-        let parser =
+  let test () =
+    let parser =
       "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
       |> Parser.new_parser
     in

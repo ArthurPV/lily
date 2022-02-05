@@ -98,8 +98,7 @@ and argument = {
           match dt with
           | Some d -> fprintf fmt "%s" (show_data_type d)
           | None -> fprintf fmt "None"]
-  loc : location;
-      [@printer fun fmt loc -> fprintf fmt "%s" (show_location loc)]
+  loc : location; [@printer fun fmt _ -> fprintf fmt "Location"]
 }
 [@@deriving show]
 
@@ -413,10 +412,8 @@ and decl =
                 if i < Array.length body_arr then
                   loop_body ~i:(i + 1)
                     ~l:
-                      (Printf.sprintf "(%s, %s)"
+                      (Printf.sprintf "%s"
                          (show_ast (match body_arr.(i) with n, _ -> n))
-                         (show_location
-                            (match body_arr.(i) with _, l -> l))
                       :: l)
                     ()
                 else l |> List.rev |> String.concat ", "

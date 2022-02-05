@@ -119,6 +119,8 @@ let parse_data_type parser =
   | Keyword Bool -> `Bool
   | Keyword Unit -> `Unit
   | Keyword Self -> `SelfArg
+  | Identifier s when String.lowercase_ascii s = s -> `Generics s
+  | Identifier s -> `CustomType (s, None) (* TODO: add type argument *)
   | _ ->
       Diagnostic.EmitDiagnostic
         ( show_token parser.previous_token
@@ -173,6 +175,7 @@ let is_data_type parser ~n =
   | Some (Keyword Isize)
   | Some (Keyword Bool)
   | Some (Keyword Unit)
+  | Some (Identifier _)
   | Some (Keyword Self) ->
       true
   | _ -> false
@@ -396,7 +399,7 @@ and parse_grouping parser ~is_mut =
 
 and parse_function_call parser ~id =
   next_token parser;
-  next_token parser;
+  (* next_token parser; *)
   let rec loop ?(args = []) () =
     if parser.current_token <> Separator RightParen then (
       let expr = Expr (parse_expr2 parser) in
@@ -410,7 +413,7 @@ and parse_function_call parser ~id =
       loop ~args:(expr :: args) ())
     else (
       next_token parser;
-      FunctionCall (id, Array.of_list args))
+      FunctionCall (id, args |> List.rev |> Array.of_list))
   in
   loop ()
 
@@ -418,8 +421,30 @@ and parse_class_call parser =
   let id =
     match parser.current_token with
     | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) ->
-        parse_identifier_access parser (Identifier (s, None))
-    | Identifier s -> Identifier (s, None)
+        let rec loop ?(l = []) () =
+          if parser.current_token <> Separator LeftParen then (
+            let id =
+              match parser.current_token with
+              | Identifier s -> Identifier (s, None)
+              | _ ->
+                  Diagnostic.EmitDiagnostic
+                    ( parser.current_token |> show_token
+                      |> Printf.sprintf "expected identifier, found `%s`",
+                      Diagnostic.Error,
+                      parser.current_location )
+                  |> raise
+            in
+            next_token parser;
+            if parser.current_token = Separator Dot then (
+              next_token parser;
+              loop ~l:(id :: l) ())
+            else IdentifierAccess (l |> List.rev |> Array.of_list, None))
+          else IdentifierAccess (l |> List.rev |> Array.of_list, None)
+        in
+        loop ()
+    | Identifier s ->
+        next_token parser;
+        Identifier (s, None)
     | _ ->
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token
@@ -428,12 +453,13 @@ and parse_class_call parser =
             parser.current_location )
         |> raise
   in
-  Diagnostic.EmitDiagnostic
-    ( parser.current_token |> show_token
-      |> Printf.sprintf "expected `(`, found `%s`",
-      Diagnostic.Error,
-      parser.current_location )
-  |> expect_token parser (Separator LeftParen);
+  if parser.current_token <> Separator LeftParen then
+    Diagnostic.EmitDiagnostic
+      ( parser.current_token |> show_token
+        |> Printf.sprintf "expected `(`, found `%s`",
+        Diagnostic.Error,
+        parser.current_location )
+    |> raise;
   match parse_function_call parser ~id with
   | FunctionCall (id, args) -> ClassCall (id, args)
   | _ -> failwith "unreachable"
@@ -441,7 +467,7 @@ and parse_class_call parser =
 and parse_record_call parser ~id =
   next_token parser;
   let rec loop ?(args = []) () =
-    if parser.current_token <> Separator RightBrace then
+    if parser.current_token <> Separator RightBrace then (
       let id =
         match parser.current_token with
         | Identifier s -> s
@@ -453,6 +479,7 @@ and parse_record_call parser ~id =
                 parser.current_location )
             |> raise
       in
+      next_token parser;
       if parser.current_token = Separator Comma then (
         next_token parser;
         loop ~args:((id, None) :: args) ())
@@ -475,10 +502,10 @@ and parse_record_call parser ~id =
             |> Printf.sprintf "unexpected expression: %s",
             Diagnostic.Error,
             parser.current_location )
-        |> raise
+        |> raise)
     else (
       next_token parser;
-      RecordCall (id, Array.of_list args))
+      RecordCall (id, args |> List.rev |> Array.of_list))
   in
   loop ()
 
@@ -502,7 +529,7 @@ and parse_identifier_access parser f_id =
         (* TODO: review the code to see if there are any other bugs. *)
         let access_ref = ref access in
         access_ref := [ Identifier (s, None) ] @ !access_ref;
-        (* next_token parser; *)
+        next_token parser;
         let call =
           parse_function_call parser
             ~id:
@@ -511,31 +538,34 @@ and parse_identifier_access parser f_id =
         in
         if parser.current_token = Separator Dot then (
           next_token parser;
-          loop
-            ~access:
-              ((match call with
-               | FunctionCall (e, vals) ->
-                   FunctionCall (Identifier (s, None), vals)
-               | _ -> failwith "unreachable")
-              :: access)
-            ())
+          loop ~access:(call :: access) ()
+          (*loop ~access: ((match call with | FunctionCall (e, vals) ->
+            FunctionCall (Identifier (s, None), vals) | _ -> failwith
+            "unreachable") :: access) ()*))
         else call
     | Identifier s when peek_token parser ~n:1 = Some (Separator LeftBrace)
       ->
-        (* TODO: fix bug *)
         let access_ref = ref access in
-        access_ref := !access_ref @ [ Identifier (s, None) ];
-        parse_record_call parser
-          ~id:(IdentifierAccess (Array.of_list !access_ref, None))
+        access_ref := [ Identifier (s, None) ] @ !access_ref;
+        next_token parser;
+        let call =
+          parse_record_call parser
+            ~id:
+              (IdentifierAccess
+                 (!access_ref |> List.rev |> Array.of_list, None))
+        in
+        if parser.current_token = Separator Dot then (
+          next_token parser;
+          loop ~access:(call :: access) ())
+        else call
     | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) ->
-        (* TODO: fix bug *)
         next_token parser;
         next_token parser;
         loop ~access:(Identifier (s, None) :: access) ()
     | Identifier s ->
-        (* TODO: fix bug *)
         IdentifierAccess
-          (access @ [ Identifier (s, None) ] |> Array.of_list, None)
+          ( access @ [ Identifier (s, None) ] |> List.rev |> Array.of_list,
+            None )
     | _ ->
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token
@@ -546,6 +576,7 @@ and parse_identifier_access parser f_id =
   in
   loop ()
 
+(* TODO: review this function *)
 and parse_self_access parser =
   match parser.current_token with
   | Identifier s when peek_token parser ~n:1 = Some (Separator LeftParen) ->
