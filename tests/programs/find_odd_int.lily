@@ -1,4 +1,27 @@
-fun find_odd_int =
+import "std.list" as List
+import "std.io" as Io
+
+(* fun find_odd_int_style_1(seq) =
+  for n in seq do
+    if seq.filter(fun (x) => x == n end).len() % 2 != 0 do 
+      return n
+    end
+  end
+end *)
+
+fun find_odd_int_style_2 (seq, i) =
+  if i < seq.len() do
+    n := seq.filter(fun (x) => x == seq[i] end).len() % 2 
+    if n == 0 do
+      find_odd_int_style_2(seq, i+1)
+    else
+      return n
+    end
+  end
 end
 
-fun main = end
+fun main =
+  l := new List.List(1, 2, 3, 4, 5)
+  Io.println("{}", find_odd_int_style_1(l))
+  Io.println("{}", find_odd_int_style_2(l))
+end
