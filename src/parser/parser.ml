@@ -360,8 +360,7 @@ and parse_grouping parser ~is_mut =
         let copy_loc = Location.copy_location parser.current_location in
         (* same location for all vars *)
         let rec push_vars ?(i = 0) () =
-          if i < Array.length vars - 2 then (
-            (* NOTE: not sure for -2 *)
+          if i < Array.length vars - 1 then (
             parser.nodes <-
               Array.append parser.nodes [| (vars.(i), copy_loc) |];
             push_vars ~i:(i + 1) ())
@@ -378,8 +377,7 @@ and parse_grouping parser ~is_mut =
         let copy_loc = Location.copy_location parser.current_location in
         (* same location for all consts *)
         let rec push_consts ?(i = 0) () =
-          if i < Array.length consts - 2 then (
-            (* NOTE: not sure for -2 *)
+          if i < Array.length consts - 1 then (
             parser.nodes <-
               Array.append parser.nodes [| (consts.(i), copy_loc) |];
             push_consts ~i:(i + 1) ())
@@ -612,7 +610,7 @@ and parse_tuple parser =
       loop ~tuple:(expr :: tuple) ())
     else (
       next_token parser;
-      Tuple (Array.of_list tuple))
+      Tuple (tuple |> List.rev |> Array.of_list))
   in
   loop ()
 
@@ -630,7 +628,7 @@ and parse_array parser =
       loop ~arr:(expr :: arr) ())
     else (
       next_token parser;
-      Tuple (Array.of_list arr))
+      Tuple (arr |> List.rev |> Array.of_list))
   in
   loop ()
 
@@ -776,7 +774,7 @@ and parse_multiple parser =
               |> Printf.sprintf "expected `,`, found `%s`",
               Diagnostic.Error,
               parser.current_location )
-          |> raise;
+          |> expect_token parser (Separator Comma);
         loop ~ids:((id, Some dt) :: ids) ())
       else (
         if parser.current_token <> Separator RightParen then
@@ -785,7 +783,7 @@ and parse_multiple parser =
               |> Printf.sprintf "expected `,`, found `%s`",
               Diagnostic.Error,
               parser.current_location )
-          |> raise;
+          |> expect_token parser (Separator Comma);
         loop ~ids:((id, None) :: ids) ()))
     else (
       if parser.current_token <> Separator RightParen then
@@ -794,7 +792,7 @@ and parse_multiple parser =
             |> Printf.sprintf "expected `)`, found `%s`",
             Diagnostic.Error,
             parser.current_location )
-        |> raise;
+        |> expect_token parser (Separator RightParen);
       next_token parser;
       (Array.of_list ids, is_lower))
   in
@@ -827,7 +825,7 @@ and parse_multiple_variable parser ~ids ~is_mut =
             |> Printf.sprintf "expected `,`, found `%s`",
             Diagnostic.Error,
             parser.current_location )
-        |> raise;
+        |> expect_token parser (Separator Comma);
       loop ~i:(i + 1)
         ~vars:
           (Decl
@@ -847,7 +845,7 @@ and parse_multiple_variable parser ~ids ~is_mut =
             |> Printf.sprintf "expected `)`, found `%s`",
             Diagnostic.Error,
             parser.current_location )
-        |> raise;
+        |> expect_token parser (Separator RightParen);
       if List.length vars = 0 then
         (Location.end_location loc parser.current_location;
          loc
@@ -885,7 +883,7 @@ and parse_multiple_constant parser ~ids ~is_pub =
             |> Printf.sprintf "expected `,`, found `%s`",
             Diagnostic.Error,
             parser.current_location )
-        |> raise;
+        |> expect_token parser (Separator Comma);
       loop ~i:(i + 1)
         ~consts:
           (Decl
@@ -915,7 +913,7 @@ and parse_multiple_constant parser ~ids ~is_pub =
             |> Printf.sprintf "expected `)`, found `%s`",
             Diagnostic.Error,
             parser.current_location )
-        |> raise;
+        |> expect_token parser (Separator RightParen);
       if List.length consts = 0 then (
         Location.end_location loc parser.current_location;
         loc
@@ -1666,6 +1664,18 @@ and parse_body parser ~closure =
         | Keyword Await ->
             next_token parser;
             Stmt (parse_await parser)
+        | Separator LeftParen -> (
+            next_token parser;
+            match parse_grouping parser ~is_mut:false with
+            | Decl (Variable { id; data_type; expr; is_mut }) ->
+                Decl (Variable { id; data_type; expr; is_mut })
+            | _ ->
+                Location.end_location loc parser.current_location;
+                Diagnostic.EmitDiagnostic
+                  ( "unexpected declaration in this scope",
+                    Diagnostic.Error,
+                    loc )
+                |> raise)
         | Keyword Mut ->
             next_token parser;
             let id =
