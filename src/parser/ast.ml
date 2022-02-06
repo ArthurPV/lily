@@ -18,6 +18,8 @@ type data_type =
   | `Bool [@printer fun fmt _ -> fprintf fmt "Bool"]
   | `Unit [@printer fun fmt _ -> fprintf fmt "Unit"]
   | `SelfArg [@printer fun fmt _ -> fprintf fmt "self"]
+  | `Array of data_type
+    [@printer fun fmt dt -> fprintf fmt "%s" (show_data_type dt)]
   | `Tuple of data_type array
     [@printer
       fun fmt dt_arr ->
@@ -324,9 +326,8 @@ and expr =
             if i < Array.length body then
               loop_body ~i:(i + 1)
                 ~l:
-                  (Printf.sprintf "(%s, %s)\n"
+                  (Printf.sprintf "%s\n"
                      (show_ast (match body.(i) with a, _ -> a))
-                     (show_location (match body.(i) with _, l -> l))
                   :: l)
                 ()
             else l |> List.rev |> String.concat ""

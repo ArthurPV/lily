@@ -99,7 +99,7 @@ let peek_token parser ~n =
     Some (Lexer.tok_of_tokens parser.lexer ~idx:(parser.pos + n))
   else None
 
-let parse_data_type parser =
+let rec parse_data_type parser =
   next_token parser;
   match parser.previous_token with
   | Keyword Int8 -> `I8
@@ -121,6 +121,23 @@ let parse_data_type parser =
   | Keyword Self -> `SelfArg
   | Identifier s when String.lowercase_ascii s = s -> `Generics s
   | Identifier s -> `CustomType (s, None) (* TODO: add type argument *)
+  | Separator LeftHook ->
+      if is_data_type parser ~n:0 then (
+        let dt = parse_data_type parser in
+        Diagnostic.EmitDiagnostic
+          ( show_token parser.current_token
+            |> Printf.sprintf "expected `]`, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> expect_token parser (Separator RightHook);
+        `Array dt)
+      else
+        Diagnostic.EmitDiagnostic
+          ( show_token parser.current_token
+            |> Printf.sprintf "expected data type, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
   | _ ->
       Diagnostic.EmitDiagnostic
         ( show_token parser.previous_token
@@ -129,7 +146,7 @@ let parse_data_type parser =
           parser.previous_location )
       |> raise
 
-let is_binop parser ~n =
+and is_binop parser ~n =
   match peek_token ~n parser with
   | Some (Operator Plus)
   | Some (Operator Minus)
@@ -157,7 +174,7 @@ let is_binop parser ~n =
       true
   | _ -> false
 
-let is_data_type parser ~n =
+and is_data_type parser ~n =
   match peek_token ~n parser with
   | Some (Keyword Int8)
   | Some (Keyword Int16)
@@ -178,6 +195,7 @@ let is_data_type parser ~n =
   | Some (Identifier _)
   | Some (Keyword Self) ->
       true
+  | Some (Separator LeftHook) when is_data_type parser ~n:(n+1) -> true
   | _ -> false
 
 [@@@warning "-27"]
@@ -628,7 +646,7 @@ and parse_array parser =
       loop ~arr:(expr :: arr) ())
     else (
       next_token parser;
-      Tuple (arr |> List.rev |> Array.of_list))
+      Array (arr |> List.rev |> Array.of_list))
   in
   loop ()
 
