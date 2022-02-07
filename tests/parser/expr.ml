@@ -244,39 +244,60 @@ module CallExpr = struct
 
     Alcotest.(check string)
       "same string"
-      "Ast.Constant {id = C; data_type = `CustomType ((\"Animal\", None));\n  expr = new (Animal, None)(Tiger); is_pub = False}"
+      "Ast.Constant {id = C; data_type = `CustomType ((\"Animal\", None));\n\
+      \  expr = new (Animal, None)(Tiger); is_pub = False}"
       (show_ast nodes.(2));
 
     Alcotest.(check string)
       "same string"
-      "Ast.Constant {id = D; data_type = `I8;\n  expr = ((Calc, None).(add, None), None)(3, 4); is_pub = False}"
+      "Ast.Constant {id = D; data_type = `I8;\n\
+      \  expr = ((Calc, None).(add, None), None)(3, 4); is_pub = False}"
       (show_ast nodes.(3));
 
     Alcotest.(check string)
       "same string"
-      "Ast.Constant {id = E; data_type = `CustomType ((\"Animal\", None));\n  expr = new ((R, None), None)(Tiger); is_pub = False}"
+      "Ast.Constant {id = E; data_type = `CustomType ((\"Animal\", None));\n\
+      \  expr = new ((R, None), None)(Tiger); is_pub = False}"
       (show_ast nodes.(4))
 end
 
 module AnonymousFunExpr = struct
   let test () =
     let parser =
-      "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
-      |> Parser.new_parser
+      "A Int8 := fun (x, y) => x+y end\nB Int8 := fun (x=3) => x end\n"
+      |> Source.new_source "" |> Lexer.new_lexer |> Parser.new_parser
     in
     Parser.run parser;
     let nodes = parser.nodes |> Array.map (fun (n, _) -> n) in
 
     Alcotest.(check string)
       "same string"
-      "Ast.Constant {id = A; data_type = `I8; expr = 3; is_pub = False}"
-      (show_ast nodes.(0))
+      "Ast.Constant {id = A; data_type = `I8;\n\
+      \  expr =\n\
+      \  fun({ Ast.id = x; kind = Normal; data_type = None; loc = Location \
+       }, { Ast.id = y; kind = Normal; data_type = None; loc = Location }) \
+       =>\n\
+       (x, None) + (y, None)\n\
+       end;\n\
+      \  is_pub = False}"
+      (show_ast nodes.(0));
+
+    Alcotest.(check string)
+      "same string"
+      "Ast.Constant {id = B; data_type = `I8;\n\
+      \  expr =\n\
+      \  fun({ Ast.id = x; kind = Default: 3; data_type = None; loc = \
+       Location }) =>\n\
+       (x, None)\n\
+       end;\n\
+      \  is_pub = False}"
+      (show_ast nodes.(1))
 end
 
 module IdentifierExpr = struct
   let test () =
     let parser =
-      "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
+      "A Int8 := a\n" |> Source.new_source "" |> Lexer.new_lexer
       |> Parser.new_parser
     in
     Parser.run parser;
@@ -284,29 +305,45 @@ module IdentifierExpr = struct
 
     Alcotest.(check string)
       "same string"
-      "Ast.Constant {id = A; data_type = `I8; expr = 3; is_pub = False}"
+      "Ast.Constant {id = A; data_type = `I8; expr = (a, None); is_pub = \
+       False}"
       (show_ast nodes.(0))
 end
 
 module TupleExpr = struct
   let test () =
     let parser =
-      "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
-      |> Parser.new_parser
+      "A Int8 := (1, False, 2, True)\n\
+      \       (B Uint8, C Uint8, D Uint8) := (1, 2, 3)\n"
+      |> Source.new_source "" |> Lexer.new_lexer |> Parser.new_parser
     in
     Parser.run parser;
     let nodes = parser.nodes |> Array.map (fun (n, _) -> n) in
 
     Alcotest.(check string)
       "same string"
-      "Ast.Constant {id = A; data_type = `I8; expr = 3; is_pub = False}"
-      (show_ast nodes.(0))
+      "Ast.Constant {id = A; data_type = `I8; expr = (1, False, 2, True);\n\
+      \  is_pub = False}"
+      (show_ast nodes.(0));
+
+    Alcotest.(check string)
+      "same string"
+      "Ast.Constant {id = B; data_type = `U8; expr = 3; is_pub = False}"
+      (show_ast nodes.(1));
+    Alcotest.(check string)
+      "same string"
+      "Ast.Constant {id = C; data_type = `U8; expr = 2; is_pub = False}"
+      (show_ast nodes.(2));
+    Alcotest.(check string)
+      "same string"
+      "Ast.Constant {id = D; data_type = `U8; expr = 1; is_pub = False}"
+      (show_ast nodes.(3))
 end
 
 module ArrayExpr = struct
   let test () =
     let parser =
-      "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
+      "A [Int8] := [1, 2, 3]\n" |> Source.new_source "" |> Lexer.new_lexer
       |> Parser.new_parser
     in
     Parser.run parser;
@@ -314,23 +351,31 @@ module ArrayExpr = struct
 
     Alcotest.(check string)
       "same string"
-      "Ast.Constant {id = A; data_type = `I8; expr = 3; is_pub = False}"
+      "Ast.Constant {id = A; data_type = `Array (`I8); expr = [1, 2, 3];\n\
+      \  is_pub = False}"
       (show_ast nodes.(0))
 end
 
 module VariantExpr = struct
   let test () =
     let parser =
-      "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
-      |> Parser.new_parser
+      "A Letter := Letter.A(1)\nB Person := Person.Age(2)\n"
+      |> Source.new_source "" |> Lexer.new_lexer |> Parser.new_parser
     in
     Parser.run parser;
     let nodes = parser.nodes |> Array.map (fun (n, _) -> n) in
 
     Alcotest.(check string)
       "same string"
-      "Ast.Constant {id = A; data_type = `I8; expr = 3; is_pub = False}"
-      (show_ast nodes.(0))
+      "Ast.Constant {id = A; data_type = `CustomType ((\"Letter\", None));\n\
+      \  expr = ((Letter, None).(A, None), None)(1); is_pub = False}"
+      (show_ast nodes.(0));
+
+    Alcotest.(check string)
+      "same string"
+      "Ast.Constant {id = B; data_type = `CustomType ((\"Person\", None));\n\
+      \  expr = ((Person, None).(Age, None), None)(2); is_pub = False}"
+      (show_ast nodes.(1))
 end
 
 module LiteralExpr = struct
