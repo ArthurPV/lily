@@ -455,6 +455,15 @@ and decl =
   | Module of {
       id : string;
       body : (ast * location) array;
+          [@printer
+            fun fmt arr ->
+              let arr_ast = arr |> Array.map (fun (x, _) -> x) in
+              let rec loop ?(i = 0) ?(l = []) () =
+                if i < Array.length arr_ast then
+                  loop ~i:(i + 1) ~l:(show_ast arr_ast.(i) :: l) ()
+                else l |> List.rev |> String.concat ", "
+              in
+              fprintf fmt "[%s]" (loop ())]
       is_pub : bool;
       is_test : bool;
     }

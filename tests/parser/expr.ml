@@ -396,7 +396,7 @@ end
 module OtherExpr = struct
   let test () =
     let parser =
-      "A Int8 := 3\n" |> Source.new_source "" |> Lexer.new_lexer
+      "A _ := nil\nB _ := undef\n" |> Source.new_source "" |> Lexer.new_lexer
       |> Parser.new_parser
     in
     Parser.run parser;
@@ -404,6 +404,13 @@ module OtherExpr = struct
 
     Alcotest.(check string)
       "same string"
-      "Ast.Constant {id = A; data_type = `I8; expr = 3; is_pub = False}"
-      (show_ast nodes.(0))
+      "Ast.Constant {id = A; data_type = `Generics (\"_\"); expr = nil; \
+       is_pub = False}"
+      (show_ast nodes.(0));
+
+    Alcotest.(check string)
+      "same string"
+      "Ast.Constant {id = B; data_type = `Generics (\"_\"); expr = undef;\n\
+      \  is_pub = False}"
+      (show_ast nodes.(1))
 end

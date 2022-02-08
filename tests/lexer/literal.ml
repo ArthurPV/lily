@@ -9,7 +9,7 @@ let test () =
   in
   Lexer.run lexer;
   let tokens = lexer.tokens |> Array.map (fun (t, _) -> t) in
-  
+
   Alcotest.(check string) "same token" "\"Hello\"" (show_token tokens.(0));
   Alcotest.(check string) "same token" "\'c\'" (show_token tokens.(1));
   Alcotest.(check string) "same token" "3.3333" (show_token tokens.(2));

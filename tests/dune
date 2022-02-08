@@ -1,1 +1,1 @@
-(dirs analysis lexer parser)
+(dirs analysis lexer parser vm)
