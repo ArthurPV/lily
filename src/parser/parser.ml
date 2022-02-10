@@ -2184,7 +2184,13 @@ and parse_for parser =
     | Separator LeftParen ->
         next_token parser;
         parse_tuple parser
-    | _ -> failwith "unreachable"
+    | _ ->
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "expected identifier, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
   in
   Diagnostic.EmitDiagnostic
     ( parser.current_token |> show_token
