@@ -195,7 +195,7 @@ and is_data_type parser ~n =
   | Some (Identifier _)
   | Some (Keyword Self) ->
       true
-  | Some (Separator LeftHook) when is_data_type parser ~n:(n+1) -> true
+  | Some (Separator LeftHook) when is_data_type parser ~n:(n + 1) -> true
   | _ -> false
 
 [@@@warning "-27"]
@@ -735,18 +735,17 @@ and parse_variable parser ~id ~is_mut =
       (Variable { id; expr = parse_expr2 parser; data_type = None; is_mut }))
 
 and parse_constant parser ~id ~is_pub =
-  if parser |> is_data_type ~n:0 |> Bool.not then
-    Expr (Identifier (id, None))
-  else
-    let dt = parse_data_type parser in
-    Diagnostic.EmitDiagnostic
-      ( id
-        |> Printf.sprintf "expected `:=`, found `%s` in constant named `%s`"
-             (show_token parser.current_token),
-        Diagnostic.Error,
-        parser.current_location )
-    |> expect_token parser (Operator ColonEq);
-    Decl (Constant { id; expr = parse_expr2 parser; data_type = dt; is_pub })
+  (* if parser |> is_data_type ~n:0 |> Bool.not then Expr (Identifier (id,
+     None)) else *)
+  let dt = parse_data_type parser in
+  Diagnostic.EmitDiagnostic
+    ( id
+      |> Printf.sprintf "expected `:=`, found `%s` in constant named `%s`"
+           (show_token parser.current_token),
+      Diagnostic.Error,
+      parser.current_location )
+  |> expect_token parser (Operator ColonEq);
+  Decl (Constant { id; expr = parse_expr2 parser; data_type = dt; is_pub })
 
 and parse_multiple parser =
   let is_lower =
@@ -1609,9 +1608,17 @@ and parse_pub_block parser =
         ()
     else (
       next_token parser;
-      Pub (body |> Array.of_list))
+      body |> List.rev |> Array.of_list)
   in
-  loop ()
+  (* TODO: add Array.sub *)
+  (* TODO: push directly in nodes *)
+  (* TODO: delete node pub block in ast.ml *)
+  let pub_body = loop () in
+  Array.length pub_body - 1
+  |> Array.sub pub_body 0
+  |> Array.iter (fun (n, loc) ->
+         parser.nodes <- Array.append parser.nodes [| (Decl n, loc) |]);
+  pub_body.(Array.length pub_body - 1)
 
 and parse_pub parser =
   next_token parser;
@@ -1644,7 +1651,11 @@ and parse_pub parser =
   | Keyword Object -> parse_object parser ~is_pub:true
   | Keyword Type -> parse_type parser ~is_pub:true
   | Keyword Import -> parse_import parser ~is_pub:true
-  | Operator Eq -> parse_pub_block parser
+  | Operator Eq -> (
+      match parse_pub_block parser with
+      | n, l ->
+          parser.current_location <- l;
+          n)
   | _ ->
       Diagnostic.EmitDiagnostic
         ( "the usage of `pub` keyword is not allowed",

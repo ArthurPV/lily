@@ -97,7 +97,7 @@ val parse_class :
 val parse_method : parser -> string -> is_pub:bool -> decl
 val parse_trait : parser -> string -> data_type array -> is_pub:bool -> decl
 val parse_import : parser -> is_pub:bool -> decl
-val parse_pub_block : parser -> decl
+val parse_pub_block : parser -> decl * location
 val parse_pub : parser -> decl
 
 val parse_body :

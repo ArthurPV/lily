@@ -513,8 +513,6 @@ and decl =
       is_pub : bool;
     }
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
-  | Pub of (decl * location) array
-  (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
   | Property of string * data_type * bool
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
   | Include of expr

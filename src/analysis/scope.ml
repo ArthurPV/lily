@@ -341,20 +341,6 @@ let rec get_global_access scope nodes ~p_pub =
                     Some (match nodes.(i) with n, _ -> n) );
               ];
           loop ~access:!access_ref ~i:(i + 1) ()
-      | Decl (Pub body_pub) ->
-          let pub_block_access =
-            get_global_access scope
-              (body_pub |> Array.map (fun (d, l) -> (Decl d, l)))
-              ~p_pub
-          in
-          let access_ref = ref access in
-          let rec loop_pub ?(j = 0) () =
-            if j < Array.length pub_block_access then (
-              access_ref := !access_ref @ [ pub_block_access.(j) ];
-              loop_pub ~j:(j + 1) ())
-          in
-          loop_pub ();
-          loop ~access:!access_ref ~i:(i + 1) ()
       | Decl (Class { id; poly_args; is_pub; body; _ }) ->
           (*let rec loop ?(i = 0) () = if i < Array.length body then let a =
             match match body.(i) with n, _ -> n with | Decl (Property (id, _,
@@ -734,7 +720,6 @@ let run scope =
     scope.global_pub <-
       get_global_access scope scope.parser.nodes ~p_pub:true;
     if verify_if_same_access scope scope.global > 0 then exit 1;
-
     let main_fun, idx = is_contain_main_fun scope in
     if main_fun |> Bool.not then (
       scope.idx_of_main_fun <- idx;
