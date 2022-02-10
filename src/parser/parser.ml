@@ -42,50 +42,50 @@ let advance parser ~add_pos =
   match Lexer.tok_of_tokens parser.lexer ~idx:(parser.pos - 1) with
   | Comment _ -> ()
   | _ ->
-    parser.previous_location <-
-      Lexer.loc_of_tokens parser.lexer ~idx:(parser.pos - 1);
-    parser.previous_token <-
-      Lexer.tok_of_tokens parser.lexer ~idx:(parser.pos - 1)
+      parser.previous_location <-
+        Lexer.loc_of_tokens parser.lexer ~idx:(parser.pos - 1);
+      parser.previous_token <-
+        Lexer.tok_of_tokens parser.lexer ~idx:(parser.pos - 1)
 
 let next_token parser =
   (match Lexer.tok_of_tokens parser.lexer ~idx:parser.pos with
-   | Comment (Doc s) ->
-     parser.nodes <-
-       Array.append parser.nodes
-         [| (Doc s, Lexer.loc_of_tokens parser.lexer ~idx:parser.pos) |];
-     advance parser ~add_pos:true
-   | _ -> advance parser ~add_pos:true);
+  | Comment (Doc s) ->
+      parser.nodes <-
+        Array.append parser.nodes
+          [| (Doc s, Lexer.loc_of_tokens parser.lexer ~idx:parser.pos) |];
+      advance parser ~add_pos:true
+  | _ -> advance parser ~add_pos:true);
   match parser.current_token with
   | Comment _ ->
-    let rec loop () =
-      if parser.pos < Array.length parser.lexer.tokens - 1 then
-        match Lexer.tok_of_tokens parser.lexer ~idx:parser.pos with
-        | Comment (Doc s) ->
-          parser.nodes <-
-            [|
-              (Doc s, Lexer.loc_of_tokens parser.lexer ~idx:parser.pos);
-            |]
-            |> Array.append parser.nodes;
-          parser.pos <- parser.pos + 1;
-          loop ()
-        | Comment _ ->
-          parser.pos <- parser.pos + 1;
-          loop ()
-        | _ -> advance ~add_pos:false parser
-    in
-    loop ()
+      let rec loop () =
+        if parser.pos < Array.length parser.lexer.tokens - 1 then
+          match Lexer.tok_of_tokens parser.lexer ~idx:parser.pos with
+          | Comment (Doc s) ->
+              parser.nodes <-
+                [|
+                  (Doc s, Lexer.loc_of_tokens parser.lexer ~idx:parser.pos);
+                |]
+                |> Array.append parser.nodes;
+              parser.pos <- parser.pos + 1;
+              loop ()
+          | Comment _ ->
+              parser.pos <- parser.pos + 1;
+              loop ()
+          | _ -> advance ~add_pos:false parser
+      in
+      loop ()
   | _ -> ()
 
 let expect_token parser tok err =
   (match parser.current_token with
-   | Comment _ -> next_token parser
-   | _ -> ());
+  | Comment _ -> next_token parser
+  | _ -> ());
   if tok <> parser.current_token then raise err else next_token parser
 
 let matches parser tok =
   (match parser.current_token with
-   | Comment _ -> next_token parser
-   | _ -> ());
+  | Comment _ -> next_token parser
+  | _ -> ());
   if parser.current_token = tok then (
     next_token parser;
     true)
@@ -122,29 +122,29 @@ let rec parse_data_type parser =
   | Identifier s when String.lowercase_ascii s = s -> `Generics s
   | Identifier s -> `CustomType (s, None) (* TODO: add type argument *)
   | Separator LeftHook ->
-    if is_data_type parser ~n:0 then (
-      let dt = parse_data_type parser in
+      if is_data_type parser ~n:0 then (
+        let dt = parse_data_type parser in
+        Diagnostic.EmitDiagnostic
+          ( show_token parser.current_token
+            |> Printf.sprintf "expected `]`, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> expect_token parser (Separator RightHook);
+        `Array dt)
+      else
+        Diagnostic.EmitDiagnostic
+          ( show_token parser.current_token
+            |> Printf.sprintf "expected data type, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
+  | _ ->
       Diagnostic.EmitDiagnostic
-        ( show_token parser.current_token
-          |> Printf.sprintf "expected `]`, found `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> expect_token parser (Separator RightHook);
-      `Array dt)
-    else
-      Diagnostic.EmitDiagnostic
-        ( show_token parser.current_token
+        ( show_token parser.previous_token
           |> Printf.sprintf "expected data type, found `%s`",
           Diagnostic.Error,
-          parser.current_location )
+          parser.previous_location )
       |> raise
-  | _ ->
-    Diagnostic.EmitDiagnostic
-      ( show_token parser.previous_token
-        |> Printf.sprintf "expected data type, found `%s`",
-        Diagnostic.Error,
-        parser.previous_location )
-    |> raise
 
 and is_binop parser ~n =
   match peek_token ~n parser with
@@ -171,7 +171,7 @@ and is_binop parser ~n =
   | Some (Operator RightShiftEq)
   | Some (Operator BangEq)
   | Some (Operator Interrogation) ->
-    true
+      true
   | _ -> false
 
 and is_data_type parser ~n =
@@ -194,7 +194,7 @@ and is_data_type parser ~n =
   | Some (Keyword Unit)
   | Some (Identifier _)
   | Some (Keyword Self) ->
-    true
+      true
   | Some (Separator LeftHook) when is_data_type parser ~n:(n + 1) -> true
   | _ -> false
 
@@ -204,8 +204,8 @@ and is_data_type parser ~n =
 let rec run parser =
   (* skip comemnt if is first *)
   (match parser.current_token with
-   | Comment _ -> next_token parser
-   | _ -> ());
+  | Comment _ -> next_token parser
+  | _ -> ());
   if parser.pos < Array.length parser.lexer.tokens - 1 then (
     let loc = Location.copy_location parser.current_location in
     try
@@ -222,7 +222,7 @@ let rec run parser =
             [|
               Location.copy_location parser.previous_location
               |> new_diagnostic parser Diagnostic.Error
-                "unexpected end of expression";
+                   "unexpected end of expression";
             |]
             |> Array.append parser.errors
       else ();
@@ -253,12 +253,12 @@ and parse_assign parser loc =
       | Identifier (id, _) -> Identifier (id, None)
       | IdentifierAccess (ids, _) -> IdentifierAccess (ids, None)
       | _ ->
-        Location.end_location loc parser.current_location;
-        Diagnostic.EmitDiagnostic
-          ( "the left-hand assignment take an identifier",
-            Diagnostic.Error,
-            loc )
-        |> raise
+          Location.end_location loc parser.current_location;
+          Diagnostic.EmitDiagnostic
+            ( "the left-hand assignment take an identifier",
+              Diagnostic.Error,
+              loc )
+          |> raise
     in
     match parser.previous_token with
     | Operator PlusEq -> AddAssign (id, parse_assign parser loc)
@@ -437,37 +437,37 @@ and parse_class_call parser =
   let id =
     match parser.current_token with
     | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) ->
-      let rec loop ?(l = []) () =
-        if parser.current_token <> Separator LeftParen then (
-          let id =
-            match parser.current_token with
-            | Identifier s -> Identifier (s, None)
-            | _ ->
-              Diagnostic.EmitDiagnostic
-                ( parser.current_token |> show_token
-                  |> Printf.sprintf "expected identifier, found `%s`",
-                  Diagnostic.Error,
-                  parser.current_location )
-              |> raise
-          in
-          next_token parser;
-          if parser.current_token = Separator Dot then (
+        let rec loop ?(l = []) () =
+          if parser.current_token <> Separator LeftParen then (
+            let id =
+              match parser.current_token with
+              | Identifier s -> Identifier (s, None)
+              | _ ->
+                  Diagnostic.EmitDiagnostic
+                    ( parser.current_token |> show_token
+                      |> Printf.sprintf "expected identifier, found `%s`",
+                      Diagnostic.Error,
+                      parser.current_location )
+                  |> raise
+            in
             next_token parser;
-            loop ~l:(id :: l) ())
-          else IdentifierAccess (l |> List.rev |> Array.of_list, None))
-        else IdentifierAccess (l |> List.rev |> Array.of_list, None)
-      in
-      loop ()
+            if parser.current_token = Separator Dot then (
+              next_token parser;
+              loop ~l:(id :: l) ())
+            else IdentifierAccess (l |> List.rev |> Array.of_list, None))
+          else IdentifierAccess (l |> List.rev |> Array.of_list, None)
+        in
+        loop ()
     | Identifier s ->
-      next_token parser;
-      Identifier (s, None)
+        next_token parser;
+        Identifier (s, None)
     | _ ->
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf "expected identifier, found `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "expected identifier, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
   in
   if parser.current_token <> Separator LeftParen then
     Diagnostic.EmitDiagnostic
@@ -488,12 +488,12 @@ and parse_record_call parser ~id =
         match parser.current_token with
         | Identifier s -> s
         | _ ->
-          Diagnostic.EmitDiagnostic
-            ( parser.current_token |> show_token
-              |> Printf.sprintf "expected field name, found `%s`",
-              Diagnostic.Error,
-              parser.current_location )
-          |> raise
+            Diagnostic.EmitDiagnostic
+              ( parser.current_token |> show_token
+                |> Printf.sprintf "expected field name, found `%s`",
+                Diagnostic.Error,
+                parser.current_location )
+            |> raise
       in
       next_token parser;
       if parser.current_token = Separator Comma then (
@@ -542,53 +542,53 @@ and parse_identifier_access parser f_id =
     match parser.current_token with
     | Identifier s when peek_token parser ~n:1 = Some (Separator LeftParen)
       ->
-      (* TODO: review the code to see if there are any other bugs. *)
-      let access_ref = ref access in
-      access_ref := [ Identifier (s, None) ] @ !access_ref;
-      next_token parser;
-      let call =
-        parse_function_call parser
-          ~id:
-            (IdentifierAccess
-               (!access_ref |> List.rev |> Array.of_list, None))
-      in
-      if parser.current_token = Separator Dot then (
+        (* TODO: review the code to see if there are any other bugs. *)
+        let access_ref = ref access in
+        access_ref := [ Identifier (s, None) ] @ !access_ref;
         next_token parser;
-        loop ~access:(call :: access) ()
-        (*loop ~access: ((match call with | FunctionCall (e, vals) ->
-          FunctionCall (Identifier (s, None), vals) | _ -> failwith
-          "unreachable") :: access) ()*))
-      else call
+        let call =
+          parse_function_call parser
+            ~id:
+              (IdentifierAccess
+                 (!access_ref |> List.rev |> Array.of_list, None))
+        in
+        if parser.current_token = Separator Dot then (
+          next_token parser;
+          loop ~access:(call :: access) ()
+          (*loop ~access: ((match call with | FunctionCall (e, vals) ->
+            FunctionCall (Identifier (s, None), vals) | _ -> failwith
+            "unreachable") :: access) ()*))
+        else call
     | Identifier s when peek_token parser ~n:1 = Some (Separator LeftBrace)
       ->
-      let access_ref = ref access in
-      access_ref := [ Identifier (s, None) ] @ !access_ref;
-      next_token parser;
-      let call =
-        parse_record_call parser
-          ~id:
-            (IdentifierAccess
-               (!access_ref |> List.rev |> Array.of_list, None))
-      in
-      if parser.current_token = Separator Dot then (
+        let access_ref = ref access in
+        access_ref := [ Identifier (s, None) ] @ !access_ref;
         next_token parser;
-        loop ~access:(call :: access) ())
-      else call
+        let call =
+          parse_record_call parser
+            ~id:
+              (IdentifierAccess
+                 (!access_ref |> List.rev |> Array.of_list, None))
+        in
+        if parser.current_token = Separator Dot then (
+          next_token parser;
+          loop ~access:(call :: access) ())
+        else call
     | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) ->
-      next_token parser;
-      next_token parser;
-      loop ~access:(Identifier (s, None) :: access) ()
+        next_token parser;
+        next_token parser;
+        loop ~access:(Identifier (s, None) :: access) ()
     | Identifier s ->
-      IdentifierAccess
-        ( access @ [ Identifier (s, None) ] |> List.rev |> Array.of_list,
-          None )
+        IdentifierAccess
+          ( access @ [ Identifier (s, None) ] |> List.rev |> Array.of_list,
+            None )
     | _ ->
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf "unexpected expression: `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "unexpected expression: `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
   in
   loop ()
 
@@ -596,8 +596,8 @@ and parse_identifier_access parser f_id =
 and parse_self_access parser =
   match parser.current_token with
   | Identifier s when peek_token parser ~n:1 = Some (Separator LeftParen) ->
-    parse_function_call parser
-      ~id:(SelfAccess ([| Identifier (s, None) |], None))
+      parse_function_call parser
+        ~id:(SelfAccess ([| Identifier (s, None) |], None))
   | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) -> (
       next_token parser;
       next_token parser;
@@ -607,12 +607,12 @@ and parse_self_access parser =
       | _ -> failwith "unreachable")
   | Identifier s -> IdentifierAccess ([| Identifier (s, None) |], None)
   | _ ->
-    Diagnostic.EmitDiagnostic
-      ( parser.current_token |> show_token
-        |> Printf.sprintf "unexpected expression: `%s`",
-        Diagnostic.Error,
-        parser.current_location )
-    |> raise
+      Diagnostic.EmitDiagnostic
+        ( parser.current_token |> show_token
+          |> Printf.sprintf "unexpected expression: `%s`",
+          Diagnostic.Error,
+          parser.current_location )
+      |> raise
 
 and parse_tuple parser =
   let rec loop ?(tuple = []) () =
@@ -668,18 +668,18 @@ and parse_primary_expr parser =
     | Identifier s when String.lowercase_ascii s = s -> (
         match parser.current_token with
         | Separator LeftParen ->
-          parse_function_call parser ~id:(Identifier (s, None))
+            parse_function_call parser ~id:(Identifier (s, None))
         | Separator Dot ->
-          parse_identifier_access parser (Identifier (s, None))
+            parse_identifier_access parser (Identifier (s, None))
         | _ -> Identifier (s, None))
     | Identifier s when Char.uppercase_ascii s.[0] = s.[0] -> (
         match parser.current_token with
         | Separator Dot ->
-          parse_identifier_access parser (Identifier (s, None))
+            parse_identifier_access parser (Identifier (s, None))
         | Separator LeftBrace ->
-          parse_record_call parser ~id:(Identifier (s, None))
+            parse_record_call parser ~id:(Identifier (s, None))
         | Separator LeftParen ->
-          parse_variant parser ~id:(Identifier (s, None))
+            parse_variant parser ~id:(Identifier (s, None))
         | _ -> Identifier (s, None))
     | Identifier s -> Identifier (s, None)
     | Keyword New -> parse_class_call parser
@@ -687,17 +687,20 @@ and parse_primary_expr parser =
     | Keyword Undef -> Undef
     | Keyword Nil -> Nil
     | Keyword Self ->
-      next_token parser;
-      parse_self_access parser
+        next_token parser;
+        parse_self_access parser
     | Separator LeftHook -> parse_array parser
+    | Separator LeftParen when parser.current_token = Separator RightParen ->
+        next_token parser;
+        Literal Unit
     | Separator LeftParen -> parse_tuple parser
     | _ ->
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf "unexpected expression: %s",
-          Diagnostic.Error,
-          parser.previous_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "unexpected expression: %s",
+            Diagnostic.Error,
+            parser.previous_location )
+        |> raise
   in
   Location.end_location loc parser.current_location;
   expr
@@ -716,8 +719,8 @@ and parse_variable parser ~id ~is_mut =
       Diagnostic.EmitDiagnostic
         ( id
           |> Printf.sprintf
-            "expected `:=`, found `%s` in variable named `%s`"
-            (show_token parser.current_token),
+               "expected `:=`, found `%s` in variable named `%s`"
+               (show_token parser.current_token),
           Diagnostic.Error,
           parser.current_location )
       |> expect_token parser (Operator ColonEq);
@@ -727,7 +730,7 @@ and parse_variable parser ~id ~is_mut =
     Diagnostic.EmitDiagnostic
       ( id
         |> Printf.sprintf "expected `:=`, found `%s` in variable named `%s`"
-          (show_token parser.current_token),
+             (show_token parser.current_token),
         Diagnostic.Error,
         parser.current_location )
     |> expect_token parser (Operator ColonEq);
@@ -741,7 +744,7 @@ and parse_constant parser ~id ~is_pub =
   Diagnostic.EmitDiagnostic
     ( id
       |> Printf.sprintf "expected `:=`, found `%s` in constant named `%s`"
-        (show_token parser.current_token),
+           (show_token parser.current_token),
       Diagnostic.Error,
       parser.current_location )
   |> expect_token parser (Operator ColonEq);
@@ -752,12 +755,12 @@ and parse_multiple parser =
     match parser.current_token with
     | Identifier s -> String.lowercase_ascii s = s
     | _ ->
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf "miss identifier, found `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "miss identifier, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
   in
   let rec loop ?(ids = []) () =
     if
@@ -767,20 +770,20 @@ and parse_multiple parser =
       let id =
         match parser.current_token with
         | Identifier s ->
-          if is_lower <> (s = String.lowercase_ascii s) then
+            if is_lower <> (s = String.lowercase_ascii s) then
+              Diagnostic.EmitDiagnostic
+                ( "you cannot define variable and constant in same pattern",
+                  Diagnostic.Error,
+                  parser.current_location )
+              |> raise
+            else s
+        | _ ->
             Diagnostic.EmitDiagnostic
-              ( "you cannot define variable and constant in same pattern",
+              ( parser.current_token |> show_token
+                |> Printf.sprintf "miss identifier, found `%s`",
                 Diagnostic.Error,
                 parser.current_location )
             |> raise
-          else s
-        | _ ->
-          Diagnostic.EmitDiagnostic
-            ( parser.current_token |> show_token
-              |> Printf.sprintf "miss identifier, found `%s`",
-              Diagnostic.Error,
-              parser.current_location )
-          |> raise
       in
       next_token parser;
       if is_data_type parser ~n:0 then (
@@ -853,7 +856,7 @@ and parse_multiple_variable parser ~ids ~is_mut =
                   data_type = (match ids.(i) with _, dt -> dt);
                   is_mut;
                 })
-           :: vars)
+          :: vars)
         ())
     else (
       if matches parser (Separator RightParen) |> Bool.not then
@@ -867,7 +870,7 @@ and parse_multiple_variable parser ~ids ~is_mut =
         (Location.end_location loc parser.current_location;
          loc
          |> new_diagnostic parser Diagnostic.Warning
-           "please define a simple variable like this: `<id> := <value>`")
+              "please define a simple variable like this: `<id> := <value>`")
         |> Diagnostic.emit_diagnostic;
       Array.of_list vars)
   in
@@ -910,18 +913,18 @@ and parse_multiple_constant parser ~ids ~is_pub =
                   expr;
                   data_type =
                     (match ids.(i) with
-                     | _, Some dt -> dt
-                     | _, None ->
-                       Diagnostic.EmitDiagnostic
-                         ( parser.current_token |> show_token
-                           |> Printf.sprintf
-                             "expected data_type, found `%s`",
-                           Diagnostic.Error,
-                           parser.current_location )
-                       |> raise);
+                    | _, Some dt -> dt
+                    | _, None ->
+                        Diagnostic.EmitDiagnostic
+                          ( parser.current_token |> show_token
+                            |> Printf.sprintf
+                                 "expected data_type, found `%s`",
+                            Diagnostic.Error,
+                            parser.current_location )
+                        |> raise);
                   is_pub;
                 })
-           :: consts)
+          :: consts)
         ())
     else (
       if matches parser (Separator RightParen) |> Bool.not then
@@ -935,7 +938,7 @@ and parse_multiple_constant parser ~ids ~is_pub =
         Location.end_location loc parser.current_location;
         loc
         |> new_diagnostic parser Diagnostic.Warning
-          "please define a simple variable like this: `<id> := <value>`"
+             "please define a simple variable like this: `<id> := <value>`"
         |> Diagnostic.emit_diagnostic);
       Array.of_list consts)
   in
@@ -946,20 +949,20 @@ and parse_function parser ~is_pub ~is_async ~is_test ~is_export =
     match parser.current_token with
     | Identifier s when String.lowercase_ascii s = s -> s
     | Identifier s ->
-      Diagnostic.EmitDiagnostic
-        ( s |> String.lowercase_ascii
-          |> Printf.sprintf
-            "invalid function name `%s`\n\
-             help: define your function name in camel case format, \
-             like this: `%s`"
-            s,
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( s |> String.lowercase_ascii
+            |> Printf.sprintf
+                 "invalid function name `%s`\n\
+                  help: define your function name in camel case format, \
+                  like this: `%s`"
+                 s,
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
     | _ ->
-      Diagnostic.EmitDiagnostic
-        ("miss function name", Diagnostic.Error, parser.current_location)
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ("miss function name", Diagnostic.Error, parser.current_location)
+        |> raise
   in
   next_token parser;
   if Separator LeftHook |> matches parser then
@@ -970,7 +973,7 @@ and parse_function parser ~is_pub ~is_async ~is_test ~is_export =
       Diagnostic.EmitDiagnostic
         ( id
           |> Printf.sprintf "expected `=`, found `%s` in function name `%s`"
-            (show_token parser.current_token),
+               (show_token parser.current_token),
           Diagnostic.Error,
           parser.current_location )
       |> expect_token parser (Operator Eq);
@@ -1013,7 +1016,7 @@ and parse_function parser ~is_pub ~is_async ~is_test ~is_export =
       Diagnostic.EmitDiagnostic
         ( id
           |> Printf.sprintf "expected `=`, found `%s` in function name `%s`"
-            (show_token parser.current_token),
+               (show_token parser.current_token),
           Diagnostic.Error,
           parser.current_location )
       |> expect_token parser (Operator Eq);
@@ -1036,7 +1039,7 @@ and parse_function parser ~is_pub ~is_async ~is_test ~is_export =
       Diagnostic.EmitDiagnostic
         ( id
           |> Printf.sprintf "expected `=`, found `%s` in function name `%s`"
-            (show_token parser.current_token),
+               (show_token parser.current_token),
           Diagnostic.Error,
           parser.current_location )
       |> expect_token parser (Operator Eq);
@@ -1062,8 +1065,8 @@ and parse_body_module parser =
     if parser.current_token <> Keyword End then
       match parse_decl parser with
       | Decl d ->
-        Location.end_location loc parser.current_location;
-        loop ~body:((Decl d, loc) :: body) ()
+          Location.end_location loc parser.current_location;
+          loop ~body:((Decl d, loc) :: body) ()
       | _ -> failwith "unreachable"
     else (
       next_token parser;
@@ -1076,23 +1079,23 @@ and parse_module parser ~is_pub ~is_test =
     match parser.current_token with
     | Identifier s when String.lowercase_ascii s = s -> s
     | Identifier s ->
-      Diagnostic.EmitDiagnostic
-        ( s
-          |> Printf.sprintf
-            "invalid module name `%s`\n\
-             help: define your module name in camel case format like \
-             this `%s`"
-            (String.lowercase_ascii s),
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( s
+            |> Printf.sprintf
+                 "invalid module name `%s`\n\
+                  help: define your module name in camel case format like \
+                  this `%s`"
+                 (String.lowercase_ascii s),
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
     | _ ->
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf "miss module name, found `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "miss module name, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
   in
   next_token parser;
   Diagnostic.EmitDiagnostic
@@ -1109,24 +1112,24 @@ and parse_type parser ~is_pub =
     match parser.current_token with
     | Identifier s when Char.uppercase_ascii s.[0] = s.[0] -> s
     | Identifier s ->
-      Diagnostic.EmitDiagnostic
-        ( (Char.uppercase_ascii s.[0] |> String.make 1)
-          ^ (String.length s - 1 |> String.sub s 1)
-          |> Printf.sprintf
-            "invalid type name: `%s`\n\
-             help define your type name in uppercase format like this: \
-             `%s`"
-            s,
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( (Char.uppercase_ascii s.[0] |> String.make 1)
+            ^ (String.length s - 1 |> String.sub s 1)
+            |> Printf.sprintf
+                 "invalid type name: `%s`\n\
+                  help define your type name in uppercase format like this: \
+                  `%s`"
+                 s,
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
     | _ ->
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf "miss type name, found `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "miss type name, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
   in
   next_token parser;
   let poly_args = ref [] in
@@ -1150,18 +1153,18 @@ and parse_type parser ~is_pub =
   |> expect_token parser (Operator Eq);
   match kw with
   | Keyword Alias ->
-    !poly_args |> Array.of_list |> parse_alias parser id ~is_pub
+      !poly_args |> Array.of_list |> parse_alias parser id ~is_pub
   | Keyword Record ->
-    !poly_args |> Array.of_list |> parse_record parser id ~is_pub
+      !poly_args |> Array.of_list |> parse_record parser id ~is_pub
   | Keyword Enum ->
-    !poly_args |> Array.of_list |> parse_enum parser id ~is_pub
+      !poly_args |> Array.of_list |> parse_enum parser id ~is_pub
   | _ ->
-    Diagnostic.EmitDiagnostic
-      ( "the usage of `type` keyword is not allowed without `alias`, \
-         `record`, `enum` definition",
-        Diagnostic.Error,
-        parser.previous_location )
-    |> raise
+      Diagnostic.EmitDiagnostic
+        ( "the usage of `type` keyword is not allowed without `alias`, \
+           `record`, `enum` definition",
+          Diagnostic.Error,
+          parser.previous_location )
+      |> raise
 
 and parse_alias parser id poly_args ~is_pub =
   let dt = parse_data_type parser in
@@ -1179,23 +1182,23 @@ and parse_record parser id poly_args ~is_pub =
         match parser.current_token with
         | Identifier s when String.lowercase_ascii s = s -> s
         | Identifier s ->
-          Diagnostic.EmitDiagnostic
-            ( s |> String.lowercase_ascii
-              |> Printf.sprintf
-                "invalid field name `%s` in record named `%s`\n\
-                 help: define your field name in lowercase format like \
-                 this: `%s`"
-                s id,
-              Diagnostic.Error,
-              parser.current_location )
-          |> raise
+            Diagnostic.EmitDiagnostic
+              ( s |> String.lowercase_ascii
+                |> Printf.sprintf
+                     "invalid field name `%s` in record named `%s`\n\
+                      help: define your field name in lowercase format like \
+                      this: `%s`"
+                     s id,
+                Diagnostic.Error,
+                parser.current_location )
+            |> raise
         | _ ->
-          raise
-            (Diagnostic.EmitDiagnostic
-               ( parser.current_token |> show_token
-                 |> Printf.sprintf "miss field name found `%s`",
-                 Diagnostic.Error,
-                 parser.current_location ))
+            raise
+              (Diagnostic.EmitDiagnostic
+                 ( parser.current_token |> show_token
+                   |> Printf.sprintf "miss field name found `%s`",
+                   Diagnostic.Error,
+                   parser.current_location ))
       in
       next_token parser;
       let dt = parse_data_type parser in
@@ -1218,24 +1221,24 @@ and parse_enum parser id poly_args ~is_pub =
         match parser.current_token with
         | Identifier s when Char.uppercase_ascii s.[0] = s.[0] -> s
         | Identifier s ->
-          Diagnostic.EmitDiagnostic
-            ( (Char.uppercase_ascii s.[0] |> String.make 1)
-              ^ (String.length s - 1 |> String.sub s 1)
-              |> Printf.sprintf
-                "invalid variant name: `%s` in enum named `%s`\n\
-                 help define your variant name in camel case format, \
-                 like this: `%s`"
-                s id,
-              Diagnostic.Error,
-              parser.current_location )
-          |> raise
+            Diagnostic.EmitDiagnostic
+              ( (Char.uppercase_ascii s.[0] |> String.make 1)
+                ^ (String.length s - 1 |> String.sub s 1)
+                |> Printf.sprintf
+                     "invalid variant name: `%s` in enum named `%s`\n\
+                      help define your variant name in camel case format, \
+                      like this: `%s`"
+                     s id,
+                Diagnostic.Error,
+                parser.current_location )
+            |> raise
         | _ ->
-          raise
-            (Diagnostic.EmitDiagnostic
-               ( parser.current_token |> show_token
-                 |> Printf.sprintf "miss variant name, found `%s`",
-                 Diagnostic.Error,
-                 parser.current_location ))
+            raise
+              (Diagnostic.EmitDiagnostic
+                 ( parser.current_token |> show_token
+                   |> Printf.sprintf "miss variant name, found `%s`",
+                   Diagnostic.Error,
+                   parser.current_location ))
       in
       next_token parser;
       if parser.current_token <> Keyword End then (
@@ -1268,24 +1271,24 @@ and parse_object parser ~is_pub =
     match parser.current_token with
     | Identifier s when Char.uppercase_ascii s.[0] = s.[0] -> s
     | Identifier s ->
-      Diagnostic.EmitDiagnostic
-        ( (Char.uppercase_ascii s.[0] |> String.make 1)
-          ^ (String.length s - 1 |> String.sub s 1)
-          |> Printf.sprintf
-            "invalid object name: `%s`\n\
-             help define your object name in uppercase format like \
-             this: `%s`"
-            s,
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( (Char.uppercase_ascii s.[0] |> String.make 1)
+            ^ (String.length s - 1 |> String.sub s 1)
+            |> Printf.sprintf
+                 "invalid object name: `%s`\n\
+                  help define your object name in uppercase format like \
+                  this: `%s`"
+                 s,
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
     | _ ->
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf "miss object name, found `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "miss object name, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
   in
   next_token parser;
   let poly_args = ref [] in
@@ -1308,12 +1311,12 @@ and parse_object parser ~is_pub =
           match parser.current_token with
           | Identifier s -> s
           | _ ->
-            Diagnostic.EmitDiagnostic
-              ( parser.current_token |> show_token
-                |> Printf.sprintf "expected identifier, found `%s`",
-                Diagnostic.Error,
-                parser.current_location )
-            |> raise
+              Diagnostic.EmitDiagnostic
+                ( parser.current_token |> show_token
+                  |> Printf.sprintf "expected identifier, found `%s`",
+                  Diagnostic.Error,
+                  parser.current_location )
+              |> raise
         in
         next_token parser;
         if parser.current_token <> Separator RightHook then
@@ -1345,29 +1348,29 @@ and parse_object parser ~is_pub =
   |> expect_token parser (Operator Eq);
   match kw with
   | Keyword Class ->
-    !inh |> Array.of_list
-    |> parse_class parser id (!poly_args |> Array.of_list) ~is_pub
+      !inh |> Array.of_list
+      |> parse_class parser id (!poly_args |> Array.of_list) ~is_pub
   | Keyword Trait ->
-    !poly_args |> Array.of_list |> parse_trait parser id ~is_pub
+      !poly_args |> Array.of_list |> parse_trait parser id ~is_pub
   | _ ->
-    Diagnostic.EmitDiagnostic
-      ( "the usage of `object` keyword is not allowed without `class`, \
-         `trait` definition",
-        Diagnostic.Error,
-        parser.previous_location )
-    |> raise
+      Diagnostic.EmitDiagnostic
+        ( "the usage of `object` keyword is not allowed without `class`, \
+           `trait` definition",
+          Diagnostic.Error,
+          parser.previous_location )
+      |> raise
 
 and parse_property parser ~is_pub =
   let id =
     match parser.current_token with
     | Identifier s -> s
     | _ ->
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf "expected identifier, found `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "expected identifier, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
   in
   next_token parser;
   if is_data_type parser ~n:0 && parser.current_token <> Keyword Self then
@@ -1382,22 +1385,22 @@ and parse_body_class parser id =
       let decl =
         match parser.current_token with
         | Separator At ->
-          next_token parser;
-          Decl (parse_property parser ~is_pub:false)
+            next_token parser;
+            Decl (parse_property parser ~is_pub:false)
         | Keyword Pub ->
-          next_token parser;
-          next_token parser;
-          Decl (parse_property parser ~is_pub:true)
+            next_token parser;
+            next_token parser;
+            Decl (parse_property parser ~is_pub:true)
         | _ ->
-          Location.end_location loc parser.current_location;
-          Diagnostic.EmitDiagnostic
-            ( id
-              |> Printf.sprintf
-                "unexpected expression `%s`, in class named `%s`"
-                (show_token parser.current_token),
-              Diagnostic.Error,
-              loc )
-          |> raise
+            Location.end_location loc parser.current_location;
+            Diagnostic.EmitDiagnostic
+              ( id
+                |> Printf.sprintf
+                     "unexpected expression `%s`, in class named `%s`"
+                     (show_token parser.current_token),
+                Diagnostic.Error,
+                loc )
+            |> raise
       in
       Location.end_location loc parser.current_location;
       loop ~body:((decl, loc) :: body) ())
@@ -1420,8 +1423,8 @@ and parse_method parser id ~is_pub =
       Diagnostic.EmitDiagnostic
         ( id
           |> Printf.sprintf
-            "expected `=>`, found `%s` in method named in `%s`"
-            (show_token parser.current_token),
+               "expected `=>`, found `%s` in method named in `%s`"
+               (show_token parser.current_token),
           Diagnostic.Error,
           parser.current_location )
       |> expect_token parser (Separator FatArrow);
@@ -1442,8 +1445,8 @@ and parse_method parser id ~is_pub =
       Diagnostic.EmitDiagnostic
         ( id
           |> Printf.sprintf
-            "expected `=>`, found `%s` in method named in `%s`"
-            (show_token parser.current_token),
+               "expected `=>`, found `%s` in method named in `%s`"
+               (show_token parser.current_token),
           Diagnostic.Error,
           parser.current_location )
       |> expect_token parser (Separator FatArrow);
@@ -1473,17 +1476,17 @@ and parse_trait parser id poly_args ~is_pub =
       let decl =
         match parse_decl parser with
         | Decl (Method { id; poly_args; args; return_type; body; is_pub }) ->
-          Decl (Method { id; poly_args; args; return_type; body; is_pub })
+            Decl (Method { id; poly_args; args; return_type; body; is_pub })
         | _ ->
-          Diagnostic.EmitDiagnostic
-            ( id
-              |> Printf.sprintf
-                "this current declaration is not allowed in trait \
-                 named `%s`",
-              (* TODO: convert decl in string *)
-              Diagnostic.Error,
-              parser.current_location )
-          |> raise
+            Diagnostic.EmitDiagnostic
+              ( id
+                |> Printf.sprintf
+                     "this current declaration is not allowed in trait \
+                      named `%s`",
+                (* TODO: convert decl in string *)
+                Diagnostic.Error,
+                parser.current_location )
+            |> raise
       in
       Location.end_location loc parser.current_location;
       loop ~body:((decl, loc) :: body) ())
@@ -1498,13 +1501,13 @@ and parse_import parser ~is_pub =
     match parser.current_token with
     | Literal (String s) -> s
     | _ ->
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf
-            "you have not define a value of import, found `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf
+                 "you have not define a value of import, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
   in
   next_token parser;
   if parser.current_token = Keyword As then (
@@ -1513,13 +1516,13 @@ and parse_import parser ~is_pub =
       match parser.current_token with
       | Identifier s -> s
       | _ ->
-        Diagnostic.EmitDiagnostic
-          ( parser.current_token |> show_token
-            |> Printf.sprintf
-              "expected identifier of `as` keyword but it found `%s`",
-            Diagnostic.Error,
-            parser.current_location )
-        |> raise
+          Diagnostic.EmitDiagnostic
+            ( parser.current_token |> show_token
+              |> Printf.sprintf
+                   "expected identifier of `as` keyword but it found `%s`",
+              Diagnostic.Error,
+              parser.current_location )
+          |> raise
     in
     next_token parser;
     Import { import = value; is_pub; _as = Some as_id })
@@ -1532,79 +1535,79 @@ and parse_pub_block parser =
       loop
         ~body:
           ((match parser.current_token with
-              | Keyword Fun ->
-                next_token parser;
-                let f =
-                  parse_function parser ~is_pub:true ~is_async:false
-                    ~is_test:false ~is_export:false
-                in
-                Location.end_location loc parser.current_location;
-                (f, loc)
-              | Keyword Async when peek_token parser ~n:1 = Some (Keyword Fun)
-                ->
-                next_token parser;
-                next_token parser;
-                let f =
-                  parse_function parser ~is_pub:true ~is_async:true
-                    ~is_test:false ~is_export:false
-                in
-                Location.end_location loc parser.current_location;
-                (f, loc)
-              | Keyword Async ->
-                Diagnostic.EmitDiagnostic
-                  ( "the usage of `async` keyword is not allowed without \
-                     function definition",
-                    Diagnostic.Error,
-                    parser.current_location )
-                |> raise
-              | Identifier s when String.uppercase_ascii s = s -> (
-                  next_token parser;
-                  match parse_constant parser ~id:s ~is_pub:true with
-                  | Decl (Constant { id; data_type; expr; is_pub }) ->
-                    Location.end_location loc parser.current_location;
-                    (Constant { id; data_type; expr; is_pub }, loc)
-                  | _ ->
-                    Diagnostic.EmitDiagnostic
-                      ( "the usage of `pub` keyword is not allowed",
-                        Diagnostic.Error,
-                        parser.current_location )
-                    |> raise)
-              | Keyword Module ->
-                next_token parser;
-                let m = parse_module parser ~is_pub:true ~is_test:false in
-                Location.end_location loc parser.current_location;
-                (m, loc)
-              | Keyword Object ->
-                next_token parser;
-                let o = parse_object parser ~is_pub:true in
-                Location.end_location loc parser.current_location;
-                (o, loc)
-              | Keyword Type ->
-                next_token parser;
-                let t = parse_type parser ~is_pub:true in
-                Location.end_location loc parser.current_location;
-                (t, loc)
-              | Keyword Import ->
-                next_token parser;
-                let i = parse_import parser ~is_pub:true in
-                Location.end_location loc parser.current_location;
-                (i, loc)
-              | Operator Eq ->
-                Diagnostic.EmitDiagnostic
-                  ( "you cannot define pub block in pub block is not make \
-                     sense",
-                    Diagnostic.Error,
-                    parser.current_location )
-                |> raise
-              | _ ->
-                Diagnostic.EmitDiagnostic
-                  ( parser.current_token |> show_token
-                    |> Printf.sprintf
-                      "unexpected expression in pub block: `%s`",
-                    Diagnostic.Error,
-                    parser.current_location )
-                |> raise)
-           :: body)
+           | Keyword Fun ->
+               next_token parser;
+               let f =
+                 parse_function parser ~is_pub:true ~is_async:false
+                   ~is_test:false ~is_export:false
+               in
+               Location.end_location loc parser.current_location;
+               (f, loc)
+           | Keyword Async when peek_token parser ~n:1 = Some (Keyword Fun)
+             ->
+               next_token parser;
+               next_token parser;
+               let f =
+                 parse_function parser ~is_pub:true ~is_async:true
+                   ~is_test:false ~is_export:false
+               in
+               Location.end_location loc parser.current_location;
+               (f, loc)
+           | Keyword Async ->
+               Diagnostic.EmitDiagnostic
+                 ( "the usage of `async` keyword is not allowed without \
+                    function definition",
+                   Diagnostic.Error,
+                   parser.current_location )
+               |> raise
+           | Identifier s when String.uppercase_ascii s = s -> (
+               next_token parser;
+               match parse_constant parser ~id:s ~is_pub:true with
+               | Decl (Constant { id; data_type; expr; is_pub }) ->
+                   Location.end_location loc parser.current_location;
+                   (Constant { id; data_type; expr; is_pub }, loc)
+               | _ ->
+                   Diagnostic.EmitDiagnostic
+                     ( "the usage of `pub` keyword is not allowed",
+                       Diagnostic.Error,
+                       parser.current_location )
+                   |> raise)
+           | Keyword Module ->
+               next_token parser;
+               let m = parse_module parser ~is_pub:true ~is_test:false in
+               Location.end_location loc parser.current_location;
+               (m, loc)
+           | Keyword Object ->
+               next_token parser;
+               let o = parse_object parser ~is_pub:true in
+               Location.end_location loc parser.current_location;
+               (o, loc)
+           | Keyword Type ->
+               next_token parser;
+               let t = parse_type parser ~is_pub:true in
+               Location.end_location loc parser.current_location;
+               (t, loc)
+           | Keyword Import ->
+               next_token parser;
+               let i = parse_import parser ~is_pub:true in
+               Location.end_location loc parser.current_location;
+               (i, loc)
+           | Operator Eq ->
+               Diagnostic.EmitDiagnostic
+                 ( "you cannot define pub block in pub block is not make \
+                    sense",
+                   Diagnostic.Error,
+                   parser.current_location )
+               |> raise
+           | _ ->
+               Diagnostic.EmitDiagnostic
+                 ( parser.current_token |> show_token
+                   |> Printf.sprintf
+                        "unexpected expression in pub block: `%s`",
+                   Diagnostic.Error,
+                   parser.current_location )
+               |> raise)
+          :: body)
         ()
     else (
       next_token parser;
@@ -1614,36 +1617,36 @@ and parse_pub_block parser =
   Array.length pub_body - 1
   |> Array.sub pub_body 0
   |> Array.iter (fun (n, loc) ->
-      parser.nodes <- Array.append parser.nodes [| (Decl n, loc) |]);
+         parser.nodes <- Array.append parser.nodes [| (Decl n, loc) |]);
   pub_body.(Array.length pub_body - 1)
 
 and parse_pub parser =
   next_token parser;
   match parser.previous_token with
   | Keyword Fun ->
-    parse_function parser ~is_pub:true ~is_async:false ~is_test:false
-      ~is_export:false
+      parse_function parser ~is_pub:true ~is_async:false ~is_test:false
+        ~is_export:false
   | Keyword Async when parser.current_token = Keyword Fun ->
-    next_token parser;
-    parse_function parser ~is_pub:true ~is_async:true ~is_test:false
-      ~is_export:false
+      next_token parser;
+      parse_function parser ~is_pub:true ~is_async:true ~is_test:false
+        ~is_export:false
   | Keyword Async ->
-    Diagnostic.EmitDiagnostic
-      ( "the usage of `async` keyword is not allowed without function \
-         definition",
-        Diagnostic.Error,
-        parser.current_location )
-    |> raise
+      Diagnostic.EmitDiagnostic
+        ( "the usage of `async` keyword is not allowed without function \
+           definition",
+          Diagnostic.Error,
+          parser.current_location )
+      |> raise
   | Identifier s when String.uppercase_ascii s = s -> (
       match parse_constant parser ~id:s ~is_pub:true with
       | Decl (Constant { id; data_type; expr; is_pub }) ->
-        Constant { id; data_type; expr; is_pub }
+          Constant { id; data_type; expr; is_pub }
       | _ ->
-        Diagnostic.EmitDiagnostic
-          ( "the usage of `pub` keyword is not allowed",
-            Diagnostic.Error,
-            parser.current_location )
-        |> raise)
+          Diagnostic.EmitDiagnostic
+            ( "the usage of `pub` keyword is not allowed",
+              Diagnostic.Error,
+              parser.current_location )
+          |> raise)
   | Keyword Module -> parse_module parser ~is_pub:true ~is_test:false
   | Keyword Object -> parse_object parser ~is_pub:true
   | Keyword Type -> parse_type parser ~is_pub:true
@@ -1651,14 +1654,14 @@ and parse_pub parser =
   | Operator Eq -> (
       match parse_pub_block parser with
       | n, l ->
-        parser.current_location <- l;
-        n)
+          parser.current_location <- l;
+          n)
   | _ ->
-    Diagnostic.EmitDiagnostic
-      ( "the usage of `pub` keyword is not allowed",
-        Diagnostic.Error,
-        parser.current_location )
-    |> raise
+      Diagnostic.EmitDiagnostic
+        ( "the usage of `pub` keyword is not allowed",
+          Diagnostic.Error,
+          parser.current_location )
+      |> raise
 
 and parse_body parser ~closure =
   let clos1, clos2, clos3 = closure in
@@ -1673,78 +1676,85 @@ and parse_body parser ~closure =
         match parser.current_token with
         | Identifier _ when is_binop parser ~n:1 -> Expr (parse_expr2 parser)
         | Identifier s when String.uppercase_ascii s = s ->
-          next_token parser;
-          parse_constant parser ~id:s ~is_pub:false
+            next_token parser;
+            parse_constant parser ~id:s ~is_pub:false
         | Identifier s when String.lowercase_ascii s = s ->
-          next_token parser;
-          parse_variable parser ~id:s ~is_mut:false
+            next_token parser;
+            parse_variable parser ~id:s ~is_mut:false
         | Keyword If ->
-          next_token parser;
-          Stmt (parse_if parser)
+            next_token parser;
+            Stmt (parse_if parser)
         | Keyword Match ->
-          next_token parser;
-          Stmt (parse_match parser)
+            next_token parser;
+            Stmt (parse_match parser)
         | Keyword Return ->
-          next_token parser;
-          Stmt (parse_return parser)
+            next_token parser;
+            Stmt (parse_return parser)
+        | Keyword For ->
+            next_token parser;
+            Stmt (parse_for parser)
+        | Keyword While ->
+            next_token parser;
+            Stmt (parse_while parser)
         | Keyword Await ->
-          next_token parser;
-          Stmt (parse_await parser)
-        | Separator LeftParen -> (
+            next_token parser;
+            Stmt (parse_await parser)
+        | Separator LeftParen
+          when peek_token parser ~n:1 <> Some (Separator RightParen) -> (
             next_token parser;
             match parse_grouping parser ~is_mut:false with
             | Decl (Variable { id; data_type; expr; is_mut }) ->
-              Decl (Variable { id; data_type; expr; is_mut })
+                Decl (Variable { id; data_type; expr; is_mut })
             | _ ->
-              Location.end_location loc parser.current_location;
-              Diagnostic.EmitDiagnostic
-                ( "unexpected declaration in this scope",
-                  Diagnostic.Error,
-                  loc )
-              |> raise)
+                Location.end_location loc parser.current_location;
+                Diagnostic.EmitDiagnostic
+                  ( "unexpected declaration in this scope",
+                    Diagnostic.Error,
+                    loc )
+                |> raise)
         | Keyword Mut ->
-          next_token parser;
-          let id =
-            match parser.current_token with
-            | Identifier s when String.lowercase_ascii s = s -> s
-            | Identifier s ->
-              Diagnostic.EmitDiagnostic
-                ( s |> String.lowercase_ascii
-                  |> Printf.sprintf
-                    "invalid variable name `%s`\n\
-                     help: define your variable name in lowercase \
-                     format like this: `%s`"
-                    s,
-                  Diagnostic.Error,
-                  parser.current_location )
-              |> raise
-            | _ ->
-              Diagnostic.EmitDiagnostic
-                ( "miss variable identifier",
-                  Diagnostic.Error,
-                  parser.current_location )
-              |> raise
-          in
-          next_token parser;
-          parse_variable parser ~id ~is_mut:true
+            next_token parser;
+            let id =
+              match parser.current_token with
+              | Identifier s when String.lowercase_ascii s = s -> s
+              | Identifier s ->
+                  Diagnostic.EmitDiagnostic
+                    ( s |> String.lowercase_ascii
+                      |> Printf.sprintf
+                           "invalid variable name `%s`\n\
+                            help: define your variable name in lowercase \
+                            format like this: `%s`"
+                           s,
+                      Diagnostic.Error,
+                      parser.current_location )
+                  |> raise
+              | _ ->
+                  Diagnostic.EmitDiagnostic
+                    ( "miss variable identifier",
+                      Diagnostic.Error,
+                      parser.current_location )
+                  |> raise
+            in
+            next_token parser;
+            parse_variable parser ~id ~is_mut:true
         | Keyword Fun ->
-          next_token parser;
-          Decl
-            (parse_function parser ~is_pub:false ~is_async:false
-               ~is_test:false ~is_export:false)
+            next_token parser;
+            Decl
+              (parse_function parser ~is_pub:false ~is_async:false
+                 ~is_test:false ~is_export:false)
         | Keyword Async when peek_token parser ~n:1 = Some (Keyword Fun) ->
-          next_token parser;
-          next_token parser;
-          Decl
-            (parse_function parser ~is_pub:false ~is_async:true
-               ~is_test:false ~is_export:false)
+            next_token parser;
+            next_token parser;
+            Decl
+              (parse_function parser ~is_pub:false ~is_async:true
+                 ~is_test:false ~is_export:false)
         | Keyword Async ->
-          Diagnostic.EmitDiagnostic
-            ( "the usage of `async` keyword is not allowed without \
-               function definition",
-              Diagnostic.Error,
-              parser.current_location )
-          |> raise
+            Diagnostic.EmitDiagnostic
+              ( "the usage of `async` keyword is not allowed without \
+                 function definition",
+                Diagnostic.Error,
+                parser.current_location )
+            |> raise
         | _ -> Expr (parse_expr2 parser)
       in
       Location.end_location loc parser.current_location;
@@ -1760,15 +1770,15 @@ and parse_polymorphic_argument parser =
     if parser.current_token <> Separator RightHook then (
       let p = parse_data_type parser in
       (match p with
-       | `Generics _ -> ()
-       | _ ->
-         if true then
-           Diagnostic.EmitDiagnostic
-             ( "polymorphic parameter expect only parameter data type like \
-                `a`",
-               Diagnostic.Error,
-               parser.current_location )
-           |> raise);
+      | `Generics _ -> ()
+      | _ ->
+          if true then
+            Diagnostic.EmitDiagnostic
+              ( "polymorphic parameter expect only parameter data type like \
+                 `a`",
+                Diagnostic.Error,
+                parser.current_location )
+            |> raise);
       if parser.current_token <> Separator RightHook then
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token
@@ -1801,20 +1811,20 @@ and parse_argument parser =
           match parser.current_token with
           | Identifier s when String.lowercase_ascii s = s -> s
           | Identifier s ->
-            Diagnostic.emit_diagnostic
-              (parser.current_location
-               |> new_diagnostic parser Diagnostic.Error
-                 (s
-                  |> Printf.sprintf
-                    "use lowercase format for argument named `%s`"));
-            s
+              Diagnostic.emit_diagnostic
+                (parser.current_location
+                |> new_diagnostic parser Diagnostic.Error
+                     (s
+                     |> Printf.sprintf
+                          "use lowercase format for argument named `%s`"));
+              s
           | _ ->
-            Diagnostic.EmitDiagnostic
-              ( parser.current_token |> show_token
-                |> Printf.sprintf "miss parameter name, found `%s`",
-                Diagnostic.Error,
-                parser.current_location )
-            |> raise
+              Diagnostic.EmitDiagnostic
+                ( parser.current_token |> show_token
+                  |> Printf.sprintf "miss parameter name, found `%s`",
+                  Diagnostic.Error,
+                  parser.current_location )
+              |> raise
         in
         next_token parser;
         if is_data_type parser ~n:0 then
@@ -1824,13 +1834,13 @@ and parse_argument parser =
             args :=
               !args
               @ [
-                {
-                  id;
-                  kind = Default (Expr (parse_expr2 parser));
-                  data_type = Some dt;
-                  loc;
-                };
-              ])
+                  {
+                    id;
+                    kind = Default (Expr (parse_expr2 parser));
+                    data_type = Some dt;
+                    loc;
+                  };
+                ])
           else (
             Location.end_location loc parser.current_location;
             args :=
@@ -1840,13 +1850,13 @@ and parse_argument parser =
           args :=
             !args
             @ [
-              {
-                id;
-                kind = Default (Expr (parse_expr2 parser));
-                data_type = None;
-                loc;
-              };
-            ])
+                {
+                  id;
+                  kind = Default (Expr (parse_expr2 parser));
+                  data_type = None;
+                  loc;
+                };
+              ])
         else (
           Location.end_location loc parser.current_location;
           args := !args @ [ { id; kind = Normal; data_type = None; loc } ]);
@@ -1891,20 +1901,20 @@ and parse_method_argument parser =
             match parser.current_token with
             | Identifier s when String.lowercase_ascii s = s -> s
             | Identifier s ->
-              Diagnostic.emit_diagnostic
-                (parser.current_location
-                 |> new_diagnostic parser Diagnostic.Error
-                   (s
-                    |> Printf.sprintf
-                      "use lowercase format for argument named `%s`"));
-              s
+                Diagnostic.emit_diagnostic
+                  (parser.current_location
+                  |> new_diagnostic parser Diagnostic.Error
+                       (s
+                       |> Printf.sprintf
+                            "use lowercase format for argument named `%s`"));
+                s
             | _ ->
-              Diagnostic.EmitDiagnostic
-                ( parser.current_token |> show_token
-                  |> Printf.sprintf "miss parameter name, found `%s`",
-                  Diagnostic.Error,
-                  parser.current_location )
-              |> raise
+                Diagnostic.EmitDiagnostic
+                  ( parser.current_token |> show_token
+                    |> Printf.sprintf "miss parameter name, found `%s`",
+                    Diagnostic.Error,
+                    parser.current_location )
+                |> raise
           in
           next_token parser;
           if is_data_type parser ~n:0 then
@@ -1913,42 +1923,42 @@ and parse_method_argument parser =
               args :=
                 !args
                 @ [
-                  {
-                    id_mth = Some id;
-                    kind_mth = Default (Expr (parse_expr2 parser));
-                    data_type_mth = Some dt;
-                  };
-                ]
+                    {
+                      id_mth = Some id;
+                      kind_mth = Default (Expr (parse_expr2 parser));
+                      data_type_mth = Some dt;
+                    };
+                  ]
             else
               args :=
                 !args
                 @ [
-                  {
-                    id_mth = Some id;
-                    kind_mth = Normal;
-                    data_type_mth = Some dt;
-                  };
-                ]
+                    {
+                      id_mth = Some id;
+                      kind_mth = Normal;
+                      data_type_mth = Some dt;
+                    };
+                  ]
           else if matches parser (Operator Eq) then
             args :=
               !args
               @ [
-                {
-                  id_mth = Some id;
-                  kind_mth = Default (Expr (parse_expr2 parser));
-                  data_type_mth = None;
-                };
-              ]
+                  {
+                    id_mth = Some id;
+                    kind_mth = Default (Expr (parse_expr2 parser));
+                    data_type_mth = None;
+                  };
+                ]
           else
             args :=
               !args
               @ [
-                {
-                  id_mth = Some id;
-                  kind_mth = Normal;
-                  data_type_mth = None;
-                };
-              ];
+                  {
+                    id_mth = Some id;
+                    kind_mth = Normal;
+                    data_type_mth = None;
+                  };
+                ];
           if parser.current_token <> Separator RightParen then
             Diagnostic.EmitDiagnostic
               ( parser.current_token |> show_token
@@ -1976,52 +1986,52 @@ and parse_decl parser =
   let node =
     match parser.previous_token with
     | Identifier s when String.uppercase_ascii s = s ->
-      parse_constant parser ~id:s ~is_pub:false
+        parse_constant parser ~id:s ~is_pub:false
     | Separator LeftParen -> (
         match parse_grouping parser ~is_mut:false with
         | Decl (Constant { id; data_type; expr; is_pub }) ->
-          Decl (Constant { id; data_type; expr; is_pub })
+            Decl (Constant { id; data_type; expr; is_pub })
         | _ ->
-          Location.end_location loc parser.current_location;
-          Diagnostic.EmitDiagnostic
-            ("unexpected declaration in this scope", Diagnostic.Error, loc)
-          |> raise)
+            Location.end_location loc parser.current_location;
+            Diagnostic.EmitDiagnostic
+              ("unexpected declaration in this scope", Diagnostic.Error, loc)
+            |> raise)
     | Keyword Fun ->
-      Decl
-        (parse_function parser ~is_pub:false ~is_async:false ~is_test:false
-           ~is_export:false)
+        Decl
+          (parse_function parser ~is_pub:false ~is_async:false ~is_test:false
+             ~is_export:false)
     | Keyword Async when parser.current_token = Keyword Fun ->
-      Decl
-        (parse_function parser ~is_pub:false ~is_async:true ~is_test:false
-           ~is_export:false)
+        Decl
+          (parse_function parser ~is_pub:false ~is_async:true ~is_test:false
+             ~is_export:false)
     | Keyword Async ->
-      Diagnostic.EmitDiagnostic
-        ( "the usage of `async` keyword is not allowed without function \
-           definition",
-          Diagnostic.Error,
-          parser.previous_location )
-      |> raise
+        Diagnostic.EmitDiagnostic
+          ( "the usage of `async` keyword is not allowed without function \
+             definition",
+            Diagnostic.Error,
+            parser.previous_location )
+        |> raise
     | Keyword Pub -> Decl (parse_pub parser)
     | Keyword Module ->
-      Decl (parse_module parser ~is_pub:false ~is_test:false)
+        Decl (parse_module parser ~is_pub:false ~is_test:false)
     | Keyword Type -> Decl (parse_type parser ~is_pub:false)
     | Keyword Object -> Decl (parse_object parser ~is_pub:false)
     | Keyword Import -> Decl (parse_import parser ~is_pub:false)
     | t -> (
         match t with
         | Keyword End ->
-          Diagnostic.EmitDiagnostic
-            ( "unexpected end of block",
-              Diagnostic.Error,
-              parser.current_location )
-          |> raise
+            Diagnostic.EmitDiagnostic
+              ( "unexpected end of block",
+                Diagnostic.Error,
+                parser.current_location )
+            |> raise
         | _ ->
-          Diagnostic.EmitDiagnostic
-            ( parser.current_token |> show_token
-              |> Printf.sprintf "unexpected expression `%s`",
-              Diagnostic.Error,
-              parser.previous_location )
-          |> raise)
+            Diagnostic.EmitDiagnostic
+              ( parser.current_token |> show_token
+                |> Printf.sprintf "unexpected expression `%s`",
+                Diagnostic.Error,
+                parser.previous_location )
+            |> raise)
   in
   Location.end_location loc parser.current_location;
   node
@@ -2058,7 +2068,7 @@ and parse_if parser =
                    ( Some (Keyword Elif),
                      Some (Keyword Else),
                      Some (Keyword End) ) )
-             :: elif_)
+            :: elif_)
           ())
       else if parser.current_token = Keyword End then
         If
@@ -2096,42 +2106,42 @@ and parse_match parser =
   let rec loop ?(case = []) () =
     match parser.current_token with
     | Identifier s ->
-      next_token parser;
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf "expected `->`, found `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> expect_token parser (Separator Arrow);
-      let body =
-        parse_body parser
-          ~closure:(Some (Keyword End), Some (Separator Bar), None)
-      in
-      if
-        parser.previous_token = Separator Bar
-        && parser.current_token = Keyword End
-      then next_token parser;
-      Match
-        {
-          expr;
-          case = Array.of_list case;
-          else_case = Some { expr = Identifier (s, None); body };
-        }
+        next_token parser;
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "expected `->`, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> expect_token parser (Separator Arrow);
+        let body =
+          parse_body parser
+            ~closure:(Some (Keyword End), Some (Separator Bar), None)
+        in
+        if
+          parser.previous_token = Separator Bar
+          && parser.current_token = Keyword End
+        then next_token parser;
+        Match
+          {
+            expr;
+            case = Array.of_list case;
+            else_case = Some { expr = Identifier (s, None); body };
+          }
     | Keyword End ->
-      next_token parser;
-      Match { expr; case = Array.of_list case; else_case = None }
+        next_token parser;
+        Match { expr; case = Array.of_list case; else_case = None }
     | _ ->
-      let matched = parse_expr2 parser in
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf "expected `->`, found `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> expect_token parser (Separator Arrow);
-      let body =
-        parse_body parser ~closure:(Some (Separator Bar), None, None)
-      in
-      loop ~case:({ expr = matched; body } :: case) ()
+        let matched = parse_expr2 parser in
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "expected `->`, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> expect_token parser (Separator Arrow);
+        let body =
+          parse_body parser ~closure:(Some (Separator Bar), None, None)
+        in
+        loop ~case:({ expr = matched; body } :: case) ()
   in
   loop ()
 
@@ -2165,4 +2175,29 @@ and parse_while parser =
   let body = parse_body parser ~closure:(Some (Keyword End), None, None) in
   While { cond; body }
 
-and parse_for parser = assert false
+and parse_for parser =
+  let id =
+    match parser.current_token with
+    | Identifier s ->
+        next_token parser;
+        Identifier (s, None)
+    | Separator LeftParen ->
+        next_token parser;
+        parse_tuple parser
+    | _ -> failwith "unreachable"
+  in
+  Diagnostic.EmitDiagnostic
+    ( parser.current_token |> show_token
+      |> Printf.sprintf "expected `in` keyword, found `%s`",
+      Diagnostic.Error,
+      parser.current_location )
+  |> expect_token parser (Keyword In);
+  let expr = parse_expr2 parser in
+  Diagnostic.EmitDiagnostic
+    ( parser.current_token |> show_token
+      |> Printf.sprintf "expected `do` keyword, found `%s`",
+      Diagnostic.Error,
+      parser.current_location )
+  |> expect_token parser (Keyword Do);
+  let body = parse_body parser ~closure:(Some (Keyword End), None, None) in
+  For { expr = In (id, expr); body }
