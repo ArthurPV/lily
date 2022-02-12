@@ -91,11 +91,12 @@ and check_expr_type tpc = function
   | Mod (x, y), l
   | Add (x, y), l
   | Sub (x, y), l
-  | Exp (x, y), l ->
+  | Exp (x, y), l -> (
       let left = check_expr_type tpc (x, l) in
       let right = check_expr_type tpc (y, l) in
-      (* TODO: add try *)
-      check_arithmetic_expr (left, right)
+      try check_arithmetic_expr (left, right)
+      with Failure e ->
+        Diagnostic.EmitDiagnostic (e, Diagnostic.Error, l) |> raise)
   | Range (x, y), l -> (
       let left = check_expr_type tpc (x, l) in
       let right = check_expr_type tpc (y, l) in
@@ -143,13 +144,10 @@ and check_expr_type tpc = function
                "bad type for range expression: [left: %s, right: %s]"
                (dt2 |> show_data_type)
           |> failwith)
-  | Lt (x, y), l
-  | Gt (x, y), l
-  | Le (x, y), l
-  | Ge (x, y), l ->
+  | Lt (x, y), l | Gt (x, y), l | Le (x, y), l | Ge (x, y), l -> (
       let left = check_expr_type tpc (x, l) in
       let right = check_expr_type tpc (y, l) in
-      (match (left, right) with
+      match (left, right) with
       | `I8, `I8 -> `Bool
       | `I16, `I16 -> `Bool
       | `I32, `I32 -> `Bool
@@ -160,23 +158,55 @@ and check_expr_type tpc = function
       | `U64, `U64 -> `Bool
       | `F32, `F32 -> `Bool
       | `F64, `F64 -> `Bool
-      | _ -> failwith "error")
-  | Eq (x, y), _ -> failwith "not implemented"
-  | Ne (x, y), _ -> failwith "not implemented"
-  | And (x, y), l
-  | Or (x, y), l ->
+      | `Char, `Char -> `Bool
+      | `I8, dt
+      | `I16, dt
+      | `I32, dt
+      | `I64, dt
+      | `U8, dt
+      | `U16, dt
+      | `U32, dt
+      | `U64, dt
+      | `F32, dt
+      | `F64, dt
+      | `Char, dt -> failwith "error"
+      | dt, `I8
+      | dt, `I16
+      | dt, `I32
+      | dt, `I64
+      | dt, `U8
+      | dt, `U16
+      | dt, `U32
+      | dt, `U64
+      | dt, `F32
+      | dt, `F64
+      | dt, `Char -> failwith "error"
+      | dt, dt2 ->
+          Diagnostic.EmitDiagnostic
+            ( dt |> show_data_type
+              |> Printf.sprintf
+                   "bad type for comparison expression: [left: %s, right: \
+                    %s]"
+                   (dt2 |> show_data_type),
+              Diagnostic.Error,
+              l )
+          |> raise)
+  | Eq (x, y), l
+  | Ne (x, y), l -> failwith "not implemented"
+  | And (x, y), l | Or (x, y), l -> (
       let left = check_expr_type tpc (x, l) in
       let right = check_expr_type tpc (y, l) in
-      (match (left, right) with
+      match (left, right) with
       | `Bool, `Bool -> `Bool
       | _ -> failwith "error")
-  | Assign (x, y), _ -> failwith "not implemented"
-  | AddAssign (x, y), _ -> failwith "not implemented"
-  | SubAssign (x, y), _ -> failwith "not implemented"
-  | MulAssign (x, y), _ -> failwith "not implemented"
-  | DivAssign (x, y), _ -> failwith "not implemented"
-  | ModAssign (x, y), _ -> failwith "not implemented"
-  | ExpAssign (x, y), _ -> failwith "not implemented"
+  | Assign (x, y), l
+  | AddAssign (x, y), l
+  | SubAssign (x, y), l
+  | MulAssign (x, y), l
+  | DivAssign (x, y), l
+  | ModAssign (x, y), l
+  | ExpAssign (x, y), l ->
+      failwith "not implemented"
   | FunctionCall (id, args), _ -> failwith "not implemented"
   | ClassCall (id, args), _ -> failwith "not implemented"
   | RecordCall (id, args), _ -> failwith "not implemented"
