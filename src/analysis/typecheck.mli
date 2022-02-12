@@ -1,6 +1,11 @@
 open Lily_parser.Ast
+open Lily_parser.Parser
+open Lily_lexer.Location
 
-val can_check_type : ast -> bool
-val check_generics_type : ast -> unit
-val check_expr_type : expr -> unit
-val check_type : ast -> unit
+type typecheck = parser
+
+val can_check_type : ast * location -> bool
+val check_generics_type : typecheck -> ast * location -> data_type
+val check_binary_expr : typecheck -> data_type * data_type -> data_type
+val check_expr_type : typecheck -> expr * location -> data_type
+val check_type : typecheck -> ast * location -> data_type
