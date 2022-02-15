@@ -729,6 +729,12 @@ let run scope =
            "please add main function.\nhelp: ```fun main = end```"
       |> Diagnostic.emit_diagnostic;
       exit 1);
+    check_fun_scope scope [||] [| scope.global |]
+      (match scope.parser.nodes.(idx) with
+      | n, _ -> (
+          match n with
+          | Decl (Fun { body; _ }) -> body
+          | _ -> failwith "unreachable"));
     ())
   else (
     (match
