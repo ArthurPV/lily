@@ -814,7 +814,7 @@ and parse_multiple parser =
             parser.current_location )
         |> expect_token parser (Separator RightParen);
       next_token parser;
-      (Array.of_list ids, is_lower))
+      (ids |> List.rev |> Array.of_list, is_lower))
   in
   loop ()
 
@@ -872,7 +872,7 @@ and parse_multiple_variable parser ~ids ~is_mut =
          |> new_diagnostic parser Diagnostic.Warning
               "please define a simple variable like this: `<id> := <value>`")
         |> Diagnostic.emit_diagnostic;
-      Array.of_list vars)
+      vars |> List.rev |> Array.of_list)
   in
   loop ()
 
@@ -940,7 +940,7 @@ and parse_multiple_constant parser ~ids ~is_pub =
         |> new_diagnostic parser Diagnostic.Warning
              "please define a simple variable like this: `<id> := <value>`"
         |> Diagnostic.emit_diagnostic);
-      Array.of_list consts)
+      consts |> List.rev |> Array.of_list)
   in
   loop ()
 
@@ -1070,7 +1070,7 @@ and parse_body_module parser =
       | _ -> failwith "unreachable"
     else (
       next_token parser;
-      Array.of_list body)
+      body |> List.rev |> Array.of_list)
   in
   loop ()
 
@@ -1153,11 +1153,13 @@ and parse_type parser ~is_pub =
   |> expect_token parser (Operator Eq);
   match kw with
   | Keyword Alias ->
-      !poly_args |> Array.of_list |> parse_alias parser id ~is_pub
+      !poly_args |> List.rev |> Array.of_list
+      |> parse_alias parser id ~is_pub
   | Keyword Record ->
-      !poly_args |> Array.of_list |> parse_record parser id ~is_pub
+      !poly_args |> List.rev |> Array.of_list
+      |> parse_record parser id ~is_pub
   | Keyword Enum ->
-      !poly_args |> Array.of_list |> parse_enum parser id ~is_pub
+      !poly_args |> List.rev |> Array.of_list |> parse_enum parser id ~is_pub
   | _ ->
       Diagnostic.EmitDiagnostic
         ( "the usage of `type` keyword is not allowed without `alias`, \
@@ -1209,7 +1211,13 @@ and parse_record parser id poly_args ~is_pub =
         ())
     else (
       next_token parser;
-      Record { id; poly_args; fields = Array.of_list fields; is_pub })
+      Record
+        {
+          id;
+          poly_args;
+          fields = fields |> List.rev |> Array.of_list;
+          is_pub;
+        })
   in
   loop ()
 
@@ -1261,7 +1269,13 @@ and parse_enum parser id poly_args ~is_pub =
         loop ~variants:(({ id; data_type = None }, loc) :: variants) ()))
     else (
       next_token parser;
-      Enum { id; poly_args; variants = Array.of_list variants; is_pub })
+      Enum
+        {
+          id;
+          poly_args;
+          variants = variants |> List.rev |> Array.of_list;
+          is_pub;
+        })
   in
   loop ()
 
@@ -1348,10 +1362,13 @@ and parse_object parser ~is_pub =
   |> expect_token parser (Operator Eq);
   match kw with
   | Keyword Class ->
-      !inh |> Array.of_list
-      |> parse_class parser id (!poly_args |> Array.of_list) ~is_pub
+      !inh |> List.rev |> Array.of_list
+      |> parse_class parser id
+           (!poly_args |> List.rev |> Array.of_list)
+           ~is_pub
   | Keyword Trait ->
-      !poly_args |> Array.of_list |> parse_trait parser id ~is_pub
+      !poly_args |> List.rev |> Array.of_list
+      |> parse_trait parser id ~is_pub
   | _ ->
       Diagnostic.EmitDiagnostic
         ( "the usage of `object` keyword is not allowed without `class`, \
@@ -1406,7 +1423,7 @@ and parse_body_class parser id =
       loop ~body:((decl, loc) :: body) ())
     else (
       next_token parser;
-      Array.of_list body)
+      body |> List.rev |> Array.of_list)
   in
   loop ()
 
@@ -1492,7 +1509,8 @@ and parse_trait parser id poly_args ~is_pub =
       loop ~body:((decl, loc) :: body) ())
     else (
       next_token parser;
-      Trait { id; poly_args; body = Array.of_list body; is_pub })
+      Trait
+        { id; poly_args; body = body |> List.rev |> Array.of_list; is_pub })
   in
   loop ()
 
@@ -1791,7 +1809,7 @@ and parse_polymorphic_argument parser =
       loop ~args:(p :: args) ())
     else (
       next_token parser;
-      Array.of_list args)
+      args |> List.rev |> Array.of_list)
   in
   loop ()
 
@@ -1873,7 +1891,7 @@ and parse_argument parser =
     in
     loop ();
     next_token parser;
-    Array.of_list !args)
+    !args |> List.rev |> Array.of_list)
   else [||]
 
 and parse_method_argument parser =
@@ -1972,7 +1990,7 @@ and parse_method_argument parser =
         else next_token parser
       in
       loop ();
-      !args |> Array.of_list))
+      !args |> List.rev |> Array.of_list))
   else (
     Diagnostic.EmitDiagnostic
       ( parser.current_token |> show_token
@@ -2076,7 +2094,7 @@ and parse_if parser =
         If
           {
             if_ = (cond, if_);
-            elif_ = Some (Array.of_list elif_);
+            elif_ = Some (elif_ |> List.rev |> Array.of_list);
             else_ = None;
           }
       else
@@ -2086,7 +2104,7 @@ and parse_if parser =
         If
           {
             if_ = (cond, if_);
-            elif_ = Some (Array.of_list elif_);
+            elif_ = Some (elif_ |> List.rev |> Array.of_list);
             else_ = Some else_;
           }
     in
@@ -2126,12 +2144,17 @@ and parse_match parser =
         Match
           {
             expr;
-            case = Array.of_list case;
+            case = case |> List.rev |> Array.of_list;
             else_case = Some { expr = Identifier (s, None); body };
           }
     | Keyword End ->
         next_token parser;
-        Match { expr; case = Array.of_list case; else_case = None }
+        Match
+          {
+            expr;
+            case = case |> List.rev |> Array.of_list;
+            else_case = None;
+          }
     | _ ->
         let matched = parse_expr2 parser in
         Diagnostic.EmitDiagnostic
