@@ -1763,7 +1763,7 @@ and parse_body parser ~closure =
       loop ~body:((child, loc) :: body) ())
     else (
       next_token parser;
-      Array.of_list body)
+      body |> List.rev |> Array.of_list)
   in
   loop ()
 
