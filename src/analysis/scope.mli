@@ -117,10 +117,13 @@ val add_ref_on_node : expr -> ast option -> expr
 val check_expr :
   scope -> ast ref -> location -> scope_access array array -> ast
 
+val push_access_in :
+  scope_access array ref array ref -> int -> scope_access -> unit
+
 val check_fun_scope :
   scope ->
   argument array ->
-  scope_access array array ->
+  scope_access array ref array ->
   (ast * location) array ->
   unit
 

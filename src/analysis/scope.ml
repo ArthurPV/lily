@@ -580,10 +580,16 @@ let rec check_expr scope node loc access =
              check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | _ -> failwith "unreachable"
 
+let push_access_in access_in len access =
+  if len + 1 <> Array.length !access_in then
+    access_in := Array.append [| ref [| access |] |] !access_in
+  else !access_in.(0) <- Array.append !(!access_in.(0)) [| access |] |> ref
+
 let rec check_fun_scope scope args access nodes =
   (* List all used access in array *)
   (* let used_access_in = ref [||] in *)
   (* Add function parameter in access_in *)
+  let len = Array.length access in
   let rec loop ?(i = 0) ?(access_in = []) () =
     if i < Array.length args then
       match args.(i) with
@@ -591,17 +597,18 @@ let rec check_fun_scope scope args access nodes =
           loop ~i:(i + 1)
             ~access_in:(`Identifier (`None, id, loc, None) :: access_in)
             ()
-    else access_in |> Array.of_list
+    else access_in |> List.rev |> Array.of_list
   in
-  let access_in = ref [| loop () |] in
+  let access_in = Array.append [| loop () |> ref |] access |> ref in
   let rec loop_body ?(i = 0) () =
     if i < Array.length nodes then
       match match nodes.(i) with t, _ -> t with
       | Decl (Variable { id; data_type; expr; is_mut }) ->
           let checked_expr =
-            check_expr scope (Expr expr |> ref)
-              (match nodes.(i) with _, l -> l)
-              !access_in
+            !access_in
+            |> Array.map (fun x -> !x)
+            |> check_expr scope (Expr expr |> ref)
+                 (match nodes.(i) with _, l -> l)
           in
           nodes.(i) <-
             (match nodes.(i) with
@@ -615,26 +622,22 @@ let rec check_fun_scope scope args access nodes =
                          is_mut;
                        }),
                   l ));
-          access_in :=
-            Array.append !access_in
-              [|
-                [|
-                  `Identifier
-                    ( `None,
-                      id,
-                      (match nodes.(i) with _, l -> l),
-                      Some (match nodes.(i) with n, _ -> n) );
-                |];
-              |];
+          push_access_in access_in len
+            (`Identifier
+              ( `None,
+                id,
+                (match nodes.(i) with _, l -> l),
+                Some (match nodes.(i) with n, _ -> n) ));
           loop_body ~i:(i + 1) ()
       | Stmt (If { if_; elif_; else_ }) ->
           (* check condition *)
           let checked_if_cond =
-            check_expr scope
-              (Expr (match if_ with e, _ -> e) |> ref)
-              (match nodes.(i) with _, l -> l)
-              (* TODO: add location on if expr *)
-              !access_in
+            !access_in
+            |> Array.map (fun x -> !x)
+            |> check_expr scope
+                 (Expr (match if_ with e, _ -> e) |> ref)
+                 (match nodes.(i) with _, l -> l)
+            (* TODO: add location on if expr *)
           in
           let access_in_ref = access_in in
           check_fun_scope scope [||] !access_in_ref
@@ -673,10 +676,11 @@ let rec check_fun_scope scope args access nodes =
       | Stmt (While { cond; body }) ->
           (* CHECK condition *)
           let check_while_cond =
-            check_expr scope (Expr cond |> ref)
-              (match nodes.(i) with _, l -> l)
-              (* TODO: add location on expression *)
-              !access_in
+            !access_in
+            |> Array.map (fun x -> !x)
+            |> check_expr scope (Expr cond |> ref)
+                 (match nodes.(i) with _, l -> l)
+            (* TODO: add location on expression *)
           in
           let access_in_ref = access_in in
           check_fun_scope scope args !access_in_ref body;
@@ -692,9 +696,10 @@ let rec check_fun_scope scope args access nodes =
           loop_body ~i:(i + 1) () (* TODO *)
       | Stmt (Return expr) ->
           let check_return_expr =
-            check_expr scope (Expr expr |> ref)
-              (match nodes.(i) with _, l -> l)
-              !access_in
+            !access_in
+            |> Array.map (fun x -> !x)
+            |> check_expr scope (Expr expr |> ref)
+                 (match nodes.(i) with _, l -> l)
           in
           nodes.(i) <-
             (match nodes.(i) with
@@ -703,6 +708,7 @@ let rec check_fun_scope scope args access nodes =
       | _ -> failwith "unreachable"
   in
   loop_body ();
+  if verify_if_same_access scope !(!access_in.(0)) > 0 then () else ();
   ()
 
 let check_alias_scope scope nodes = assert false
@@ -729,7 +735,8 @@ let run scope =
            "please add main function.\nhelp: ```fun main = end```"
       |> Diagnostic.emit_diagnostic;
       exit 1);
-    check_fun_scope scope [||] [| scope.global |]
+    check_fun_scope scope [||]
+      [| ref scope.global |]
       (match scope.parser.nodes.(idx) with
       | n, _ -> (
           match n with
