@@ -483,12 +483,44 @@ let rec check_expr scope node loc access =
       if !matched |> Bool.not then
         loc
         |> Parser.new_diagnostic scope.parser Diagnostic.Error
-             (Printf.sprintf "identifier do not exists: `%s`" s)
+             (Printf.sprintf "cannot find identifier `%s` in this scope" s)
         |> Diagnostic.emit_diagnostic;
       !node
   | Expr (IdentifierAccess (_, _)) | Expr (SelfAccess (_, _)) ->
       failwith "todo"
-  | Expr (FunctionCall (_, _)) -> failwith "todo"
+  | Expr (FunctionCall (e, arr)) -> (
+      match e with
+      | Identifier (s, _) ->
+          let rec loop ?(i = 0) () =
+            if i < Array.length access && !matched |> Bool.not then (
+              let rec loop2 ?(j = 0) () =
+                if j < Array.length access.(i) && !matched |> Bool.not then
+                  match access.(i).(j) with
+                  | `Fun (_, s2, _, _, ast) when s = s2 ->
+                      matched := true;
+                      check_fun_scope scope
+                        (match ast with
+                        | Some (Decl (Fun { args; _ })) -> args
+                        | _ -> failwith "unreachable")
+                        (access |> Array.map (fun x -> x |> ref))
+                        (match ast with
+                        | Some (Decl (Fun { body; _ })) -> body
+                        | _ -> failwith "unreachable");
+                      node := Expr (FunctionCall (Identifier (s, ast), arr))
+                  | _ -> loop2 ~j:(j + 1) ()
+              in
+              loop2 ();
+              loop ~i:(i + 1) ())
+          in
+          loop ();
+          if !matched |> Bool.not then
+            loc
+            |> Parser.new_diagnostic scope.parser Diagnostic.Error
+                 (Printf.sprintf "cannot find function `%s` in this scope" s)
+            |> Diagnostic.emit_diagnostic;
+          !node
+      | IdentifierAccess (_, _) -> failwith "todo"
+      | _ -> failwith "unreachable")
   | Expr (RecordCall (_, _)) -> failwith "todo"
   | Expr (ClassCall (_, _)) -> failwith "todo"
   | Expr (AnonymousFunction (_, _)) -> failwith "topdo"
@@ -580,12 +612,12 @@ let rec check_expr scope node loc access =
              check_expr scope (Expr r |> ref) loc access |> ast_to_expr ))
   | _ -> failwith "unreachable"
 
-let push_access_in access_in len access =
+and push_access_in access_in len access =
   if len + 1 <> Array.length !access_in then
     access_in := Array.append [| ref [| access |] |] !access_in
   else !access_in.(0) <- Array.append !(!access_in.(0)) [| access |] |> ref
 
-let rec check_fun_scope scope args access nodes =
+and check_fun_scope scope args access nodes =
   (* List all used access in array *)
   (* let used_access_in = ref [||] in *)
   (* Add function parameter in access_in *)
