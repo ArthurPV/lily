@@ -120,11 +120,21 @@ val check_expr :
 val push_access_in :
   scope_access array ref array ref -> int -> scope_access -> unit
 
+val check_duplicate_argument_name : scope -> argument array -> unit
+
+val check_count_argument :
+  scope -> argument array -> args_fun_call array -> location -> unit
+
+val get_argument_access :
+  scope -> argument array -> args_fun_call array -> scope_access array
+
 val check_fun_scope :
   scope ->
   argument array ->
+  args_fun_call array ->
   scope_access array ref array ->
   (ast * location) array ->
+  location option ->
   unit
 
 val check_alias_scope : scope -> (ast * location) array -> unit
