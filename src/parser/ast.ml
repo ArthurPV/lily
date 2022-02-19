@@ -19,7 +19,7 @@ type data_type =
   | `Unit [@printer fun fmt _ -> fprintf fmt "Unit"]
   | `SelfArg [@printer fun fmt _ -> fprintf fmt "self"]
   | `Array of data_type
-    [@printer fun fmt dt -> fprintf fmt "%s" (show_data_type dt)]
+    [@printer fun fmt dt -> fprintf fmt "[%s]" (show_data_type dt)]
   | `Tuple of data_type array
     [@printer
       fun fmt dt_arr ->
@@ -143,6 +143,7 @@ and case = {
 }
 [@@deriving show]
 
+and args_fun_call = string option * ast [@@deriving show]
 and if_t = expr * (ast * location) array
 
 (* NOTE: ast option it used in analysis, but for the moment the value is
@@ -240,14 +241,14 @@ and expr =
       [@printer
         fun fmt (e1, e2) ->
           fprintf fmt "%s ^= %s" (show_expr e1) (show_expr e2)]
-  | FunctionCall of expr * ast array
+  | FunctionCall of expr * args_fun_call array
       (* TODO: create a function for convert to string expr * (ast * ast
          option) array if it's possible *)
       [@printer
         fun fmt (e, tp_arr) ->
           let rec loop ?(i = 0) ?(l = []) () =
             if i < Array.length tp_arr then
-              loop ~i:(i + 1) ~l:(show_ast tp_arr.(i) :: l) ()
+              loop ~i:(i + 1) ~l:(show_args_fun_call tp_arr.(i) :: l) ()
             else l |> List.rev |> String.concat ", "
           in
           let tp_s = loop () in
@@ -334,8 +335,10 @@ and expr =
           in
           let body_s = loop_body () in
           fprintf fmt "fun(%s) =>\n%send" args_s body_s]
-  | In of string * ast
-      [@printer fun fmt (s, a) -> fprintf fmt "(%s, %s)" s (show_ast a)]
+  | In of expr * expr
+      [@printer
+        fun fmt (e1, e2) ->
+          fprintf fmt "(%s, %s)" (show_expr e1) (show_expr e2)]
   (* TODO: replace string by expr *)
   | Tuple of expr array
       [@printer
