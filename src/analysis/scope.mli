@@ -117,6 +117,17 @@ val add_ref_on_node : expr -> ast option -> expr
 val check_expr :
   scope -> ast ref -> location -> scope_access array array -> ast
 
+val search_in :
+  scope ->
+  scope_access array ->
+  pos:int ->
+  value:expr ->
+  location ->
+  scope_access option * scope_access array option
+
+val identifier_access_node_to_identifier_addr :
+  scope -> ast -> location -> scope_access
+
 val push_access_in :
   scope_access array ref array ref -> int -> scope_access -> unit
 
