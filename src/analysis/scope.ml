@@ -537,7 +537,28 @@ let rec check_expr scope node loc access =
                  (Printf.sprintf "cannot find function `%s` in this scope" s)
             |> Diagnostic.emit_diagnostic;
           !node
-      | IdentifierAccess (_, _) -> failwith "todo"
+      | IdentifierAccess (id, _) -> (
+          let addr =
+            match
+              identifier_access_node_to_identifier_addr scope (Expr e) loc
+            with
+            | `IdentifierAddr arr -> arr
+            | _ -> failwith "unreachable"
+          in
+          match addr.(Array.length addr - 1) with
+          | `Fun (_, _, _, loc, ast) ->
+              check_fun_scope scope
+                (match ast with
+                | Some (Decl (Fun { args; _ })) -> args
+                | _ -> failwith "unreachable")
+                arr [||]
+                (match ast with
+                | Some (Decl (Fun { body; _ })) -> body
+                | _ -> failwith "unreachable")
+                (Some loc);
+              node := Expr (FunctionCall (IdentifierAccess (id, ast), arr));
+              !node
+          | _ -> failwith "unreachable")
       | _ -> failwith "unreachable")
   | Expr (RecordCall (_, _)) -> failwith "todo"
   | Expr (ClassCall (_, _)) -> failwith "todo"
@@ -682,36 +703,36 @@ and search_in scope access ~pos ~value loc =
 and identifier_access_node_to_identifier_addr scope node loc =
   let access = ref scope.global in
   match node with
-  | Expr (IdentifierAccess (es, _)) ->
-      let rec loop ?(i = 0) ?(items = []) () =
-        if i < Array.length es then
+  | Expr (IdentifierAccess (es, _)) -> (
+      let rec loop ?(i = 0) ?(addr = None) () =
+        if i < Array.length es && addr = None then
           match es.(i) with
           | FunctionCall (_, _) -> (
               match search_in scope !access ~pos:i ~value:es.(i) loc with
               | Some a, None ->
-                if i+1 <> Array.length es then failwith "todo"
-                else loop ~i:(i + 1) ~items:(a :: items) ()
+                  if i + 1 <> Array.length es then failwith "todo"
+                  else loop ~i:(i + 1) ~addr:(Some a) ()
               | _ -> failwith "unreachable")
           | RecordCall (_, _) -> (
               match search_in scope !access ~pos:i ~value:es.(i) loc with
               | Some a, None ->
-                if i+1 <> Array.length es then failwith "todo"
-                else loop ~i:(i + 1) ~items:(a :: items) ()
+                  if i + 1 <> Array.length es then failwith "todo"
+                  else loop ~i:(i + 1) ~addr:(Some a) ()
               | _ -> failwith "unreachable")
           | ClassCall (_, _) -> (
               match search_in scope !access ~pos:i ~value:es.(i) loc with
-              | Some a, None -> loop ~i:(i + 1) ~items:(a :: items) ()
+              | Some a, None -> loop ~i:(i + 1) ~addr:(Some a) ()
               | _ -> failwith "unreachable")
           | Identifier (_, _) -> (
               match search_in scope !access ~pos:i ~value:es.(i) loc with
               | Some a, Some new_access ->
                   access := new_access;
-                  loop ~i:(i + 1) ~items:(a :: items) ()
-              | _ -> loop ~i:(i + 1) ())
+                  loop ~i:(i + 1) ~addr:(Some a) ()
+              | _ -> failwith "unreachable")
           | _ -> failwith "unreachable"
-        else items |> List.rev |> Array.of_list
+        else addr
       in
-      `IdentifierAddr (loop ())
+      match loop () with Some v -> v | None -> failwith "unreachable")
   | _ -> failwith "unreachable"
 
 and push_access_in access_in len access =
