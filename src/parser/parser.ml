@@ -606,6 +606,17 @@ and parse_identifier_access parser f_id =
         next_token parser;
         next_token parser;
         loop ~access:(Identifier (s, None) :: access) ()
+    | Identifier s when peek_token parser ~n:1 = Some (Separator Colon) ->
+        let access_ref = ref access in
+        access_ref := [ Identifier (s, None) ] @ !access_ref;
+        next_token parser;
+        let call =
+          parse_variant parser
+            ~id:
+              (IdentifierAccess
+                 (!access_ref |> List.rev |> Array.of_list, None))
+        in
+        call
     | Identifier s ->
         next_token parser;
         IdentifierAccess
@@ -680,8 +691,17 @@ and parse_array parser =
   loop ()
 
 and parse_variant parser ~id =
-  let expr = parse_expr2 parser in
-  Variant (id, Some expr)
+  if matches parser (Separator Colon) then
+    let expr = parse_expr2 parser in
+    Variant (id, Some expr)
+  else if matches parser (Separator ColonColon) then Variant (id, None)
+  else
+    Diagnostic.EmitDiagnostic
+      ( parser.current_token |> show_token
+        |> Printf.sprintf "expected `:` or `::`, found `%s`",
+        Diagnostic.Error,
+        parser.current_location )
+    |> raise
 
 and parse_primary_expr parser =
   let loc = Location.copy_location parser.current_location in
@@ -708,6 +728,8 @@ and parse_primary_expr parser =
         | Separator LeftBrace ->
             parse_record_call parser ~id:(Identifier (s, None))
         | Separator LeftParen ->
+            parse_function_call parser ~id:(Identifier (s, None))
+        | Separator Colon | Separator ColonColon ->
             parse_variant parser ~id:(Identifier (s, None))
         | _ -> Identifier (s, None))
     | Identifier s -> Identifier (s, None)
