@@ -1,3 +1,3 @@
-A := (1, 2)
+A (Int8, Int8) := (1, 2)
 
 fun main = end
