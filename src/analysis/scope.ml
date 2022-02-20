@@ -1,6 +1,7 @@
 open Lily_common.Common
 open Lily_lexer.Location
 open Lily_parser.Ast
+open Typecheck
 module Diagnostic = Lily_lexer.Diagnostic
 module Parser = Lily_parser.Parser
 
@@ -891,12 +892,15 @@ and get_argument_access scope args call =
 and check_fun_scope scope args call access nodes loc =
   (* List all used access in array *)
   (* let used_access_in = ref [||] in *)
+  let return_expr = ref [||] in
   (* Add function parameter in access_in *)
   let len = Array.length access in
   (match loc with
   | Some l ->
+      (* SIMPLE CHECK FOR FUN ARGUMENT *)
       check_duplicate_argument_name scope args;
       check_count_argument scope args call l
+  (* CHECK TYPE FOR FUN ARGUMENT *)
   | None -> ());
   (* Main function or not in function *)
   let access_in =
@@ -920,7 +924,10 @@ and check_fun_scope scope args call access nodes loc =
                     (Variable
                        {
                          id;
-                         data_type;
+                         data_type =
+                           Some
+                             (check_expr_type scope.parser
+                                (expr, match nodes.(i) with _, l -> l));
                          expr = ast_to_expr checked_expr;
                          is_mut;
                        }),
@@ -1007,9 +1014,30 @@ and check_fun_scope scope args call access nodes loc =
             |> check_expr scope (Expr expr |> ref)
                  (match nodes.(i) with _, l -> l)
           in
+          return_expr := Array.append !return_expr [| check_return_expr |];
+          (* ADD RETURN FOR CHECK TYPE *)
           nodes.(i) <-
             (match nodes.(i) with
             | _, l -> (Stmt (Return (check_return_expr |> ast_to_expr)), l));
+          loop_body ~i:(i + 1) ()
+      | Expr expr ->
+          let check_expr =
+            !access_in
+            |> Array.map (fun x -> !x)
+            |> check_expr scope (Expr expr |> ref)
+                 (match nodes.(i) with _, l -> l)
+          in
+          (if i + 1 = Array.length nodes then
+           return_expr := Array.append !return_expr [| check_expr |]
+          else
+            match expr with
+            | Assign _ | FunctionCall _ ->
+                ()
+                (* TODO: maybe add warning of function call if return type is
+                   not equal to unit type *)
+            | _ -> failwith "warning");
+          (* ADD RETURN FOR CHECK TYPE *)
+          nodes.(i) <- (match nodes.(i) with _, l -> (check_expr, l));
           loop_body ~i:(i + 1) ()
       | _ -> failwith "unreachable"
   in
