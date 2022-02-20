@@ -560,13 +560,15 @@ let rec check_expr scope node loc access =
               !node
           | _ -> failwith "unreachable")
       | _ -> failwith "unreachable")
-  | Expr (RecordCall (e, arr)) ->
-    (* VERIFY EXPR *)
-     let rec loop ?(i = 0) () =
+  | Expr (RecordCall (e, arr)) -> (
+      (* VERIFY EXPR *)
+      let rec loop ?(i = 0) () =
         if i < Array.length arr then
           match
             check_expr scope
-              (match arr.(i) with _, Some e_call -> (Expr e_call) |> ref | _ -> failwith "todo")
+              (match arr.(i) with
+              | _, Some e_call -> Expr e_call |> ref
+              | _ -> failwith "todo")
               loc access
           with
           | _ ->
@@ -575,14 +577,14 @@ let rec check_expr scope node loc access =
       in
       loop ();
 
-    (* SEARCH IF RECORD EXISTS *)
-    (match e with
-    | Identifier (_, _) -> failwith "todo"
-    | IdentifierAccess (_, _) -> failwith "todo"
-    | _ -> failwith "unreachable")
-  | Expr (ClassCall (e, arr)) ->
-    (* VERIFY EXPR *)
-         let rec loop ?(i = 0) () =
+      (* SEARCH IF RECORD EXISTS *)
+      match e with
+      | Identifier (_, _) -> failwith "todo"
+      | IdentifierAccess (_, _) -> failwith "todo"
+      | _ -> failwith "unreachable")
+  | Expr (ClassCall (e, arr)) -> (
+      (* VERIFY EXPR *)
+      let rec loop ?(i = 0) () =
         if i < Array.length arr then
           match
             check_expr scope
@@ -596,10 +598,24 @@ let rec check_expr scope node loc access =
       loop ();
 
       (* SEARCH IF CLASS EXISTS *)
-      (match e with
-       | Identifier (_, _) -> failwith "todo"
-       | IdentifierAccess (_, _) -> failwith "todo"
-       | _ -> failwith "unreachable")
+      match e with
+      | Identifier (_, _) -> failwith "todo"
+      | IdentifierAccess (_, _) -> failwith "todo"
+      | _ -> failwith "unreachable")
+  | Expr (Array arr) ->
+      Expr
+        (Array
+           (arr
+           |> Array.map (fun x ->
+                  check_expr scope (Expr x |> ref) loc access |> ast_to_expr)
+           ))
+  | Expr (Tuple arr) ->
+      Expr
+        (Tuple
+           (arr
+           |> Array.map (fun x ->
+                  check_expr scope (Expr x |> ref) loc access |> ast_to_expr)
+           ))
   | Expr (AnonymousFunction (_, _)) -> failwith "todo"
   | Expr (Negative l) ->
       Expr
