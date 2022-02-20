@@ -560,9 +560,47 @@ let rec check_expr scope node loc access =
               !node
           | _ -> failwith "unreachable")
       | _ -> failwith "unreachable")
-  | Expr (RecordCall (_, _)) -> failwith "todo"
-  | Expr (ClassCall (_, _)) -> failwith "todo"
-  | Expr (AnonymousFunction (_, _)) -> failwith "topdo"
+  | Expr (RecordCall (e, arr)) ->
+    (* VERIFY EXPR *)
+     let rec loop ?(i = 0) () =
+        if i < Array.length arr then
+          match
+            check_expr scope
+              (match arr.(i) with _, Some e_call -> (Expr e_call) |> ref | _ -> failwith "todo")
+              loc access
+          with
+          | _ ->
+              ();
+              loop ~i:(i + 1) ()
+      in
+      loop ();
+
+    (* SEARCH IF RECORD EXISTS *)
+    (match e with
+    | Identifier (_, _) -> failwith "todo"
+    | IdentifierAccess (_, _) -> failwith "todo"
+    | _ -> failwith "unreachable")
+  | Expr (ClassCall (e, arr)) ->
+    (* VERIFY EXPR *)
+         let rec loop ?(i = 0) () =
+        if i < Array.length arr then
+          match
+            check_expr scope
+              (match arr.(i) with e_call -> e_call |> ref)
+              loc access
+          with
+          | _ ->
+              ();
+              loop ~i:(i + 1) ()
+      in
+      loop ();
+
+      (* SEARCH IF CLASS EXISTS *)
+      (match e with
+       | Identifier (_, _) -> failwith "todo"
+       | IdentifierAccess (_, _) -> failwith "todo"
+       | _ -> failwith "unreachable")
+  | Expr (AnonymousFunction (_, _)) -> failwith "todo"
   | Expr (Negative l) ->
       Expr
         (Negative (check_expr scope (Expr l |> ref) loc access |> ast_to_expr))
