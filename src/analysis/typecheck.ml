@@ -169,7 +169,8 @@ and check_expr_type tpc = function
       | `U64, dt
       | `F32, dt
       | `F64, dt
-      | `Char, dt -> failwith "error"
+      | `Char, dt ->
+          failwith "error"
       | dt, `I8
       | dt, `I16
       | dt, `I32
@@ -180,7 +181,8 @@ and check_expr_type tpc = function
       | dt, `U64
       | dt, `F32
       | dt, `F64
-      | dt, `Char -> failwith "error"
+      | dt, `Char ->
+          failwith "error"
       | dt, dt2 ->
           Diagnostic.EmitDiagnostic
             ( dt |> show_data_type
@@ -191,8 +193,12 @@ and check_expr_type tpc = function
               Diagnostic.Error,
               l )
           |> raise)
-  | Eq (x, y), l
-  | Ne (x, y), l -> failwith "not implemented"
+  | Eq (x, y), l | Ne (x, y), l -> (
+      let left = check_expr_type tpc (x, l) in
+      let right = check_expr_type tpc (y, l) in
+      match (left, right) with
+      | dt, dt2 when dt = dt2 -> `Bool
+      | dt, dt2 -> failwith "error")
   | And (x, y), l | Or (x, y), l -> (
       let left = check_expr_type tpc (x, l) in
       let right = check_expr_type tpc (y, l) in
@@ -205,12 +211,30 @@ and check_expr_type tpc = function
   | MulAssign (x, y), l
   | DivAssign (x, y), l
   | ModAssign (x, y), l
-  | ExpAssign (x, y), l ->
-      failwith "not implemented"
+  | ExpAssign (x, y), l -> (
+      let var_dt =
+        match x with
+        | Identifier (_, r) -> (
+            match r with
+            | Some (Decl (Variable { data_type; _ })) -> (
+                match data_type with
+                | Some t -> t
+                | None -> failwith "unreachable")
+            | _ -> failwith "unreachable")
+        | _ -> failwith "unreachable"
+      in
+      match check_expr_type tpc (y, l) with
+      | dt when dt = var_dt -> var_dt
+      | dt -> failwith "error")
   | FunctionCall (id, args), _ -> failwith "not implemented"
   | ClassCall (id, args), _ -> failwith "not implemented"
   | RecordCall (id, args), _ -> failwith "not implemented"
-  | Identifier (x, r), _ -> failwith "not implemented"
+  | Identifier (x, r), _ -> (
+      match r with
+      | Some (Decl (Variable { data_type; _ })) -> (
+          match data_type with Some t -> t | None -> failwith "unreachable")
+      | Some (Decl (Constant { data_type; _ })) -> data_type
+      | _ -> failwith "unreachable")
   | IdentifierAccess (xs, r), _ -> failwith "not implemented"
   | SelfAccess (xs, r), _ -> failwith "not implemented"
   | AnonymousFunction (args, body), _ -> failwith "not implemented"
@@ -218,6 +242,10 @@ and check_expr_type tpc = function
   | Array vals, _ -> failwith "not implemented"
   | Variant (id, args), _ -> failwith "not implemented"
   | Literal (Int i), _ -> failwith "not implemented"
+  | Literal (Float f), _ -> failwith "not implemented"
+  | Literal (String _), _ -> `String
+  | Literal (Char _), _ -> `Char
+  | Literal (Bool _), _ -> `Bool
   | Undef, _ -> failwith "not implemented"
   | Nil, _ -> failwith "not implemented"
   | _ -> failwith "not implemented"

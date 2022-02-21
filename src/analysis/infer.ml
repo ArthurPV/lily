@@ -1,4 +1,4 @@
-(* open Lily_parser.Ast *)
+open Lily_parser.Ast
 
 [@@@warning "-27"]
 
@@ -21,6 +21,13 @@ module IsUint = struct
   let is16 i = i >= Int64.of_int 0 && i <= Int64.of_int 65535
   let is32 i = i >= Int64.of_int 0 && i <= Int64.of_int 4294967295
   let is64 i = i >= Int64.of_int 0 && i <= Int64.max_int
+end
+
+module InferFun = struct
+  type t = { dt_of_ret : data_type array; mutable dt : data_type option }
+
+  let infer_arg_type args = assert false
+  let infer_function_type node ~call = assert false
 end
 
 let infer_function_type node ~call = assert false
