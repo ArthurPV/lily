@@ -101,50 +101,76 @@ let peek_token parser ~n =
 
 let rec parse_data_type parser =
   next_token parser;
-  match parser.previous_token with
-  | Keyword Int8 -> `I8
-  | Keyword Int16 -> `I16
-  | Keyword Int32 -> `I32
-  | Keyword Int64 -> `I64
-  | Keyword Uint8 -> `U8
-  | Keyword Uint16 -> `U16
-  | Keyword Uint32 -> `U32
-  | Keyword Uint64 -> `U64
-  | Keyword Float32 -> `F32
-  | Keyword Float64 -> `F64
-  | Keyword String -> `String
-  | Keyword Char -> `Char
-  | Keyword Usize -> `Usize
-  | Keyword Isize -> `Isize
-  | Keyword Bool -> `Bool
-  | Keyword Unit -> `Unit
-  | Keyword Self -> `SelfArg
-  | Identifier s when String.lowercase_ascii s = s -> `Generics s
-  | Identifier s -> `CustomType (s, None) (* TODO: add type argument *)
-  | Separator LeftHook ->
-      if is_data_type parser ~n:0 then (
-        let dt = parse_data_type parser in
+  let dt =
+    match parser.previous_token with
+    | Keyword Int8 -> `I8
+    | Keyword Int16 -> `I16
+    | Keyword Int32 -> `I32
+    | Keyword Int64 -> `I64
+    | Keyword Uint8 -> `U8
+    | Keyword Uint16 -> `U16
+    | Keyword Uint32 -> `U32
+    | Keyword Uint64 -> `U64
+    | Keyword Float32 -> `F32
+    | Keyword Float64 -> `F64
+    | Keyword String -> `String
+    | Keyword Char -> `Char
+    | Keyword Usize -> `Usize
+    | Keyword Isize -> `Isize
+    | Keyword Bool -> `Bool
+    | Keyword Unit -> `Unit
+    | Keyword Self -> `SelfArg
+    | Identifier s when String.lowercase_ascii s = s -> `Generics s
+    | Identifier s -> `CustomType (s, None) (* TODO: add type argument *)
+    | Separator LeftHook ->
+        if is_data_type parser ~n:0 then (
+          let dt = parse_data_type parser in
+          Diagnostic.EmitDiagnostic
+            ( show_token parser.current_token
+              |> Printf.sprintf "expected `]`, found `%s`",
+              Diagnostic.Error,
+              parser.current_location )
+          |> expect_token parser (Separator RightHook);
+          `Array dt)
+        else
+          Diagnostic.EmitDiagnostic
+            ( show_token parser.current_token
+              |> Printf.sprintf "expected data type, found `%s`",
+              Diagnostic.Error,
+              parser.current_location )
+          |> raise
+    | _ ->
         Diagnostic.EmitDiagnostic
-          ( show_token parser.current_token
-            |> Printf.sprintf "expected `]`, found `%s`",
-            Diagnostic.Error,
-            parser.current_location )
-        |> expect_token parser (Separator RightHook);
-        `Array dt)
-      else
-        Diagnostic.EmitDiagnostic
-          ( show_token parser.current_token
+          ( show_token parser.previous_token
             |> Printf.sprintf "expected data type, found `%s`",
             Diagnostic.Error,
-            parser.current_location )
+            parser.previous_location )
         |> raise
-  | _ ->
+  in
+  match parser.current_token with
+  | Separator Arrow -> parse_fun_data_type parser ~first:dt
+  | _ -> dt
+
+and parse_fun_data_type parser ~first =
+  next_token parser;
+  let rec loop ?(items = [ first ]) () =
+    if is_eof parser |> Bool.not && is_data_type parser ~n:0 then (
+      let dt = parse_data_type parser in
+      if is_data_type parser ~n:1 then
       Diagnostic.EmitDiagnostic
-        ( show_token parser.previous_token
-          |> Printf.sprintf "expected data type, found `%s`",
+        ( show_token parser.current_token
+          |> Printf.sprintf "expected `->`, found `%s`",
           Diagnostic.Error,
-          parser.previous_location )
-      |> raise
+          parser.current_location )
+      |> expect_token parser (Separator Arrow);
+      loop ~items:(dt :: items) ())
+    else
+      `Fun
+        ( List.length items - 1
+          |> Array.sub (items |> List.rev |> Array.of_list) 0,
+          List.nth items 0 )
+  in
+  loop ()
 
 and is_binop parser ~n =
   match peek_token ~n parser with

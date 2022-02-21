@@ -18,6 +18,7 @@ type data_type =
   | `Bool [@printer fun fmt _ -> fprintf fmt "Bool"]
   | `Unit [@printer fun fmt _ -> fprintf fmt "Unit"]
   | `SelfArg [@printer fun fmt _ -> fprintf fmt "self"]
+  | `Fun of data_type array * data_type
   | `Array of data_type
     [@printer fun fmt dt -> fprintf fmt "[%s]" (show_data_type dt)]
   | `Tuple of data_type array
