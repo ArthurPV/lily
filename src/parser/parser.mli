@@ -33,6 +33,7 @@ val matches : parser -> token -> bool
 val is_eof : parser -> bool
 val peek_token : parser -> n:int -> token option
 val parse_data_type : parser -> data_type
+val parse_fun_data_type : parser -> data_type
 val is_binop : parser -> n:int -> bool
 val is_data_type : parser -> n:int -> bool
 val run : parser -> unit

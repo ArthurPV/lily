@@ -215,6 +215,7 @@ and is_data_type parser ~n =
   | Some (Keyword Bool)
   | Some (Keyword Unit)
   | Some (Identifier _)
+  | Some (Separator Bar)
   | Some (Keyword Self) ->
       true
   | Some (Separator LeftHook) when is_data_type parser ~n:(n + 1) -> true
