@@ -1,6 +1,7 @@
 open Lily_lexer.Location
 open Lily_parser.Ast
 open Lily_parser.Parser
+open Buffer
 
 type from_access =
   [ `Fun
@@ -95,6 +96,7 @@ type scope_access =
 
 type scope = {
   parser : parser;
+  buffer : scope buffer;
   mutable global : scope_access array;
   mutable global_pub : scope_access array;
   mutable used : scope_access array;
@@ -102,6 +104,7 @@ type scope = {
 }
 
 val new_scope : parser -> scope
+val resolve_import : scope -> scope_access array
 
 (* check global scope *)
 val get_global_access :

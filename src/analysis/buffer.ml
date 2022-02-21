@@ -1,24 +1,23 @@
 open Lily_parser.Ast
 open Lily_lexer.Token
-open Scope
 
-type buffer = {
+type 'a buffer = {
   mutable filenames : string array;
   mutable contents : string array;
   mutable tokens : token array array;
   (* mutable locations : location array array; *)
   mutable nodes : ast array array;
-  mutable scopes : scope array;
+  mutable scopes : 'a array;
 }
 
-let new_buffer =
+let new_buffer scopes =
   {
     filenames = [||];
     contents = [||];
     tokens = [||];
     (* locations = [||]; *)
     nodes = [||];
-    scopes = [||];
+    scopes;
   }
 
 let is_same_filename buffer filename =

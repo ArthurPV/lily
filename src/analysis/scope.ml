@@ -1,6 +1,7 @@
 open Lily_common.Common
 open Lily_lexer.Location
 open Lily_parser.Ast
+open Buffer
 open Typecheck
 module Diagnostic = Lily_lexer.Diagnostic
 module Parser = Lily_parser.Parser
@@ -98,6 +99,7 @@ type scope_access =
 
 type scope = {
   parser : Parser.parser;
+  buffer : scope buffer;
   mutable global : scope_access array;
   mutable global_pub : scope_access array;
   mutable used : scope_access array;
@@ -108,6 +110,7 @@ let new_scope parser =
   Parser.run parser;
   {
     parser;
+    buffer = new_buffer [||];
     global = [||];
     global_pub = [||];
     used = [||];
@@ -115,6 +118,8 @@ let new_scope parser =
   }
 
 [@@@warning "-27"]
+
+let resolve_import scope = assert false
 
 (* IMPROVE: rename local rec function *)
 let rec get_global_access scope nodes ~p_pub =
