@@ -224,12 +224,13 @@ let scan_char lexer =
     |> raise
 
 let scan_string lexer =
+  let loc_err = copy_location lexer.loc in 
   next_char lexer;
   let rec loop ?(s = []) () =
     if lexer.src.c <> '\"' then (
       if lexer.src.pos >= lexer.src.len - 2 then
         Diagnostic.EmitDiagnostic
-          ("unclosed string literal", Diagnostic.Error, lexer.loc)
+          ("unclosed string literal", Diagnostic.Error, loc_err)
         |> raise;
       next_char lexer;
       loop
