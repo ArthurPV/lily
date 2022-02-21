@@ -1,6 +1,6 @@
 A Int8 := 30
 B String := "Hello"
-C Int16 := fun(x=3, y=4) => x+y end
+C |Int16 -> Int16 -> Int16| := fun(x, y) => x+y end
 D Char := 'h'
 
 module calc =
@@ -10,14 +10,10 @@ module calc =
 	fun div(x, y) = x/y end
 end
 
-(* fun is_zero(x) =
-	if x == 0 do True else False end
-end *)
-
 fun is_zero(x) =
   match x do
-	0 -> True |
-	_ -> False |
+	0 -> True 	|
+	_ -> False 	|
   end
 end
 
@@ -39,4 +35,6 @@ object Point: class =
 	pub @mul_x_by_y self => self.x * self.y end
 end
 
-fun main = end
+fun main = 
+  a := a.b.c.d()
+end
