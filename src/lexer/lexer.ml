@@ -161,6 +161,7 @@ let rec scan_comment_one lexer =
     Comment One)
 
 let scan_comment_multi lexer =
+  let loc_err = copy_location lexer.loc in
   next_char lexer;
   next_char lexer;
 
@@ -168,7 +169,7 @@ let scan_comment_multi lexer =
     if lexer.src.c <> '*' || peek_char lexer ~n:1 <> Some ')' then (
       if lexer.src.pos >= lexer.src.len - 2 then
         Diagnostic.EmitDiagnostic
-          ("unclosed comment multi line", Diagnostic.Error, lexer.loc)
+          ("unclosed comment multi line", Diagnostic.Error, loc_err)
         |> raise;
       next_char lexer;
       loop ())
