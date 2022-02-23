@@ -1852,6 +1852,19 @@ and parse_body parser ~closure =
         | _ -> Expr (parse_expr2 parser)
       in
       Location.end_location loc parser.current_location;
+      (* Review this part of code *)
+      if parser.current_token <> Keyword End then
+        if
+          parser.previous_location.line = parser.current_location.line
+          |> Bool.not
+        then ()
+        else
+          Diagnostic.EmitDiagnostic
+            ( "unexpected expression",
+              Diagnostic.Error,
+              parser.current_location )
+          |> raise
+      else ();
       loop ~body:((child, loc) :: body) ())
     else (
       next_token parser;
