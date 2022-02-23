@@ -225,7 +225,7 @@ let scan_char lexer =
     |> raise
 
 let scan_string lexer =
-  let loc_err = copy_location lexer.loc in 
+  let loc_err = copy_location lexer.loc in
   next_char lexer;
   let rec loop ?(s = []) () =
     if lexer.src.c <> '\"' then (
@@ -518,9 +518,7 @@ let run lexer =
     in
     loop ();
 
-    lexer.errors
-    |> Array.iter (fun x ->
-           Printf.printf "%s" (Diagnostic.diagnostic_to_string x));
+    lexer.errors |> Array.iter (fun x -> Diagnostic.emit_diagnostic x);
 
     if Array.length lexer.errors > 0 then exit 1)
   else
