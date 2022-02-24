@@ -242,6 +242,7 @@ let scan_string lexer =
   loop ()
 
 let scan_hex lexer =
+  let loc_err = lexer.loc in
   match (lexer.src.c, peek_char lexer ~n:1) with
   | '0', Some 'x' ->
       next_char lexer;
@@ -257,7 +258,7 @@ let scan_hex lexer =
               Diagnostic.EmitDiagnostic
                 ( "invalid hexadecimal literal: `0x`",
                   Diagnostic.Error,
-                  lexer.loc )
+                  loc_err )
               |> raise
           | _ ->
               Literal
@@ -270,6 +271,7 @@ let scan_hex lexer =
   | _ -> failwith "unreachable"
 
 let scan_oct lexer =
+  let loc_err = lexer.loc in
   match (lexer.src.c, peek_char lexer ~n:1) with
   | '0', Some 'o' ->
       next_char lexer;
@@ -283,7 +285,7 @@ let scan_oct lexer =
           match oct with
           | [] ->
               Diagnostic.EmitDiagnostic
-                ("invalid octal literal: `0o`", Diagnostic.Error, lexer.loc)
+                ("invalid octal literal: `0o`", Diagnostic.Error, loc_err)
               |> raise
           | _ ->
               Literal
@@ -296,6 +298,7 @@ let scan_oct lexer =
   | _ -> failwith "unreachable"
 
 let scan_bin lexer =
+  let loc_err = lexer.loc in
   match (lexer.src.c, peek_char lexer ~n:1) with
   | '0', Some 'b' ->
       next_char lexer;
@@ -309,7 +312,7 @@ let scan_bin lexer =
           match bin with
           | [] ->
               Diagnostic.EmitDiagnostic
-                ("invalid binary literal: `0b`", Diagnostic.Error, lexer.loc)
+                ("invalid binary literal: `0b`", Diagnostic.Error, loc_err)
               |> raise
           | _ ->
               Literal
@@ -322,6 +325,7 @@ let scan_bin lexer =
   | _ -> failwith "unreachable"
 
 let rec scan_num ?(num = []) ?(is_float = false) lexer =
+  let loc_err = lexer.loc in
   if is_num lexer then
     if lexer.src.c = 'e' || lexer.src.c = 'E' then (
       next_char lexer;
@@ -335,13 +339,13 @@ let rec scan_num ?(num = []) ?(is_float = false) lexer =
           ~is_float:true lexer)
       else
         Diagnostic.EmitDiagnostic
-          ("invalid number literal", Diagnostic.Error, lexer.loc)
+          ("invalid number literal", Diagnostic.Error, loc_err)
         |> raise)
     else if lexer.src.c = '.' && Bool.not is_float then (
       next_char lexer;
       if Bool.not (is_digit lexer) then
         Diagnostic.EmitDiagnostic
-          ("invalid number literal", Diagnostic.Error, lexer.loc)
+          ("invalid number literal", Diagnostic.Error, loc_err)
         |> raise
       else
         scan_num
@@ -349,11 +353,11 @@ let rec scan_num ?(num = []) ?(is_float = false) lexer =
           ~is_float:true lexer)
     else if (lexer.src.c = 'e' || lexer.src.c = 'E') && is_float then
       Diagnostic.EmitDiagnostic
-        ("invalid number literal", Diagnostic.Error, lexer.loc)
+        ("invalid number literal", Diagnostic.Error, loc_err)
       |> raise
     else if lexer.src.c = '.' && is_float then
       Diagnostic.EmitDiagnostic
-        ("invalid number literal", Diagnostic.Error, lexer.loc)
+        ("invalid number literal", Diagnostic.Error, loc_err)
       |> raise
     else (
       next_char lexer;
