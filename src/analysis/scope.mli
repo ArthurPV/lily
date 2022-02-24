@@ -104,7 +104,7 @@ type scope = {
 }
 
 val new_scope : parser -> scope
-val resolve_import : scope -> scope_access array
+val resolve_import : scope -> value:string -> scope_access array
 
 (* check global scope *)
 val get_global_access :

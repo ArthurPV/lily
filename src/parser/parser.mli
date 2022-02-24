@@ -13,7 +13,6 @@ type parser = {
   mutable previous_token : token;
   mutable current_location : location;
   mutable previous_location : location;
-  mutable module_name : string;
 }
 
 val new_parser : lexer -> parser
@@ -37,7 +36,6 @@ val parse_data_type : parser -> data_type
 val parse_fun_data_type : parser -> data_type
 val is_binop : parser -> n:int -> bool
 val is_data_type : parser -> n:int -> bool
-val get_module_name_of_file : parser -> unit
 val run : parser -> unit
 
 (* parse function *)

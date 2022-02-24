@@ -5,6 +5,9 @@ open Buffer
 open Typecheck
 module Diagnostic = Lily_lexer.Diagnostic
 module Parser = Lily_parser.Parser
+module Lexer = Lily_lexer.Lexer
+module Source = Lily_lexer.Source
+module CliError = Lily_common.Error
 
 type from_access =
   [ `Fun
@@ -118,8 +121,6 @@ let new_scope parser =
   }
 
 [@@@warning "-27"]
-
-let resolve_import scope = assert false
 
 (* IMPROVE: rename local rec function *)
 let rec get_global_access scope nodes ~p_pub =
@@ -354,13 +355,14 @@ let rec get_global_access scope nodes ~p_pub =
             "todo" | _ -> failwith "unreachable" in loop ~i:(i + 1) () in let
             arr = loop () in*)
           loop ~i:(i + 1) ()
+      | Decl (Import _) -> failwith "todo"
       | Doc _ -> loop ~i:(i + 1) ()
       | _ -> failwith "unreachable"
     else access |> Array.of_list
   in
   loop ()
 
-let verify_if_same_access scope scopes =
+and verify_if_same_access scope scopes =
   let count_errors = ref 0 in
   let rec loop ?(i = 0) () =
     if i < Array.length scopes then
@@ -448,7 +450,19 @@ let verify_if_same_access scope scopes =
   loop ();
   !count_errors
 
-let is_contain_main_fun scope =
+and resolve_import scope ~value = assert false
+(* match value.[0] with | '@' -> ( let filename = List.nth (value |>
+   String.split_on_char '@') 1 ^ ".lily" in match Source.read_file filename
+   with | Ok content -> let scope_buf = content |> Source.new_source filename
+   |> Lexer.new_lexer |> Parser.new_parser |> new_scope in run scope_buf;
+   push_buffer scope.buffer ~filename ~content (scope_buf.parser.lexer.tokens
+   |> Array.map (fun (x, _) -> x)) (scope_buf.parser.nodes |> Array.map (fun
+   (x, _) -> x)) scope_buf;
+
+   | Error err -> CliError.print_cli_error (CliError.show_cli_error_kind
+   err)) | '#' -> failwith "todo" | _ -> failwith "error" *)
+
+and is_contain_main_fun scope =
   let rec loop ?(i = 0) () =
     if i < Array.length scope.parser.nodes then
       match match scope.parser.nodes.(i) with n, _ -> n with
@@ -458,7 +472,7 @@ let is_contain_main_fun scope =
   in
   loop ()
 
-let add_ref_on_node expr v =
+and add_ref_on_node expr v =
   (* TODO *)
   match expr with
   | Identifier (s, _) -> Identifier (s, v)
@@ -466,7 +480,7 @@ let add_ref_on_node expr v =
 
 (* TODO: for improve code create a context type and pass it in function
    parameter. *)
-let rec check_expr scope node loc access =
+and check_expr scope node loc access =
   (* let result = is_verify_scope_value !node in *)
   let matched = ref false in
   match !node with
@@ -1050,16 +1064,7 @@ and check_fun_scope scope args call access nodes loc =
   if verify_if_same_access scope !(!access_in.(0)) > 0 then () else ();
   ()
 
-let check_alias_scope scope nodes = assert false
-let check_record_scope scope nodes = assert false
-let check_enum_scope scope nodes = assert false
-let check_variable_scope scope nodes = assert false
-let check_constant_scope scope nodes = assert false
-let check_module_scope scope nodes = assert false
-let check_block_scope scope nodes = assert false
-let check_scope scope nodes = assert false
-
-let run scope =
+and run scope =
   if Array.length scope.parser.nodes > 0 then (
     scope.global <- get_global_access scope scope.parser.nodes ~p_pub:false;
     scope.global_pub <-
@@ -1092,6 +1097,15 @@ let run scope =
          "please add main function.\nhelp: ```fun main = end```"
     |> Diagnostic.emit_diagnostic;
     exit 1)
+
+let check_alias_scope scope nodes = assert false
+let check_record_scope scope nodes = assert false
+let check_enum_scope scope nodes = assert false
+let check_variable_scope scope nodes = assert false
+let check_constant_scope scope nodes = assert false
+let check_module_scope scope nodes = assert false
+let check_block_scope scope nodes = assert false
+let check_scope scope nodes = assert false
 
 (* Example:
 

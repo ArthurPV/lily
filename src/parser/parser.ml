@@ -13,7 +13,6 @@ type parser = {
   mutable previous_token : token;
   mutable current_location : Location.location;
   mutable previous_location : Location.location;
-  mutable module_name : string;
 }
 
 let ast_of_nodes parser ~idx = match parser.nodes.(idx) with n, _ -> n
@@ -30,7 +29,6 @@ let new_parser lexer =
     previous_token = Lexer.tok_of_tokens lexer ~idx:0;
     current_location = Lexer.loc_of_tokens lexer ~idx:0;
     previous_location = Lexer.loc_of_tokens lexer ~idx:0;
-    module_name = "";
   }
 
 let new_diagnostic parser kind msg loc =
@@ -225,51 +223,6 @@ and is_data_type parser ~n =
 
 [@@@warning "-27"]
 [@@@warning "-39"]
-
-let get_module_name_of_file parser =
-  (match parser.current_token with
-  | Comment _ -> next_token parser
-  | _ -> ());
-  (try
-     Diagnostic.EmitDiagnostic
-       ( show_token parser.current_token
-         |> Printf.sprintf
-              "expected name module of file, found `%s`\n\
-               help add module name like this ```module <id>```",
-         Diagnostic.Error,
-         parser.current_location )
-     |> expect_token parser (Keyword Module)
-   with Diagnostic.EmitDiagnostic (msg, kind, loc) ->
-     parser.errors <-
-       [| Location.copy_location loc |> new_diagnostic parser kind msg |]
-       |> Array.append parser.errors);
-  try
-    match parser.current_token with
-    | Identifier s when String.lowercase_ascii s = s ->
-        parser.module_name <- s;
-        next_token parser
-    | Identifier s ->
-        Diagnostic.EmitDiagnostic
-          ( s
-            |> Printf.sprintf
-                 "invalid module name `%s`\n\
-                  help: define your module name in lower case format like \
-                  this `%s`"
-                 (String.lowercase_ascii s),
-            Diagnostic.Error,
-            parser.current_location )
-        |> raise
-    | _ ->
-        Diagnostic.EmitDiagnostic
-          ( parser.current_token |> show_token
-            |> Printf.sprintf "miss module name, found `%s`",
-            Diagnostic.Error,
-            parser.current_location )
-        |> raise
-  with Diagnostic.EmitDiagnostic (msg, kind, loc) ->
-    parser.errors <-
-      [| Location.copy_location loc |> new_diagnostic parser kind msg |]
-      |> Array.append parser.errors
 
 let rec run parser =
   (* skip comemnt if is first *)
