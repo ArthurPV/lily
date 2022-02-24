@@ -23,6 +23,10 @@ format:
 	ocamlformat --inplace src/parser/*.ml
 	ocamlformat --inplace src/parser/*.mli
 	ocamlformat --inplace src/*.ml
+	# ocamlformat --inplace tests/analysis/*.ml
+	ocamlformat --inplace tests/lexer/*.ml
+	ocamlformat --inplace tests/parser/*.ml
+	ocamlformat --inplace tests/vm/*.ml
 
 clean:
 	rm -rf _build
