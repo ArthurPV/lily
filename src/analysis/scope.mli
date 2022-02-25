@@ -111,6 +111,8 @@ val run_import :
 val resolve_import :
   scope -> value:string -> as_value:string -> is_pub:bool -> location -> unit
 
+val resolve_all_import : scope -> unit
+
 (* check global scope *)
 val get_global_access :
   scope -> (ast * location) array -> p_pub:bool -> scope_access array

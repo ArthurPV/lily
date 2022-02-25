@@ -355,7 +355,7 @@ let rec get_global_access scope nodes ~p_pub =
             "todo" | _ -> failwith "unreachable" in loop ~i:(i + 1) () in let
             arr = loop () in*)
           loop ~i:(i + 1) ()
-      | Decl (Import _) -> failwith "todo"
+      | Decl (Import _) -> loop ~i:(i + 1) ()
       | Doc _ -> loop ~i:(i + 1) ()
       | _ -> failwith "unreachable"
     else access |> Array.of_list
@@ -524,6 +524,17 @@ and resolve_import scope ~value ~as_value ~is_pub loc =
              \"#<lib_name>\"```"
             value)
     |> Diagnostic.emit_diagnostic
+
+and resolve_all_import scope =
+  Array.iter
+    (fun x ->
+      match x with
+      | Decl (Import { import; _as; is_pub }), loc ->
+          resolve_import scope ~value:import
+            ~as_value:(match _as with None -> "" | Some s -> s)
+            ~is_pub loc
+      | _ -> ())
+    scope.parser.nodes
 
 and is_contain_main_fun scope =
   let rec loop ?(i = 0) () =
@@ -1129,6 +1140,7 @@ and check_fun_scope scope args call access nodes loc =
 
 and run scope =
   if Array.length scope.parser.nodes > 0 then (
+    resolve_all_import scope;
     scope.global <- get_global_access scope scope.parser.nodes ~p_pub:false;
     scope.global_pub <-
       get_global_access scope scope.parser.nodes ~p_pub:true;
