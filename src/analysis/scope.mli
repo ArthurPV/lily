@@ -104,7 +104,12 @@ type scope = {
 }
 
 val new_scope : parser -> scope
-val resolve_import : scope -> value:string -> scope_access array
+
+val run_import :
+  scope -> path:string -> as_value:string -> is_pub:bool -> location -> unit
+
+val resolve_import :
+  scope -> value:string -> as_value:string -> is_pub:bool -> location -> unit
 
 (* check global scope *)
 val get_global_access :

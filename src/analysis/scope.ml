@@ -450,17 +450,80 @@ and verify_if_same_access scope scopes =
   loop ();
   !count_errors
 
-and resolve_import scope ~value = assert false
-(* match value.[0] with | '@' -> ( let filename = List.nth (value |>
-   String.split_on_char '@') 1 ^ ".lily" in match Source.read_file filename
-   with | Ok content -> let scope_buf = content |> Source.new_source filename
-   |> Lexer.new_lexer |> Parser.new_parser |> new_scope in run scope_buf;
-   push_buffer scope.buffer ~filename ~content (scope_buf.parser.lexer.tokens
-   |> Array.map (fun (x, _) -> x)) (scope_buf.parser.nodes |> Array.map (fun
-   (x, _) -> x)) scope_buf;
+and run_import scope ~path ~as_value ~is_pub loc =
+  match Source.read_file path with
+  | Ok content -> (
+      let scope_buf =
+        content |> Source.new_source path |> Lexer.new_lexer
+        |> Parser.new_parser |> new_scope
+      in
+      run scope_buf;
+      push_buffer scope.buffer ~filename:path ~content
+        (scope_buf.parser.lexer.tokens |> Array.map (fun (x, _) -> x))
+        (scope_buf.parser.nodes |> Array.map (fun (x, _) -> x))
+        scope_buf;
+      match as_value with
+      | "" ->
+          scope.parser.nodes <-
+            Array.append
+              (scope_buf.parser.nodes
+              |> Parser.change_nodes_visibility ~visibility:is_pub)
+              scope.parser.nodes
+      | s ->
+          scope.parser.nodes <-
+            Array.append
+              [|
+                ( Decl
+                    (Module
+                       {
+                         id = s;
+                         body =
+                           scope_buf.parser.nodes
+                           |> Parser.change_nodes_visibility
+                                ~visibility:is_pub;
+                         is_pub;
+                         is_test = false;
+                       }),
+                  loc );
+              |]
+              scope.parser.nodes)
+  | Error err -> CliError.print_cli_error (CliError.show_cli_error_kind err)
 
-   | Error err -> CliError.print_cli_error (CliError.show_cli_error_kind
-   err)) | '#' -> failwith "todo" | _ -> failwith "error" *)
+and resolve_import scope ~value ~as_value ~is_pub loc =
+  if value |> String.split_on_char '@' |> List.length >= 1 then
+    if value |> String.split_on_char '.' |> List.length >= 1 then
+      let value_split =
+        List.nth (value |> String.split_on_char '@') 0
+        |> String.split_on_char '.'
+      in
+      let rec loop ?(i = 0) ?(path = "") () =
+        if i < List.length value_split then
+          loop ~i:(i + 1) ~path:(path ^ List.nth value_split i ^ "/") ()
+        else path
+      in
+      let path = loop () ^ List.nth (value |> String.split_on_char '@') 1 in
+      run_import scope ~path ~as_value ~is_pub loc
+    else
+      let path = List.nth (value |> String.split_on_char '@') 1 in
+      run_import scope ~path ~as_value ~is_pub loc
+  else if value |> String.split_on_char '#' |> List.length >= 1 then
+    let path =
+      match List.nth (value |> String.split_on_char '#') 1 with
+      | "std" -> "lib/std/std.lily"
+      | _ -> failwith "todo"
+    in
+    run_import scope ~path ~as_value ~is_pub loc
+  else
+    loc
+    |> Parser.new_diagnostic scope.parser Diagnostic.Error
+         (Printf.sprintf
+            "bad import value: `%s`\n\
+             help: if you want import module use this syntax: ```import \
+             \"@<mod_name>\"```\n\
+             else if you want import library use this syntax: ```import \
+             \"#<lib_name>\"```"
+            value)
+    |> Diagnostic.emit_diagnostic
 
 and is_contain_main_fun scope =
   let rec loop ?(i = 0) () =
