@@ -1,0 +1,33 @@
+pub module option =
+	pub =
+		type T[t]: enum =
+			Some t |
+			None	 |
+		end
+
+		fun none = None end
+
+		fun some(x) = Some x end
+
+		fun get(some) =
+			match some do
+				Some v -> v |
+				None -> exn |
+			end
+		end
+
+		fun is_some(x) =
+			match x do
+				Some _ -> True |
+				None -> False	 |
+			end
+		end
+
+		fun is_none(x) =
+			match x do
+				Some _ -> False |
+				None -> True 	  |
+			end
+		end
+	end
+end

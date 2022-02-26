@@ -1,0 +1,10 @@
+import "@core.cmp.*"
+
+module char => [partialOrd with T=Char] =
+	type T: alias = Char
+
+	fun lt(l, r) = l < r end
+	fun gt(l, r) = l > r end
+	fun le(l, r) = l <= r end
+	fun ge(l, r) = l >= r end
+end

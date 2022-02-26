@@ -1,0 +1,12 @@
+pub module result =
+	pub =
+		type T[t, u]: enum =
+			Ok t 		|
+			Err u |
+		end
+
+		fun ok(x) = Ok x end
+		
+		fun err(x) = Err x end
+	end
+end

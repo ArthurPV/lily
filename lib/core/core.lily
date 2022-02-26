@@ -1,0 +1,10 @@
+module cmp =
+	type partialOrd: module =
+		type T: alias = undef
+
+		fun lt :: T -> T -> Bool
+		fun gt :: T -> T -> Bool
+		fun le :: T -> T -> Bool
+		fun ge :: T -> T -> Bool
+	end
+end
