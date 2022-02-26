@@ -20,7 +20,8 @@ Commands:
     version             Print lily's version
 |}
 
-let run_help = {|Usage: lily run [options] <INPUT>
+let run_help =
+  {|Usage: lily run [options] <INPUT>
 
 Options:
 
