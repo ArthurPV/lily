@@ -1,6 +1,6 @@
-import "@core.cmp.*"
+import "@cmp.cmp.*"
 
-module char => [partialOrd with T=Char] =
+pub module char => [partialOrd with T=Char] =
 	type T: alias = Char
 
 	fun lt(l, r) = l < r end

@@ -1,1 +1,10 @@
+import "@cmp.cmp.*"
 
+pub module bool => [partialOrd with T=Bool] =
+	type T: alias = Bool
+
+	fun lt(l, r) = l < r end
+	fun gt(l, r) = l > r end
+	fun le(l, r) = l <= r end
+	fun ge(l, r) = l >= r end
+end

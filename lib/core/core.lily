@@ -1,10 +1,19 @@
-module cmp =
-	type partialOrd: module =
-		type T: alias = undef
-
-		fun lt :: T -> T -> Bool
-		fun gt :: T -> T -> Bool
-		fun le :: T -> T -> Bool
-		fun ge :: T -> T -> Bool
-	end
-end
+pub import "@array.*"
+pub import "@bool.*"
+pub import "@char.*"
+pub import "@cmp.*"
+pub import "@float32.*"
+pub import "@float64.*"
+pub import "@int16.*"
+pub import "@int32.*"
+pub import "@int64.*"
+pub import "@int8.*"
+pub import "@isize.*"
+pub import "@string.*"
+pub import "@tuple.*"
+pub import "@uint16.*"
+pub import "@uint32.*"
+pub import "@uint64.*"
+pub import "@uint8.*"
+pub import "@unit.*"
+pub import "@usize.*"
