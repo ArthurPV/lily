@@ -470,7 +470,7 @@ and decl =
               fprintf fmt "[%s]" (loop ())]
       is_pub : bool;
       is_test : bool;
-    } 
+    }
   (* [@printer fun fmt m -> fprintf fmt "Hello"] *)
   | Alias of {
       id : string;
