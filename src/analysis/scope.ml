@@ -120,6 +120,68 @@ let new_scope parser =
     idx_of_main_fun = -1;
   }
 
+let push_used scope access =
+  scope.used <- Array.append scope.used [| access |]
+
+let rec emit_unused scope = function
+  | `Fun (_, id, _, loc, _) ->
+      loc
+      |> Parser.new_diagnostic scope.parser Diagnostic.Warning
+           (id |> Printf.sprintf "unused function `%s`")
+      |> Diagnostic.emit_diagnostic
+  | `Identifier (from, id, loc, _) ->
+      let msg =
+        match from with
+        | `Constant -> id |> Printf.sprintf "unused constant `%s`"
+        | `Module -> id |> Printf.sprintf "unused module `%s`"
+        | `None -> id |> Printf.sprintf "unused identifier `%s`"
+        | _ -> failwith "unreachable"
+      in
+      loc
+      |> Parser.new_diagnostic scope.parser Diagnostic.Warning msg
+      |> Diagnostic.emit_diagnostic
+  | `Type (from, id, _, loc, _) ->
+      let msg =
+        match from with
+        | `Alias -> id |> Printf.sprintf "unused alias `%s`"
+        | `Record -> id |> Printf.sprintf "unused record `%s`"
+        | `Enum -> id |> Printf.sprintf "unused enum `%s`"
+        | `Class -> id |> Printf.sprintf "unused class `%s`"
+        | `Trait -> id |> Printf.sprintf "unused trait `%s`"
+        | _ -> failwith "unreachable"
+      in
+      loc
+      |> Parser.new_diagnostic scope.parser Diagnostic.Warning msg
+      |> Diagnostic.emit_diagnostic
+  | `Variant (_, ids, loc, _) ->
+      loc
+      |> Parser.new_diagnostic scope.parser Diagnostic.Warning
+           (ids.(Array.length ids - 1)
+           |> Printf.sprintf "unused variant `%s`")
+      |> Diagnostic.emit_diagnostic
+  | `IdentifierAddr accs -> emit_unused scope accs.(Array.length accs - 1)
+
+let verify_if_used scope =
+  let rec loop ?(i = 0) () =
+    if i < Array.length scope.global then
+      let matched = ref false in
+      (* SKIP MAIN FUNCTION *)
+      match scope.global.(i) with
+      | `Fun (_, id, _, _, _) when id = "main" -> loop ~i:(i + 1) ()
+      | _ ->
+          let rec loop2 ?(j = 0) () =
+            if j < Array.length scope.used && !matched |> Bool.not then (
+              if scope.global.(i) = scope.used.(j) then matched := true
+              else ();
+              loop2 ~j:(j + 1) ())
+          in
+          loop2 ();
+
+          if !matched |> Bool.not then emit_unused scope scope.global.(i);
+          loop ~i:(i + 1) ()
+  in
+  loop ()
+
 [@@@warning "-27"]
 
 (* IMPROVE: rename local rec function *)
@@ -501,7 +563,11 @@ and resolve_import scope ~value ~as_value ~is_pub loc =
           loop ~i:(i + 1) ~path:(path ^ List.nth value_split i ^ "/") ()
         else path
       in
-      let path = loop () ^ List.nth (value |> String.split_on_char '@') 1 in
+      let mod_path =
+        List.nth (value |> String.split_on_char '@') 1
+        |> String.split_on_char '.'
+      in
+      let path = loop () ^ List.nth mod_path 0 in
       run_import scope ~path ~as_value ~is_pub loc
     else
       let path = List.nth (value |> String.split_on_char '@') 1 in
@@ -525,7 +591,7 @@ and resolve_import scope ~value ~as_value ~is_pub loc =
             value)
     |> Diagnostic.emit_diagnostic
 
-and resolve_all_import scope =
+and resolve_all_imports scope =
   Array.iter
     (fun x ->
       match x with
@@ -607,6 +673,7 @@ and check_expr scope node loc access =
                   match access.(i).(j) with
                   | `Fun (_, s2, _, _, ast) when s = s2 ->
                       matched := true;
+                      push_used scope access.(i).(j);
                       check_fun_scope scope
                         (match ast with
                         | Some (Decl (Fun { args; _ })) -> args
@@ -1140,7 +1207,7 @@ and check_fun_scope scope args call access nodes loc =
 
 and run scope =
   if Array.length scope.parser.nodes > 0 then (
-    resolve_all_import scope;
+    resolve_all_imports scope;
     scope.global <- get_global_access scope scope.parser.nodes ~p_pub:false;
     scope.global_pub <-
       get_global_access scope scope.parser.nodes ~p_pub:true;
@@ -1162,7 +1229,8 @@ and run scope =
           | Decl (Fun { body; _ }) -> body
           | _ -> failwith "unreachable"))
       None;
-    ())
+    ();
+    verify_if_used scope)
   else (
     (match
        scope.parser.lexer.tokens.(Array.length scope.parser.lexer.tokens - 1)

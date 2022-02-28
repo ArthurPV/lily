@@ -104,6 +104,9 @@ type scope = {
 }
 
 val new_scope : parser -> scope
+val push_used : scope -> scope_access -> unit
+val emit_unused : scope -> scope_access -> unit
+val verify_if_used : scope -> unit
 
 val run_import :
   scope -> path:string -> as_value:string -> is_pub:bool -> location -> unit
@@ -111,7 +114,7 @@ val run_import :
 val resolve_import :
   scope -> value:string -> as_value:string -> is_pub:bool -> location -> unit
 
-val resolve_all_import : scope -> unit
+val resolve_all_imports : scope -> unit
 
 (* check global scope *)
 val get_global_access :
