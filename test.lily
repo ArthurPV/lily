@@ -11,10 +11,10 @@ module calc =
 end
 
 fun is_zero(x) =
-  match x do
-	0 -> True 	|
-	_ -> False 	|
+  if x == 0 do 
+    return True
   end
+  False
 end
 
 pub =
@@ -36,5 +36,5 @@ object Point: class =
 end
 
 fun main = 
-  a := a.b.c.d()
+  a := is_zero(0)
 end
