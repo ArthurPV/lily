@@ -7,8 +7,7 @@ let test () =
     "pub self virtual break next if elif else match and or not while for \
      new undef alias record trait enum fun end in import class try catch \
      type object async await module as do include macro test True False \
-     return Char Int8 Int16 Int32 Int64 Uint8 Uint16 Uint32 Uint64 Float32 \
-     Float64 String Usize Isize Bool Unit nil mut\n" |> Source.new_source ""
+     return nil mut\n" |> Source.new_source ""
     |> Lexer.new_lexer
   in
   Lexer.run lexer;
@@ -54,21 +53,5 @@ let test () =
   Alcotest.(check string) "same token" "True" (show_token tokens.(37));
   Alcotest.(check string) "same token" "False" (show_token tokens.(38));
   Alcotest.(check string) "same token" "return" (show_token tokens.(39));
-  Alcotest.(check string) "same token" "Char" (show_token tokens.(40));
-  Alcotest.(check string) "same token" "Int8" (show_token tokens.(41));
-  Alcotest.(check string) "same token" "Int16" (show_token tokens.(42));
-  Alcotest.(check string) "same token" "Int32" (show_token tokens.(43));
-  Alcotest.(check string) "same token" "Int64" (show_token tokens.(44));
-  Alcotest.(check string) "same token" "Uint8" (show_token tokens.(45));
-  Alcotest.(check string) "same token" "Uint16" (show_token tokens.(46));
-  Alcotest.(check string) "same token" "Uint32" (show_token tokens.(47));
-  Alcotest.(check string) "same token" "Uint64" (show_token tokens.(48));
-  Alcotest.(check string) "same token" "Float32" (show_token tokens.(49));
-  Alcotest.(check string) "same token" "Float64" (show_token tokens.(50));
-  Alcotest.(check string) "same token" "String" (show_token tokens.(51));
-  Alcotest.(check string) "same token" "Usize" (show_token tokens.(52));
-  Alcotest.(check string) "same token" "Isize" (show_token tokens.(53));
-  Alcotest.(check string) "same token" "Bool" (show_token tokens.(54));
-  Alcotest.(check string) "same token" "Unit" (show_token tokens.(55));
-  Alcotest.(check string) "same token" "nil" (show_token tokens.(56));
-  Alcotest.(check string) "same token" "mut" (show_token tokens.(57))
+  Alcotest.(check string) "same token" "nil" (show_token tokens.(40));
+  Alcotest.(check string) "same token" "mut" (show_token tokens.(41))
