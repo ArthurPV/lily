@@ -22,6 +22,10 @@ module InferFun : sig
   val infer_function_type : ast * location -> call:ast * location -> ast
 end
 
+val infer_integer_type : ast * location -> data_type
+val infer_float_type : ast * location -> data_type
+val infer_tuple_type : ast * location -> data_type
+val infer_array_type : ast * location -> data_type
 val infer_function_type : ast * location -> call:ast * location -> ast
 val infer_variable_type : ast * location -> call:ast * location -> ast
 val infer_method_type : ast * location -> call:ast * location -> ast

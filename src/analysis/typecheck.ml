@@ -1,3 +1,4 @@
+open Infer
 open Lily_parser.Ast
 module Diagnostic = Lily_lexer.Diagnostic
 module Parser = Lily_parser.Parser
@@ -241,7 +242,7 @@ and check_expr_type tpc = function
   | Tuple vals, _ -> failwith "not implemented"
   | Array vals, _ -> failwith "not implemented"
   | Variant (id, args), _ -> failwith "not implemented"
-  | Literal (Int i), _ -> failwith "not implemented"
+  | Literal (Int i), loc -> infer_integer_type (Expr (Literal (Int i)), loc)
   | Literal (Float f), _ -> failwith "not implemented"
   | Literal (String _), _ -> `String
   | Literal (Char _), _ -> `Char

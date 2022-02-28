@@ -30,6 +30,14 @@ module InferFun = struct
   let infer_function_type node ~call = assert false
 end
 
+let infer_integer_type node =
+  match node with
+  | Expr (Literal (Int i)), _ -> if IsInt.is32 i then `I32 else `I64
+  | _ -> failwith "unreachable"
+
+let infer_float_type node = assert false
+let infer_tuple_type node = assert false
+let infer_array_type node = assert false
 let infer_function_type node ~call = assert false
 let infer_variable_type node ~call = assert false
 let infer_method_type node ~call = assert false
