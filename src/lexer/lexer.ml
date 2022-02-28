@@ -55,22 +55,6 @@ let get_keyword id =
   | "True" -> Keyword True
   | "False" -> Keyword False
   | "return" -> Keyword Return
-  | "Char" -> Keyword Char
-  | "Int8" -> Keyword Int8
-  | "Int16" -> Keyword Int16
-  | "Int32" -> Keyword Int32
-  | "Int64" -> Keyword Int64
-  | "Uint8" -> Keyword Uint8
-  | "Uint16" -> Keyword Uint16
-  | "Uint32" -> Keyword Uint32
-  | "Uint64" -> Keyword Uint64
-  | "Float32" -> Keyword Float32
-  | "Float64" -> Keyword Float64
-  | "String" -> Keyword String
-  | "Usize" -> Keyword Usize
-  | "Isize" -> Keyword Isize
-  | "Bool" -> Keyword Bool
-  | "Unit" -> Keyword Unit
   | "nil" -> Keyword Nil
   | "mut" -> Keyword Mut
   | _ -> Identifier id

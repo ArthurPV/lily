@@ -152,22 +152,21 @@ let peek_token parser ~n =
 let rec parse_data_type parser =
   next_token parser;
   match parser.previous_token with
-  | Keyword Int8 -> `I8
-  | Keyword Int16 -> `I16
-  | Keyword Int32 -> `I32
-  | Keyword Int64 -> `I64
-  | Keyword Uint8 -> `U8
-  | Keyword Uint16 -> `U16
-  | Keyword Uint32 -> `U32
-  | Keyword Uint64 -> `U64
-  | Keyword Float32 -> `F32
-  | Keyword Float64 -> `F64
-  | Keyword String -> `String
-  | Keyword Char -> `Char
-  | Keyword Usize -> `Usize
-  | Keyword Isize -> `Isize
-  | Keyword Bool -> `Bool
-  | Keyword Unit -> `Unit
+  | Identifier "Int8" -> `I8
+  | Identifier "Int16" -> `I16
+  | Identifier "Int32" -> `I32
+  | Identifier "Int64" -> `I64
+  | Identifier "Uint8" -> `U8
+  | Identifier "Uint16" -> `U16
+  | Identifier "Uint32" -> `U32
+  | Identifier "Uint64" -> `U64
+  | Identifier "Float32" -> `F32
+  | Identifier "Float64" -> `F64
+  | Identifier "String" -> `String
+  | Identifier "Usize" -> `Usize
+  | Identifier "Isize" -> `Isize
+  | Identifier "Bool" -> `Bool
+  | Identifier "Unit" -> `Unit
   | Keyword Self -> `SelfArg
   | Identifier s when String.lowercase_ascii s = s -> `Generics s
   | Identifier s -> `CustomType (s, None) (* TODO: add type argument *)
@@ -248,22 +247,6 @@ and is_binop parser ~n =
 
 and is_data_type parser ~n =
   match peek_token ~n parser with
-  | Some (Keyword Int8)
-  | Some (Keyword Int16)
-  | Some (Keyword Int32)
-  | Some (Keyword Int64)
-  | Some (Keyword Uint8)
-  | Some (Keyword Uint16)
-  | Some (Keyword Uint32)
-  | Some (Keyword Uint64)
-  | Some (Keyword Float32)
-  | Some (Keyword Float64)
-  | Some (Keyword String)
-  | Some (Keyword Char)
-  | Some (Keyword Usize)
-  | Some (Keyword Isize)
-  | Some (Keyword Bool)
-  | Some (Keyword Unit)
   | Some (Identifier _)
   | Some (Separator Bar)
   | Some (Keyword Self) ->
