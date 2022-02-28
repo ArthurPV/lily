@@ -1,10 +1,46 @@
-import "@cmp.cmp.*"
+import "@cmp.*"
+import "@eq.*"
+import "@to_string.*"
 
-pub module char => [partialOrd with T=Char] =
-	type T: alias = Char
+pub object Char => [Eq[Char], PartialOrd[Char], ToString]: class =
+	pub @eq(self, y) => self == y end
 
-	fun lt(l, r) = l < r end
-	fun gt(l, r) = l > r end
-	fun le(l, r) = l <= r end
-	fun ge(l, r) = l >= r end
+	pub @ne(self, y) => self != y end
+
+	pub @lt(self, y) => self < y end
+
+	pub @gt(self, y) => self > y end
+
+	pub @le(self, y) => self <= y end
+
+	pub @ge(self, y) => self >= y end
+
+	pub @code self => 0 end
+
+	pub @lowercase self => 'd' end
+
+	pub @uppercase self => 'D' end
+
+	pub @is_alphabetic self => True end
+
+	pub @is_alphanumeric self => True end
+
+	pub @is_ascii self => True end
+
+	pub @is_ascii_alphabetic self => True end
+
+	pub @is_ascii_alphanumeric self => True end
+
+	pub @is_digit self =>
+		match self
+			'1' | '2' | '3' | '4' | '5' |
+			'6' | '7' | '8' | '9' | '0'
+			-> True
+			_ -> False
+		end
+	end
+
+	pub @is_whitespace self => True end
+
+	pub @to_string self => "" end
 end

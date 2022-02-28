@@ -1,0 +1,7 @@
+import "@cmp.*"
+import "@eq.*"
+import "@to_string.*"
+
+pub object Unit => [ToString]: class =
+	pub @to_string self => "()" end
+end

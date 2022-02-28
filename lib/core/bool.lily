@@ -1,10 +1,20 @@
-import "@cmp.cmp.*"
+import "@eq.*"
+import "@to_string.*"
 
-pub module bool => [partialOrd with T=Bool] =
-	type T: alias = Bool
+pub object Bool => [Eq[Bool], ToString]: class =
+	pub @eq(self, y) => self == y end
 
-	fun lt(l, r) = l < r end
-	fun gt(l, r) = l > r end
-	fun le(l, r) = l <= r end
-	fun ge(l, r) = l >= r end
+	pub @ne(self, y) => self != y end
+
+	pub @to_int self =>
+		if self do 1 
+		else 0
+		end
+	end
+
+	pub @to_string self =>
+		if self do "True"
+		else "False"
+		end
+	end
 end

@@ -1,0 +1,3 @@
+pub object ToString: trait =
+	@to_string : self -> String
+end

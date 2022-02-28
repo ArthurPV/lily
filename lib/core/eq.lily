@@ -1,0 +1,4 @@
+pub object Eq[t=self]: trait =
+	@eq :: self -> t -> Bool
+	@ne :: self -> t -> Bool
+end

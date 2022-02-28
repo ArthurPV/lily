@@ -1,0 +1,25 @@
+import "@cmp.*"
+import "@eq.*"
+import "@to_string.*"
+
+pub object Int8 => [Eq[Int8], PartialOrd[Int8], ToString]: class =
+	pub @eq(self, y) => self == y end
+	
+	pub @ne(self, y) => self != y end
+
+	pub @lt(self, y) => self < y end
+
+	pub @gt(self, y) => self > y end
+
+	pub @le(self, y) => self <= y end
+	
+	pub @ge(self, y) => self >= y end
+
+	pub @abs self =>
+		if self < 0 do 0
+		else 0
+		end
+	end
+
+	pub @to_string self => "" end
+end
