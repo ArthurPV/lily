@@ -12,6 +12,8 @@ type from_access =
   | `Enum
   | `Variant
   | `Class
+  | `Property
+  | `Method
   | `Trait
   | `None ]
 [@@deriving show]

@@ -18,6 +18,8 @@ type from_access =
   | `Enum
   | `Variant
   | `Class
+  | `Property
+  | `Method
   | `Trait
   | `None ]
 [@@deriving show]
@@ -134,6 +136,8 @@ let rec emit_unused scope = function
         match from with
         | `Constant -> id |> Printf.sprintf "unused constant `%s`"
         | `Module -> id |> Printf.sprintf "unused module `%s`"
+        | `Property -> id |> Printf.sprintf "unused property `%s`"
+        | `Method -> id |> Printf.sprintf "unused method `%s`"
         | `None -> id |> Printf.sprintf "unused identifier `%s`"
         | _ -> failwith "unreachable"
       in
@@ -189,7 +193,7 @@ let rec get_global_access scope nodes ~p_pub =
   let rec loop ?(access = []) ?(i = 0) () =
     if i < Array.length nodes then
       match match nodes.(i) with t, _ -> t with
-      | Decl (Fun { id; args; body; is_pub; _ }) ->
+      | Decl (Fun { id; args; body; is_pub; _ }) as node_f ->
           if p_pub && is_pub then
             loop
               ~access:
@@ -198,7 +202,7 @@ let rec get_global_access scope nodes ~p_pub =
                      id,
                      args,
                      (match nodes.(i) with _, l -> l),
-                     Some (match nodes.(i) with n, _ -> n) )
+                     Some node_f )
                 :: access)
               ~i:(i + 1) ()
           else
@@ -209,10 +213,10 @@ let rec get_global_access scope nodes ~p_pub =
                      id,
                      args,
                      (match nodes.(i) with _, l -> l),
-                     Some (match nodes.(i) with n, _ -> n) )
+                     Some node_f )
                 :: access)
               ~i:(i + 1) ()
-      | Decl (Constant { id; is_pub; _ }) ->
+      | Decl (Constant { id; is_pub; _ }) as node_c ->
           if p_pub && is_pub then
             loop
               ~access:
@@ -220,7 +224,7 @@ let rec get_global_access scope nodes ~p_pub =
                    ( `Constant,
                      id,
                      (match nodes.(i) with _, l -> l),
-                     Some (match nodes.(i) with n, _ -> n) )
+                     Some node_c )
                 :: access)
               ~i:(i + 1) ()
           else
@@ -230,15 +234,15 @@ let rec get_global_access scope nodes ~p_pub =
                    ( `Constant,
                      id,
                      (match nodes.(i) with _, l -> l),
-                     Some (match nodes.(i) with n, _ -> n) )
+                     Some node_c )
                 :: access)
               ~i:(i + 1) ()
-      | Decl (Module { id = id_m; body; is_pub; _ }) ->
+      | Decl (Module { id = id_m; body; is_pub; _ }) as node ->
           let access_ref = ref access in
           let rec loop_module ?(j = 0) () =
             if j < Array.length body then
               match match body.(j) with n, _ -> n with
-              | Decl (Fun { id = id_f; args; body; is_pub; _ }) ->
+              | Decl (Fun { id = id_f; args; body; is_pub; _ }) as node_f ->
                   if is_pub then (
                     access_ref :=
                       !access_ref
@@ -249,18 +253,19 @@ let rec get_global_access scope nodes ~p_pub =
                                 ( `Module,
                                   id_m,
                                   (match nodes.(i) with _, l -> l),
-                                  Some (match nodes.(i) with n, _ -> n) );
+                                  Some node );
                               `Fun
                                 ( `Fun,
                                   id_f,
                                   args,
                                   (match body.(j) with _, l -> l),
-                                  Some (match body.(j) with n, _ -> n) );
+                                  Some node_f );
                             |];
                         ];
                     loop_module ~j:(j + 1) ())
                   else loop_module ~j:(j + 1) ()
-              | Decl (Module { id = id_m2; body = body_m; is_pub; _ }) ->
+              | Decl (Module { id = id_m2; body = body_m; is_pub; _ }) as
+                node_m ->
                   if is_pub then (
                     let m = get_global_access scope body_m ~p_pub in
                     let rec loop_module2 ?(k = 0) () =
@@ -272,7 +277,7 @@ let rec get_global_access scope nodes ~p_pub =
                               ( `Module,
                                 id_m,
                                 (match nodes.(i) with _, l -> l),
-                                Some (match nodes.(i) with n, _ -> n) );
+                                Some node );
                           ]
                           @ !m_access;
                         m_access :=
@@ -282,7 +287,7 @@ let rec get_global_access scope nodes ~p_pub =
                                  ( `Module,
                                    id_m2,
                                    (match body.(j) with _, l -> l),
-                                   Some (match body.(j) with n, _ -> n) ))
+                                   Some node_m ))
                                1;
                         access_ref :=
                           !access_ref
@@ -299,12 +304,12 @@ let rec get_global_access scope nodes ~p_pub =
                                 ( `Module,
                                   id_m,
                                   (match nodes.(i) with _, l -> l),
-                                  Some (match nodes.(i) with n, _ -> n) );
+                                  Some node );
                               `Identifier
                                 ( `Module,
                                   id_m2,
                                   (match body.(j) with _, l -> l),
-                                  Some (match body.(j) with n, _ -> n) );
+                                  Some node_m );
                             |];
                         ];
                     loop_module ~j:(j + 1) ())
@@ -317,7 +322,7 @@ let rec get_global_access scope nodes ~p_pub =
           else (
             loop_module ();
             loop ~access:!access_ref ~i:(i + 1) ())
-      | Decl (Alias { id; poly_args; is_pub; _ }) ->
+      | Decl (Alias { id; poly_args; is_pub; _ }) as node ->
           if is_pub && p_pub then
             loop
               ~access:
@@ -326,7 +331,7 @@ let rec get_global_access scope nodes ~p_pub =
                      id,
                      poly_args,
                      (match nodes.(i) with _, l -> l),
-                     Some (match nodes.(i) with n, _ -> n) )
+                     Some node )
                 :: access)
               ~i:(i + 1) ()
           else
@@ -337,10 +342,10 @@ let rec get_global_access scope nodes ~p_pub =
                      id,
                      poly_args,
                      (match nodes.(i) with _, l -> l),
-                     Some (match nodes.(i) with n, _ -> n) )
+                     Some node )
                 :: access)
               ~i:(i + 1) ()
-      | Decl (Record { id; poly_args; fields; is_pub }) ->
+      | Decl (Record { id; poly_args; fields; is_pub }) as node_rec ->
           let rec get_record_access ?(j = 0) ?(lf = fields) () =
             (* TODO: improve search of element in list *)
             if j < Array.length lf then (
@@ -349,7 +354,15 @@ let rec get_global_access scope nodes ~p_pub =
                   if
                     (match lf.(i) with f, _ -> f.id)
                     = match lf.(k) with f, _ -> f.id
-                  then failwith "error"
+                  then
+                    (match lf.(i) with _, l -> l)
+                    |> Parser.new_diagnostic scope.parser Diagnostic.Error
+                         (match lf.(i) with
+                         | f, _ ->
+                             f.id
+                             |> Printf.sprintf
+                                  "the record `%s` has same fields `%s`" id)
+                    |> Diagnostic.emit_diagnostic
                   else get_record_access2 ~k:(k + 1) ()
                 else ()
               in
@@ -365,7 +378,7 @@ let rec get_global_access scope nodes ~p_pub =
                      id,
                      poly_args,
                      (match nodes.(i) with _, l -> l),
-                     Some (match nodes.(i) with n, _ -> n) )
+                     Some node_rec )
                 :: access)
               ~i:(i + 1) ())
           else (
@@ -377,16 +390,16 @@ let rec get_global_access scope nodes ~p_pub =
                      id,
                      poly_args,
                      (match nodes.(i) with _, l -> l),
-                     Some (match nodes.(i) with n, _ -> n) )
+                     Some node_rec )
                 :: access)
               ~i:(i + 1) ())
-      | Decl (Enum { id; poly_args; variants; _ }) ->
+      | Decl (Enum { id; poly_args; variants; _ }) as node_e ->
           (* TODO: review this part of code about public access *)
           let access_ref = ref access in
           let rec iter_enum ?(j = 0) () =
             if j < Array.length variants then
               match match variants.(j) with v, _ -> v with
-              | { id = id_f; data_type } ->
+              | { id = id_f; data_type } as var ->
                   access_ref :=
                     !access_ref
                     @ [
@@ -394,7 +407,7 @@ let rec get_global_access scope nodes ~p_pub =
                           ( `Enum,
                             [| id; id_f |],
                             (match variants.(j) with _, l -> l),
-                            match variants.(j) with v, _ -> v );
+                            var );
                       ];
                   iter_enum ~j:(j + 1) ()
           in
@@ -407,16 +420,57 @@ let rec get_global_access scope nodes ~p_pub =
                     id,
                     poly_args,
                     (match nodes.(i) with _, l -> l),
-                    Some (match nodes.(i) with n, _ -> n) );
+                    Some node_e );
               ];
           loop ~access:!access_ref ~i:(i + 1) ()
-      | Decl (Class { id; poly_args; is_pub; body; _ }) ->
-          (*let rec loop ?(i = 0) () = if i < Array.length body then let a =
-            match match body.(i) with n, _ -> n with | Decl (Property (id, _,
-            _)) -> failwith "todo" | Decl (Method { id; _ }) -> failwith
-            "todo" | _ -> failwith "unreachable" in loop ~i:(i + 1) () in let
-            arr = loop () in*)
-          loop ~i:(i + 1) ()
+      | Decl (Class { id; poly_args; is_pub; body; _ }) as node_cl ->
+          let access_ref = ref access in
+          let rec iter_class ?(j = 0) () =
+            if i < Array.length body then (
+              (match match body.(j) with n, _ -> n with
+              | Decl (Property (id_prop, _, is_pub)) as prop ->
+                  if is_pub then
+                    access_ref :=
+                      !access_ref
+                      @ [
+                          `IdentifierAddr
+                            [|
+                              `Identifier
+                                ( `Class,
+                                  id,
+                                  (match nodes.(i) with _, l -> l),
+                                  Some node_cl );
+                              `Identifier
+                                ( `Property,
+                                  id_prop,
+                                  (match body.(j) with _, l -> l),
+                                  Some prop );
+                            |];
+                        ]
+              | Decl (Method { id = id_met; is_pub; _ }) as met ->
+                  if is_pub then
+                    access_ref :=
+                      !access_ref
+                      @ [
+                          `IdentifierAddr
+                            [|
+                              `Identifier
+                                ( `Class,
+                                  id,
+                                  (match nodes.(i) with _, l -> l),
+                                  Some node_cl );
+                              `Identifier
+                                ( `Method,
+                                  id_met,
+                                  (match body.(j) with _, l -> l),
+                                  Some met );
+                            |];
+                        ]
+              | _ -> failwith "todo");
+              iter_class ~j:(j + 1) ())
+          in
+          iter_class ();
+          loop ~access:!access_ref ~i:(i + 1) ()
       | Decl (Import _) -> loop ~i:(i + 1) ()
       | Doc _ -> loop ~i:(i + 1) ()
       | _ -> failwith "unreachable"
