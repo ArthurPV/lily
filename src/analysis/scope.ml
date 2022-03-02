@@ -322,7 +322,7 @@ let rec get_global_access scope nodes ~p_pub =
           else (
             loop_module ();
             loop ~access:!access_ref ~i:(i + 1) ())
-      | Decl (Alias { id; poly_args; is_pub; _ }) as node ->
+      | Decl (Alias { id; poly_args; is_pub; _ }) as node_a ->
           if is_pub && p_pub then
             loop
               ~access:
@@ -331,7 +331,7 @@ let rec get_global_access scope nodes ~p_pub =
                      id,
                      poly_args,
                      (match nodes.(i) with _, l -> l),
-                     Some node )
+                     Some node_a )
                 :: access)
               ~i:(i + 1) ()
           else
@@ -342,7 +342,7 @@ let rec get_global_access scope nodes ~p_pub =
                      id,
                      poly_args,
                      (match nodes.(i) with _, l -> l),
-                     Some node )
+                     Some node_a )
                 :: access)
               ~i:(i + 1) ()
       | Decl (Record { id; poly_args; fields; is_pub }) as node_rec ->
@@ -466,7 +466,7 @@ let rec get_global_access scope nodes ~p_pub =
                                   Some met );
                             |];
                         ]
-              | _ -> failwith "todo");
+              | _ -> failwith "unreachable");
               iter_class ~j:(j + 1) ())
           in
           iter_class ();
