@@ -370,6 +370,7 @@ and expr =
         fun fmt (s, e_op) ->
           fprintf fmt "%s%s" (show_expr s)
             (match e_op with Some e -> show_expr e | None -> "")]
+  | Self [@printer fun fmt _ -> fprintf fmt "self"]
   | Undef [@printer fun fmt _ -> fprintf fmt "undef"]
   | Nil [@printer fun fmt _ -> fprintf fmt "nil"]
   | Literal of literal_ast
