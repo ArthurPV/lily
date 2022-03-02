@@ -305,6 +305,7 @@ and parse_assign parser loc =
       match node with
       | Identifier (id, _) -> Identifier (id, None)
       | IdentifierAccess (ids, _) -> IdentifierAccess (ids, None)
+      | SelfAccess (ids, _) -> SelfAccess (ids, None)
       | _ ->
           Location.end_location loc parser.current_location;
           Diagnostic.EmitDiagnostic
@@ -687,25 +688,26 @@ and parse_identifier_access parser f_id =
 
 (* TODO: review this function *)
 and parse_self_access parser =
-  match parser.current_token with
-  | Identifier s when peek_token parser ~n:1 = Some (Separator LeftParen) ->
-      parse_function_call parser
-        ~id:(SelfAccess ([| Identifier (s, None) |], None))
-  | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) -> (
-      next_token parser;
-      next_token parser;
-      let f_id = Identifier (s, None) in
-      match parse_identifier_access parser f_id with
-      | IdentifierAccess (ids, _) -> SelfAccess (ids, None)
-      | _ -> failwith "unreachable")
-  | Identifier s -> IdentifierAccess ([| Identifier (s, None) |], None)
-  | _ ->
-      Diagnostic.EmitDiagnostic
-        ( parser.current_token |> show_token
-          |> Printf.sprintf "unexpected expression: `%s`",
-          Diagnostic.Error,
-          parser.current_location )
-      |> raise
+  if parser.current_token = Separator Dot then (
+    next_token parser;
+    match parser.current_token with
+    | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) -> (
+        match parse_identifier_access parser (Identifier (s, None)) with
+        | IdentifierAccess (arr, op) -> SelfAccess (arr, op)
+        | FunctionCall (IdentifierAccess (arr, op), args) ->
+            FunctionCall (SelfAccess (arr, op), args)
+        | _ -> failwith "unreachable")
+    | Identifier s ->
+        next_token parser;
+        SelfAccess ([| Identifier (s, None) |], None)
+    | _ ->
+        Diagnostic.EmitDiagnostic
+          ( parser.current_token |> show_token
+            |> Printf.sprintf "expected identifier, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise)
+  else Self
 
 and parse_tuple parser =
   let rec loop ?(tuple = []) () =
@@ -790,9 +792,7 @@ and parse_primary_expr parser =
     | Keyword Fun -> parse_anonymous_function parser
     | Keyword Undef -> Undef
     | Keyword Nil -> Nil
-    | Keyword Self ->
-        next_token parser;
-        parse_self_access parser
+    | Keyword Self -> parse_self_access parser
     | Separator LeftHook -> parse_array parser
     | Separator LeftParen when parser.current_token = Separator RightParen ->
         next_token parser;
@@ -1805,6 +1805,11 @@ and parse_body parser ~closure =
                && peek_token parser ~n:1 <> Some (Separator LeftParen) ->
             next_token parser;
             parse_variable parser ~id:s ~is_mut:false
+        | Keyword Self when peek_token parser ~n:1 = Some (Separator Dot) ->
+            Expr (parse_expr2 parser)
+        | Keyword Self ->
+            next_token parser;
+            Expr Self
         | Keyword If ->
             next_token parser;
             Stmt (parse_if parser)
