@@ -62,6 +62,8 @@ val parse_identifier_access : parser -> expr -> expr
 val parse_self_access : parser -> expr
 val parse_tuple : parser -> expr
 val parse_array : parser -> expr
+val parse_array_access : parser -> id:expr -> expr
+val parse_tuple_access : parser -> id:expr -> expr
 val parse_variant : parser -> id:expr -> expr
 val parse_primary_expr : parser -> expr
 val parse_expr2 : parser -> expr

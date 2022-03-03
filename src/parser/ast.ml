@@ -313,6 +313,8 @@ and expr =
           let s = loop () in
           fprintf fmt "(self.%s, %s)" s
             (match a_op with Some a -> show_ast a | None -> "None")]
+  | ArrayAccess of expr * expr array
+  | TupleAccess of expr * expr array
   | AnonymousFunction of argument array * (ast * location) array
       [@printer
         fun fmt (args, body) ->

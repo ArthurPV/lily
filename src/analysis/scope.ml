@@ -831,6 +831,8 @@ and check_expr scope node loc access =
            |> Array.map (fun x ->
                   check_expr scope (Expr x |> ref) loc access |> ast_to_expr)
            ))
+  | Expr (TupleAccess _) -> failwith "todo"
+  | Expr (ArrayAccess _) -> failwith "todo"
   | Expr (AnonymousFunction (_, _)) -> failwith "todo"
   | Expr (Negative l) ->
       Expr
@@ -1228,7 +1230,9 @@ and check_fun_scope scope args call access nodes loc =
             |> check_expr scope (Expr expr |> ref)
                  (match nodes.(i) with _, l -> l)
           in
-          return_expr := Array.append !return_expr [| check_return_expr |];
+          return_expr :=
+            Array.append !return_expr
+              [| (check_return_expr, match nodes.(i) with _, l -> l) |];
           (* ADD RETURN FOR CHECK TYPE *)
           nodes.(i) <-
             (match nodes.(i) with
@@ -1242,7 +1246,9 @@ and check_fun_scope scope args call access nodes loc =
                  (match nodes.(i) with _, l -> l)
           in
           (if i + 1 = Array.length nodes then
-           return_expr := Array.append !return_expr [| check_expr |]
+           return_expr :=
+             Array.append !return_expr
+               [| (check_expr, match nodes.(i) with _, l -> l) |]
           else
             match expr with
             | Assign _ | FunctionCall _ ->

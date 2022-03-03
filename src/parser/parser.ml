@@ -656,6 +656,36 @@ and parse_identifier_access parser f_id =
           next_token parser;
           loop ~access:(call :: access) ())
         else call
+    | Identifier s when peek_token parser ~n:1 = Some (Separator LeftHook) ->
+        let access_ref = ref access in
+        access_ref := [ Identifier (s, None) ] @ !access_ref;
+        next_token parser;
+        let acc =
+          parse_array_access parser
+            ~id:
+              (IdentifierAccess
+                 (!access_ref |> List.rev |> Array.of_list, None))
+        in
+        if parser.current_token = Separator Dot then (
+          next_token parser;
+          loop ~access:(acc :: access) ())
+        else acc
+    | Identifier s
+      when peek_token parser ~n:1 = Some (Separator Dot)
+           && peek_token parser ~n:2 = Some (Separator LeftParen) ->
+        let access_ref = ref access in
+        access_ref := [ Identifier (s, None) ] @ !access_ref;
+        next_token parser;
+        let acc =
+          parse_tuple_access parser
+            ~id:
+              (IdentifierAccess
+                 (!access_ref |> List.rev |> Array.of_list, None))
+        in
+        if parser.current_token = Separator Dot then (
+          next_token parser;
+          loop ~access:(acc :: access) ())
+        else acc
     | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) ->
         next_token parser;
         next_token parser;
@@ -689,15 +719,21 @@ and parse_identifier_access parser f_id =
 (* TODO: review this function *)
 and parse_self_access parser =
   if parser.current_token = Separator Dot then (
-    next_token parser;
-    match parser.current_token with
-    | Identifier s when peek_token parser ~n:1 = Some (Separator Dot) -> (
+    match peek_token parser ~n:1 with
+    | Some (Identifier s)
+      when peek_token parser ~n:2 = Some (Separator Dot)
+           || peek_token parser ~n:2 = Some (Separator LeftHook)
+           || peek_token parser ~n:2 = Some (Separator LeftParen) -> (
         match parse_identifier_access parser (Identifier (s, None)) with
         | IdentifierAccess (arr, op) -> SelfAccess (arr, op)
         | FunctionCall (IdentifierAccess (arr, op), args) ->
             FunctionCall (SelfAccess (arr, op), args)
+        | TupleAccess (IdentifierAccess (arr, op), v) ->
+            TupleAccess (SelfAccess (arr, op), v)
+        | ArrayAccess (IdentifierAccess (arr, op), v) ->
+            ArrayAccess (SelfAccess (arr, op), v)
         | _ -> failwith "unreachable")
-    | Identifier s ->
+    | Some (Identifier s) ->
         next_token parser;
         SelfAccess ([| Identifier (s, None) |], None)
     | _ ->
@@ -745,6 +781,42 @@ and parse_array parser =
   in
   loop ()
 
+and parse_array_access parser ~id =
+  let rec loop ?(acc = []) () =
+    if parser.current_token = Separator LeftHook then (
+      next_token parser;
+      let expr = parse_expr2 parser in
+      Diagnostic.EmitDiagnostic
+        ( parser.current_token |> show_token
+          |> Printf.sprintf "expected `]`, found `%s`",
+          Diagnostic.Error,
+          parser.current_location )
+      |> expect_token parser (Separator RightHook);
+      loop ~acc:(expr :: acc) ())
+    else acc |> List.rev |> Array.of_list
+  in
+  ArrayAccess (id, loop ())
+
+and parse_tuple_access parser ~id =
+  let rec loop ?(acc = []) () =
+    if
+      parser.current_token = Separator Dot
+      && peek_token parser ~n:1 = Some (Separator LeftParen)
+    then (
+      next_token parser;
+      next_token parser;
+      let expr = parse_expr2 parser in
+      Diagnostic.EmitDiagnostic
+        ( parser.current_token |> show_token
+          |> Printf.sprintf "expected `)`, found `%s`",
+          Diagnostic.Error,
+          parser.current_location )
+      |> expect_token parser (Separator RightParen);
+      loop ~acc:(expr :: acc) ())
+    else acc |> List.rev |> Array.of_list
+  in
+  TupleAccess (id, loop ())
+
 and parse_variant parser ~id =
   if matches parser (Separator Colon) then
     let expr = parse_expr2 parser in
@@ -773,17 +845,27 @@ and parse_primary_expr parser =
         match parser.current_token with
         | Separator LeftParen ->
             parse_function_call parser ~id:(Identifier (s, None))
+        | Separator LeftHook ->
+            parse_array_access parser ~id:(Identifier (s, None))
+        | Separator Dot
+          when peek_token parser ~n:1 = Some (Separator LeftParen) ->
+            parse_tuple_access parser ~id:(Identifier (s, None))
         | Separator Dot ->
             parse_identifier_access parser (Identifier (s, None))
         | _ -> Identifier (s, None))
     | Identifier s when Char.uppercase_ascii s.[0] = s.[0] -> (
         match parser.current_token with
+        | Separator Dot
+          when peek_token parser ~n:1 = Some (Separator LeftParen) ->
+            parse_tuple_access parser ~id:(Identifier (s, None))
         | Separator Dot ->
             parse_identifier_access parser (Identifier (s, None))
         | Separator LeftBrace ->
             parse_record_call parser ~id:(Identifier (s, None))
         | Separator LeftParen ->
             parse_function_call parser ~id:(Identifier (s, None))
+        | Separator LeftHook ->
+            parse_array_access parser ~id:(Identifier (s, None))
         | Separator Colon | Separator ColonColon ->
             parse_variant parser ~id:(Identifier (s, None))
         | _ -> Identifier (s, None))
