@@ -735,6 +735,7 @@ and parse_self_access parser =
         | _ -> failwith "unreachable")
     | Some (Identifier s) ->
         next_token parser;
+        next_token parser;
         SelfAccess ([| Identifier (s, None) |], None)
     | _ ->
         Diagnostic.EmitDiagnostic
