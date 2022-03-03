@@ -147,6 +147,11 @@ and case = {
 and args_fun_call = string option * ast [@@deriving show]
 and if_t = expr * (ast * location) array
 
+and poly_args_kind =
+  | Datatype of data_type
+  | RestrictedDatatype of data_type * data_type
+[@@deriving show]
+
 (* NOTE: ast option it used in analysis, but for the moment the value is
    None *)
 and expr =
@@ -382,13 +387,13 @@ and expr =
 and decl =
   | Fun of {
       id : string; [@printer fun fmt s -> fprintf fmt "%s" s]
-      poly_args : data_type array;
+      poly_args : poly_args_kind array;
           [@printer
             fun fmt poly_args_arr ->
               let rec loop_poly_args ?(i = 0) ?(l = []) () =
                 if i < Array.length poly_args_arr then
                   loop_poly_args ~i:(i + 1)
-                    ~l:(show_data_type poly_args_arr.(i) :: l)
+                    ~l:(show_poly_args_kind poly_args_arr.(i) :: l)
                     ()
                 else l |> List.rev |> String.concat ", "
               in
@@ -477,43 +482,43 @@ and decl =
   (* [@printer fun fmt m -> fprintf fmt "Hello"] *)
   | Alias of {
       id : string;
-      poly_args : data_type array;
+      poly_args : poly_args_kind array;
       data_type : data_type;
       is_pub : bool;
     }
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
   | Record of {
       id : string;
-      poly_args : data_type array;
+      poly_args : poly_args_kind array;
       fields : (field * location) array;
       is_pub : bool;
     }
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
   | Enum of {
       id : string;
-      poly_args : data_type array;
+      poly_args : poly_args_kind array;
       variants : (variant * location) array;
       is_pub : bool;
     }
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
   | Class of {
       id : string;
-      poly_args : data_type array;
-      inh : string array;
+      poly_args : poly_args_kind array;
+      inh : expr array;
       body : (ast * location) array;
       is_pub : bool;
     }
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
   | Trait of {
       id : string;
-      poly_args : data_type array;
+      poly_args : poly_args_kind array;
       body : (ast * location) array;
       is_pub : bool;
     }
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
   | Method of {
       id : string;
-      poly_args : data_type array;
+      poly_args : poly_args_kind array;
       args : argument_method array;
       return_type : data_type option;
       body : (ast * location) array;

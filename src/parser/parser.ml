@@ -1509,8 +1509,9 @@ and parse_object parser ~is_pub =
     let rec parse_inh ?(l = []) () =
       if parser.current_token <> Separator RightHook then (
         let id =
-          match parser.current_token with
-          | Identifier s -> s
+          match parse_primary_expr parser with
+          | Identifier (s, _) -> Identifier (s, None)
+          | IdentifierAccess (arr, _) -> IdentifierAccess (arr, None)
           | _ ->
               Diagnostic.EmitDiagnostic
                 ( parser.current_token |> show_token
@@ -1993,17 +1994,21 @@ and parse_body parser ~closure =
 and parse_polymorphic_argument parser =
   let rec loop ?(args = []) () =
     if parser.current_token <> Separator RightHook then (
-      let p = parse_data_type parser in
-      (match p with
-      | `Generics _ -> ()
-      | _ ->
-          if true then
+      let p =
+        (match parse_data_type parser with
+        | `Generics s ->
+          if parser.current_token = (Operator Eq) then (
+            next_token parser;
+            let restricted_type = parse_data_type parser in
+            RestrictedDatatype (`Generics s, restricted_type))
+          else Datatype (`Generics s)
+        | _ ->
             Diagnostic.EmitDiagnostic
               ( "polymorphic parameter expect only parameter data type like \
                  `a`",
                 Diagnostic.Error,
                 parser.current_location )
-            |> raise);
+            |> raise) in
       if parser.current_token <> Separator RightHook then
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token

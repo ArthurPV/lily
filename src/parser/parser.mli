@@ -90,18 +90,18 @@ val parse_function :
 val parse_body_module : parser -> (ast * location) array
 val parse_module : parser -> is_pub:bool -> is_test:bool -> decl
 val parse_type : parser -> is_pub:bool -> decl
-val parse_alias : parser -> string -> data_type array -> is_pub:bool -> decl
-val parse_record : parser -> string -> data_type array -> is_pub:bool -> decl
-val parse_enum : parser -> string -> data_type array -> is_pub:bool -> decl
+val parse_alias : parser -> string -> poly_args_kind array -> is_pub:bool -> decl
+val parse_record : parser -> string -> poly_args_kind array -> is_pub:bool -> decl
+val parse_enum : parser -> string -> poly_args_kind array -> is_pub:bool -> decl
 val parse_object : parser -> is_pub:bool -> decl
 val parse_property : parser -> is_pub:bool -> decl
 val parse_body_class : parser -> string -> (ast * location) array
 
 val parse_class :
-  parser -> string -> data_type array -> string array -> is_pub:bool -> decl
+  parser -> string -> poly_args_kind array -> expr array -> is_pub:bool -> decl
 
 val parse_method : parser -> string -> is_pub:bool -> decl
-val parse_trait : parser -> string -> data_type array -> is_pub:bool -> decl
+val parse_trait : parser -> string -> poly_args_kind array -> is_pub:bool -> decl
 val parse_import : parser -> is_pub:bool -> decl
 val parse_pub_block : parser -> decl * location
 val parse_pub : parser -> decl
@@ -111,7 +111,7 @@ val parse_body :
   closure:token option * token option * token option ->
   (ast * location) array
 
-val parse_polymorphic_argument : parser -> data_type array
+val parse_polymorphic_argument : parser -> poly_args_kind array
 val parse_argument : parser -> argument array
 val parse_method_argument : parser -> argument_method array
 val parse_decl : parser -> ast

@@ -57,13 +57,13 @@ type scope_access =
   | (* identifier => (variable access, constant access module access, type
        access) *)
     `Type of
-    from_access * string * data_type array * location * ast option
+    from_access * string * poly_args_kind array * location * ast option
     [@printer
       fun fmt t ->
         let arr_dt = match t with _, _, arr, _, _ -> arr in
         let rec loop ?(i = 0) ?(l = []) () =
           if i < Array.length arr_dt then
-            loop ~i:(i + 1) ~l:(show_data_type arr_dt.(i) :: l) ()
+            loop ~i:(i + 1) ~l:(show_poly_args_kind arr_dt.(i) :: l) ()
           else String.concat ", " l
         in
         fprintf fmt "Type(%s, %s, %s, %s, %s)"
