@@ -1,5 +1,0 @@
-(dirs c)
-
-(library
-  (libraries lily_types_c)
-	(name lily_types))
