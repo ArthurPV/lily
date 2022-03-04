@@ -24,8 +24,6 @@ and check_arithmetic_expr dts =
   | `U128, `U128 -> `U128
   | `F32, `F32 -> `F32
   | `F64, `F64 -> `F64
-  | `F80, `F80 -> `F80
-  | `F128, `F128 -> `F128
   | `I8, dt
   | `I16, dt
   | `I32, dt
@@ -37,9 +35,7 @@ and check_arithmetic_expr dts =
   | `U64, dt
   | `U128, dt
   | `F32, dt
-  | `F64, dt
-  | `F80, dt
-  | `F128, dt ->
+  | `F64, dt ->
       dt |> show_data_type
       |> Printf.sprintf
            "the expression on the left has type %s, but the type on the \
@@ -57,9 +53,7 @@ and check_arithmetic_expr dts =
   | dt, `U64
   | dt, `U128
   | dt, `F32
-  | dt, `F64
-  | dt, `F80
-  | dt, `F128 ->
+  | dt, `F64 ->
       dt |> show_data_type
       |> Printf.sprintf
            "the expression on the right, has type %s, but the type on the \
@@ -179,8 +173,6 @@ and check_expr_type tpc = function
       | `U128, `U128 -> `Bool
       | `F32, `F32 -> `Bool
       | `F64, `F64 -> `Bool
-      | `F80, `F80 -> `Bool
-      | `F128, `F128 -> `Bool
       | `Char, `Char -> `Bool
       | `I8, dt
       | `I16, dt
@@ -194,8 +186,6 @@ and check_expr_type tpc = function
       | `U128, dt
       | `F32, dt
       | `F64, dt
-      | `F80, dt
-      | `F128, dt
       | `Char, dt ->
           failwith "error"
       | dt, `I8
@@ -210,8 +200,6 @@ and check_expr_type tpc = function
       | dt, `U128
       | dt, `F32
       | dt, `F64
-      | dt, `F80
-      | dt, `F128
       | dt, `Char ->
           failwith "error"
       | dt, dt2 ->

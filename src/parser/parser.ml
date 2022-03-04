@@ -164,8 +164,6 @@ let rec parse_data_type parser =
   | Identifier "Uint128" -> `U128
   | Identifier "Float32" -> `F32
   | Identifier "Float64" -> `F64
-  | Identifier "Float80" -> `F80
-  | Identifier "Float128" -> `F128
   | Identifier "String" -> `String
   | Identifier "Usize" -> `Usize
   | Identifier "Isize" -> `Isize

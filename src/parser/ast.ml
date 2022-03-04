@@ -13,8 +13,6 @@ type data_type =
   | `U128 [@printer fun fmt _ -> fprintf fmt "Uint128"]
   | `F32 [@printer fun fmt _ -> fprintf fmt "Float32"]
   | `F64 [@printer fun fmt _ -> fprintf fmt "Float64"]
-  | `F80 [@printer fun fmt _ -> fprintf fmt "Float80"]
-  | `F128 [@printer fun fmt _ -> fprintf fmt "Float128"]
   | `String [@printer fun fmt _ -> fprintf fmt "String"]
   | `Char [@printer fun fmt _ -> fprintf fmt "Char"]
   | `Usize [@printer fun fmt _ -> fprintf fmt "Usize"]
