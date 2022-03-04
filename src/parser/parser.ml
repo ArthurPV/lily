@@ -156,12 +156,16 @@ let rec parse_data_type parser =
   | Identifier "Int16" -> `I16
   | Identifier "Int32" -> `I32
   | Identifier "Int64" -> `I64
+  | Identifier "Int128" -> `I128
   | Identifier "Uint8" -> `U8
   | Identifier "Uint16" -> `U16
   | Identifier "Uint32" -> `U32
   | Identifier "Uint64" -> `U64
+  | Identifier "Uint128" -> `U128
   | Identifier "Float32" -> `F32
   | Identifier "Float64" -> `F64
+  | Identifier "Float80" -> `F80
+  | Identifier "Float128" -> `F128
   | Identifier "String" -> `String
   | Identifier "Usize" -> `Usize
   | Identifier "Isize" -> `Isize
@@ -718,7 +722,7 @@ and parse_identifier_access parser f_id =
 
 (* TODO: review this function *)
 and parse_self_access parser =
-  if parser.current_token = Separator Dot then (
+  if parser.current_token = Separator Dot then
     match peek_token parser ~n:1 with
     | Some (Identifier s)
       when peek_token parser ~n:2 = Some (Separator Dot)
@@ -743,7 +747,7 @@ and parse_self_access parser =
             |> Printf.sprintf "expected identifier, found `%s`",
             Diagnostic.Error,
             parser.current_location )
-        |> raise)
+        |> raise
   else Self
 
 and parse_tuple parser =
@@ -1995,20 +1999,21 @@ and parse_polymorphic_argument parser =
   let rec loop ?(args = []) () =
     if parser.current_token <> Separator RightHook then (
       let p =
-        (match parse_data_type parser with
+        match parse_data_type parser with
         | `Generics s ->
-          if parser.current_token = (Operator Eq) then (
-            next_token parser;
-            let restricted_type = parse_data_type parser in
-            RestrictedDatatype (`Generics s, restricted_type))
-          else Datatype (`Generics s)
+            if parser.current_token = Operator Eq then (
+              next_token parser;
+              let restricted_type = parse_data_type parser in
+              RestrictedDatatype (`Generics s, restricted_type))
+            else Datatype (`Generics s)
         | _ ->
             Diagnostic.EmitDiagnostic
               ( "polymorphic parameter expect only parameter data type like \
                  `a`",
                 Diagnostic.Error,
                 parser.current_location )
-            |> raise) in
+            |> raise
+      in
       if parser.current_token <> Separator RightHook then
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token

@@ -16,22 +16,30 @@ and check_arithmetic_expr dts =
   | `I16, `I16 -> `I16
   | `I32, `I32 -> `I32
   | `I64, `I64 -> `I64
+  | `I128, `I128 -> `I128
   | `U8, `U8 -> `U8
   | `U16, `U16 -> `U16
   | `U32, `U32 -> `U32
   | `U64, `U64 -> `U64
+  | `U128, `U128 -> `U128
   | `F32, `F32 -> `F32
   | `F64, `F64 -> `F64
+  | `F80, `F80 -> `F80
+  | `F128, `F128 -> `F128
   | `I8, dt
   | `I16, dt
   | `I32, dt
   | `I64, dt
+  | `I128, dt
   | `U8, dt
   | `U16, dt
   | `U32, dt
   | `U64, dt
+  | `U128, dt
   | `F32, dt
-  | `F64, dt ->
+  | `F64, dt
+  | `F80, dt
+  | `F128, dt ->
       dt |> show_data_type
       |> Printf.sprintf
            "the expression on the left has type %s, but the type on the \
@@ -42,12 +50,16 @@ and check_arithmetic_expr dts =
   | dt, `I16
   | dt, `I32
   | dt, `I64
+  | dt, `I128
   | dt, `U8
   | dt, `U16
   | dt, `U32
   | dt, `U64
+  | dt, `U128
   | dt, `F32
-  | dt, `F64 ->
+  | dt, `F64
+  | dt, `F80
+  | dt, `F128 ->
       dt |> show_data_type
       |> Printf.sprintf
            "the expression on the right, has type %s, but the type on the \
@@ -106,19 +118,23 @@ and check_expr_type tpc = function
       | `I16, `I16 -> `I16
       | `I32, `I32 -> `I32
       | `I64, `I64 -> `I64
+      | `I128, `I128 -> `I128
       | `U8, `U8 -> `U8
       | `U16, `U16 -> `U16
       | `U32, `U32 -> `U32
       | `U64, `U64 -> `U64
+      | `U128, `U128 -> `U128
       | `Char, `Char -> `Char
       | `I8, dt
       | `I16, dt
       | `I32, dt
       | `I64, dt
+      | `I128, dt
       | `U8, dt
       | `U16, dt
       | `U32, dt
-      | `U64, dt ->
+      | `U64, dt
+      | `U128, dt ->
           dt |> show_data_type
           |> Printf.sprintf
                "the expression on the right, has type %s, but the type on \
@@ -129,10 +145,12 @@ and check_expr_type tpc = function
       | dt, `I16
       | dt, `I32
       | dt, `I64
+      | dt, `I128
       | dt, `U8
       | dt, `U16
       | dt, `U32
-      | dt, `U64 ->
+      | dt, `U64
+      | dt, `U128 ->
           dt |> show_data_type
           |> Printf.sprintf
                "the expression on the left, has type %s, but the type on \
@@ -153,35 +171,47 @@ and check_expr_type tpc = function
       | `I16, `I16 -> `Bool
       | `I32, `I32 -> `Bool
       | `I64, `I64 -> `Bool
+      | `I128, `I128 -> `Bool
       | `U8, `U8 -> `Bool
       | `U16, `U16 -> `Bool
       | `U32, `U32 -> `Bool
       | `U64, `U64 -> `Bool
+      | `U128, `U128 -> `Bool
       | `F32, `F32 -> `Bool
       | `F64, `F64 -> `Bool
+      | `F80, `F80 -> `Bool
+      | `F128, `F128 -> `Bool
       | `Char, `Char -> `Bool
       | `I8, dt
       | `I16, dt
       | `I32, dt
       | `I64, dt
+      | `I128, dt
       | `U8, dt
       | `U16, dt
       | `U32, dt
       | `U64, dt
+      | `U128, dt
       | `F32, dt
       | `F64, dt
+      | `F80, dt
+      | `F128, dt
       | `Char, dt ->
           failwith "error"
       | dt, `I8
       | dt, `I16
       | dt, `I32
       | dt, `I64
+      | dt, `I128
       | dt, `U8
       | dt, `U16
       | dt, `U32
       | dt, `U64
+      | dt, `U128
       | dt, `F32
       | dt, `F64
+      | dt, `F80
+      | dt, `F128
       | dt, `Char ->
           failwith "error"
       | dt, dt2 ->
@@ -255,3 +285,6 @@ and check_type tpc = function
   | Decl _, _ -> failwith "not implemented"
   | Expr e, l -> check_expr_type tpc (e, l)
   | _ -> failwith "not implemented"
+
+and check_fun_args_type args = assert false
+and check_fun node = assert false
