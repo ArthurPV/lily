@@ -12,7 +12,7 @@ syn keyword lilyStatement break next new try if return
 syn keyword lilyConditional if elif else match
 syn keyword lilyRepeat while for loop
 syn keyword lilyConstant nil undef
-syn keyword lilyKeyword self fun end or and not in import class then alias record trait interface enum error catch type async await module as do include init macro test rec mut
+syn keyword lilyKeyword self fun end or and not in import class then alias record trait enum error catch type async await module as do include init macro test mut impl
 syn keyword lilyType Char Int8 Int16 Int32 Int64 Uint8 Uint16 Uint32 Uint64 Float32 Float64 String Usize Isize Bool Unit
 syn keyword lilyBoolean True False
 syn match lilyStatus display "@sig"
