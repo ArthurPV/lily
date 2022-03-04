@@ -3,6 +3,8 @@ type float64 = float
 type float80
 type float128
 
+[@@@warning "-32"]
+
 module type Float = sig
   type t
 
@@ -112,21 +114,7 @@ module type Float = sig
   val hash : t -> int
 end
 
-module Float128 = struct
-  module Base = struct
-    type t = float128
-    let bits = 128
-    let fmt = "ULL"
-    let name = "Float128"
-
-    external add : float128 -> float128 -> float128 = "float128_add"
-    external sub : float128 -> float128 -> float128 = "float128_sub"
-    external mul : float128 -> float128 -> float128 = "float128_mul"
-    external div : float128 -> float128 -> float128 = "float128_div"
-    external abs : float128 -> float128 = "%identity"
-
-    external of_int : int -> float128 = "float128_of_int"
-  end
-
-  include Base
-end
+module Float32 : Float with type t = float32
+module Float64 : Float with type t = float64
+module Float80 : Float with type t = float80
+module Float128 : Float with type t = float128
