@@ -841,7 +841,7 @@ and parse_primary_expr parser =
     | Keyword True -> Literal (Bool true)
     | Keyword False -> Literal (Bool false)
     | Literal (Char c) -> Literal (Char c)
-    | Literal (Int i) -> Literal (Int (Stdint.Int64.of_string i))
+    | Literal (Int i) -> Literal (Int (Stdint.Int128.of_string i))
     | Literal (Float f) -> Literal (Float (Float.of_string f))
     | Literal (String s) -> Literal (String s)
     | Identifier s when String.lowercase_ascii s = s -> (

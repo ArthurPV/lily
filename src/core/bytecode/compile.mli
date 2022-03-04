@@ -3,9 +3,9 @@ open Lily_analysis.Scope
 
 module LIR : sig
   type t =
-    | Int of Stdint.int64
+    | Int of Stdint.int128
         [@printer
-          fun fmt i -> fprintf fmt "Int(%s)" (Stdint.Int64.to_string i)]
+          fun fmt i -> fprintf fmt "Int(%s)" (Stdint.Int128.to_string i)]
     | Float of float [@printer fun fmt f -> fprintf fmt "Float(%f)" f]
     | Bool of bool
         [@printer
@@ -25,6 +25,8 @@ module LIR : sig
             fprintf fmt "Array(%s)" (loop ())]
     | Tuple of t array
     | Fun of string * t array (* TODO: add args *)
+    | Class of string * t array
+    | Method of string * t array
     | Variable of string * t
     | Constant of string * t
     | Block of t option * t array
@@ -34,7 +36,7 @@ module LIR : sig
     | Nil [@printer fun fmt _ -> fprintf fmt "Nil"]
   [@@deriving show]
 
-  val to_int : t -> Stdint.int64
+  val to_int : t -> Stdint.int128
   val to_float : t -> float
   val to_bool : t -> bool
   val to_string : t -> string
@@ -43,8 +45,5 @@ end
 
 type compiler = { scope : scope; nodes_value : LIR.t array }
 
-val compile_expr : ast -> LIR.t
-val compile_decl : ast -> LIR.t
-val compile_fun : decl -> LIR.t
-val compile_class : decl -> LIR.t
+val compile : ast -> LIR.t
 val run : compiler -> unit

@@ -4,9 +4,9 @@ open Lily_analysis.Scope
 (* Lily IR -> LIR *)
 module LIR = struct
   type t =
-    | Int of Stdint.int64
+    | Int of Stdint.int128
         [@printer
-          fun fmt i -> fprintf fmt "Int(%s)" (Stdint.Int64.to_string i)]
+          fun fmt i -> fprintf fmt "Int(%s)" (Stdint.Int128.to_string i)]
     | Float of float [@printer fun fmt f -> fprintf fmt "Float(%f)" f]
     | Bool of bool
         [@printer
@@ -26,6 +26,8 @@ module LIR = struct
             fprintf fmt "Array(%s)" (loop ())]
     | Tuple of t array
     | Fun of string * t array (* TODO: add args *)
+    | Class of string * t array
+    | Method of string * t array
     | Variable of string * t
     | Constant of string * t
     | Block of t option * t array
@@ -46,24 +48,46 @@ type compiler = { scope : scope; nodes_value : LIR.t array }
 
 [@@@warning "-27"]
 
-(* EVAL expression *)
-let rec compile_expr node =
+(* EVAL expression, fun, class... *)
+let rec compile node =
   match node with
   | Expr (Literal (Int i)) -> LIR.Int i
   | Expr (Literal (Float f)) -> LIR.Float f
   | Expr (Literal (String s)) -> LIR.String s
   | Expr (Literal (Char c)) -> LIR.Char c
   | Expr (Literal (Bool b)) -> LIR.Bool b
-  | Expr (Grouping expr) -> compile_expr (Expr expr)
-  | Expr (Positive expr) -> compile_expr (Expr expr)
-  | Expr (Negative expr) -> compile_expr (Expr expr)
-  | Expr (Not expr) -> compile_expr (Expr expr)
+  | Expr (Identifier (s, ref_ast)) -> (
+      match ref_ast with
+      | Some v -> compile v
+      | None -> failwith "unreachable")
+  | Expr (IdentifierAccess (s, ref_ast)) -> (
+      match ref_ast with
+      | Some v -> compile v
+      | None -> failwith "unreachable")
+  | Expr (Grouping expr) -> compile (Expr expr)
+  | Expr (Positive expr) -> compile (Expr expr)
+  | Expr (Negative expr) -> compile (Expr expr)
+  | Expr (Not expr) -> compile (Expr expr)
   | Expr Undef -> LIR.Undef
   | Expr Nil -> LIR.Nil
   | Decl (Variable { id; data_type; expr; is_mut }) ->
-      LIR.Variable (id, compile_expr (Expr expr))
+      LIR.Variable (id, compile (Expr expr))
   | Decl (Constant { id; data_type; expr; is_pub }) ->
-      LIR.Constant (id, compile_expr (Expr expr))
+      LIR.Constant (id, compile (Expr expr))
+  | Expr (Array arr) ->
+      let rec loop ?(i = 0) ?(l = []) () =
+        if i < Array.length arr then
+          loop ~i:(i + 1) ~l:(compile (Expr arr.(i)) :: l) ()
+        else LIR.Array (l |> Array.of_list)
+      in
+      loop ()
+  | Expr (Tuple arr) ->
+      let rec loop ?(i = 0) ?(l = []) () =
+        if i < Array.length arr then
+          loop ~i:(i + 1) ~l:(compile (Expr arr.(i)) :: l) ()
+        else LIR.Tuple (l |> Array.of_list)
+      in
+      loop ()
   | Decl
       (Fun
         {
@@ -80,16 +104,12 @@ let rec compile_expr node =
       let body_map = body |> Array.map (fun (t, _) -> t) in
       let rec loop ?(body = []) ?(i = 0) () =
         if i < Array.length body_map then
-          loop ~body:(compile_expr body_map.(i) :: body) ~i:(i + 1) ()
+          loop ~body:(compile body_map.(i) :: body) ~i:(i + 1) ()
         else LIR.Fun (id, body |> Array.of_list)
       in
       loop ()
-  | Stmt (Return expr) -> LIR.Ret (compile_expr (Expr expr))
+  | Stmt (Return expr) -> LIR.Ret (compile (Expr expr))
   | _ -> failwith "not implemented"
-
-let compile_decl node = assert false
-let compile_fun decl = assert false
-let compile_class = assert false
 
 let run compiler =
   let main = compiler.scope.parser.nodes.(compiler.scope.idx_of_main_fun) in
