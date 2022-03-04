@@ -1,0 +1,4 @@
+#ifndef LILY_TYPES_FLOAT32_H
+#define LILY_TYPES_FLOAT32_H
+
+#endif // LILY_TYPES_FLOAT32_H
