@@ -91,6 +91,7 @@ type keyword =
   | Return [@printer fun fmt _ -> fprintf fmt "return"]
   | Nil [@printer fun fmt _ -> fprintf fmt "nil"]
   | Mut [@printer fun fmt _ -> fprintf fmt "mut"]
+  | Error [@printer fun fmt _ -> fprintf fmt "error"]
 [@@deriving show]
 
 type literal =

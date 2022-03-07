@@ -57,6 +57,7 @@ let get_keyword id =
   | "return" -> Keyword Return
   | "nil" -> Keyword Nil
   | "mut" -> Keyword Mut
+  | "error" -> Keyword Error
   | _ -> Identifier id
 
 let next_char lexer =
