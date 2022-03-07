@@ -1494,7 +1494,10 @@ and parse_error parser ~is_pub =
     else [||]
   in
   let loc = Location.copy_location parser.current_location in
-  let dt = parse_data_type parser in
+  let dt =
+    try Some (parse_data_type parser)
+    with Diagnostic.EmitDiagnostic _ -> None
+  in
   Location.end_location loc parser.current_location;
   Error { id; poly_args; variants = (dt, loc); is_pub }
 
@@ -1509,9 +1512,7 @@ and parse_object parser ~is_pub =
             ^ (String.length s - 1 |> String.sub s 1)
             |> Printf.sprintf
                  "invalid object name: `%s`\n\
-                  help define your object name in uppercase format like \
-                  this: `%s`"
-                 s,
+                  help define your object name like this: `%s`" s,
             Diagnostic.Error,
             parser.current_location )
         |> raise
@@ -1968,7 +1969,7 @@ and parse_body parser ~closure =
                     ( s |> String.lowercase_ascii
                       |> Printf.sprintf
                            "invalid variable name `%s`\n\
-                            help: define your variable name in lowercase \
+                            help: define your variable name in camel case \
                             format like this: `%s`"
                            s,
                       Diagnostic.Error,

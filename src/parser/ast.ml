@@ -506,7 +506,7 @@ and decl =
   | Error of {
       id : string;
       poly_args : poly_args_kind array;
-      variants : data_type * location;
+      variants : data_type option * location;
       is_pub : bool;
     }
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
