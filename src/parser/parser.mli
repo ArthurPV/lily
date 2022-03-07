@@ -100,6 +100,7 @@ val parse_record :
 val parse_enum :
   parser -> string -> poly_args_kind array -> is_pub:bool -> decl
 
+val parse_error : parser -> is_pub:bool -> decl
 val parse_object : parser -> is_pub:bool -> decl
 val parse_property : parser -> is_pub:bool -> decl
 val parse_body_class : parser -> string -> (ast * location) array

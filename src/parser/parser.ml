@@ -1306,9 +1306,7 @@ and parse_type parser ~is_pub =
             ^ (String.length s - 1 |> String.sub s 1)
             |> Printf.sprintf
                  "invalid type name: `%s`\n\
-                  help define your type name in uppercase format like this: \
-                  `%s`"
-                 s,
+                  help define your type name like this: `%s`" s,
             Diagnostic.Error,
             parser.current_location )
         |> raise
@@ -1467,6 +1465,38 @@ and parse_enum parser id poly_args ~is_pub =
         })
   in
   loop ()
+
+and parse_error parser ~is_pub =
+  let id =
+    match parser.current_token with
+    | Identifier s when Char.uppercase_ascii s.[0] = s.[0] -> s
+    | Identifier s ->
+        Diagnostic.EmitDiagnostic
+          ( (Char.uppercase_ascii s.[0] |> String.make 1)
+            ^ (String.length s - 1 |> String.sub s 1)
+            |> Printf.sprintf
+                 "invalid type name: `%s`\n\
+                  help define your type name like this: `%s`" s,
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
+    | t ->
+        Diagnostic.EmitDiagnostic
+          ( t |> show_token |> Printf.sprintf "miss error name, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
+  in
+  next_token parser;
+  let poly_args =
+    if parser.current_token = Separator LeftHook then
+      parse_polymorphic_argument parser
+    else [||]
+  in
+  let loc = Location.copy_location parser.current_location in
+  let dt = parse_data_type parser in
+  Location.end_location loc parser.current_location;
+  Error { id; poly_args; variants = (dt, loc); is_pub }
 
 (* object A: <class, trait> = <body> end *)
 and parse_object parser ~is_pub =
@@ -1864,6 +1894,7 @@ and parse_pub parser =
       | n, l ->
           parser.current_location <- l;
           n)
+  | Keyword Error -> parse_error parser ~is_pub:true
   | _ ->
       Diagnostic.EmitDiagnostic
         ( "the usage of `pub` keyword is not allowed",
@@ -1974,7 +2005,11 @@ and parse_body parser ~closure =
       in
       Location.end_location loc parser.current_location;
       (* TODO: Review this part of code *)
-      if parser.current_token <> Keyword End then
+      if
+        Some parser.current_token <> clos1
+        && Some parser.current_token <> clos2
+        && Some parser.current_token <> clos3
+      then
         if
           parser.previous_location.line = parser.current_location.line
           |> Bool.not
@@ -2250,6 +2285,7 @@ and parse_decl parser =
     | Keyword Type -> Decl (parse_type parser ~is_pub:false)
     | Keyword Object -> Decl (parse_object parser ~is_pub:false)
     | Keyword Import -> Decl (parse_import parser ~is_pub:false)
+    | Keyword Error -> Decl (parse_error parser ~is_pub:false)
     | t -> (
         match t with
         | Keyword End ->

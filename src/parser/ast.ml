@@ -503,6 +503,13 @@ and decl =
       is_pub : bool;
     }
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
+  | Error of {
+      id : string;
+      poly_args : poly_args_kind array;
+      variants : data_type * location;
+      is_pub : bool;
+    }
+  (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
   | Class of {
       id : string;
       poly_args : poly_args_kind array;
