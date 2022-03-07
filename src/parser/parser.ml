@@ -1495,8 +1495,9 @@ and parse_error parser ~is_pub =
   in
   let loc = Location.copy_location parser.current_location in
   let dt =
-    try Some (parse_data_type parser)
-    with Diagnostic.EmitDiagnostic _ -> None
+    if is_data_type parser ~n:0 then 
+      Some (parse_data_type parser)
+    else None
   in
   Location.end_location loc parser.current_location;
   Error { id; poly_args; variant = (dt, loc); is_pub }
