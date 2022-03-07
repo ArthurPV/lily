@@ -1499,7 +1499,7 @@ and parse_error parser ~is_pub =
     with Diagnostic.EmitDiagnostic _ -> None
   in
   Location.end_location loc parser.current_location;
-  Error { id; poly_args; variants = (dt, loc); is_pub }
+  Error { id; poly_args; variant = (dt, loc); is_pub }
 
 (* object A: <class, trait> = <body> end *)
 and parse_object parser ~is_pub =

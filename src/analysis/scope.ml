@@ -21,6 +21,7 @@ type from_access =
   | `Property
   | `Method
   | `Trait
+  | `Error
   | `None ]
 [@@deriving show]
 
@@ -138,6 +139,7 @@ let rec emit_unused scope = function
         | `Module -> id |> Printf.sprintf "unused module `%s`"
         | `Property -> id |> Printf.sprintf "unused property `%s`"
         | `Method -> id |> Printf.sprintf "unused method `%s`"
+        | `Error -> id |> Printf.sprintf "unused error `%s`"
         | `None -> id |> Printf.sprintf "unused identifier `%s`"
         | _ -> failwith "unreachable"
       in
@@ -393,6 +395,27 @@ let rec get_global_access scope nodes ~p_pub =
                      Some node_rec )
                 :: access)
               ~i:(i + 1) ())
+      | Decl (Error { id; is_pub; _ }) as err_e ->
+          if is_pub && p_pub then
+            loop
+              ~access:
+                (`Identifier
+                   ( `Error,
+                     id,
+                     (match nodes.(i) with _, l -> l),
+                     Some err_e )
+                :: access)
+              ~i:(i + 1) ()
+          else
+            loop
+              ~access:
+                (`Identifier
+                   ( `Error,
+                     id,
+                     (match nodes.(i) with _, l -> l),
+                     Some err_e )
+                :: access)
+              ~i:(i + 1) ()
       | Decl (Enum { id; poly_args; variants; _ }) as node_e ->
           (* TODO: review this part of code about public access *)
           let access_ref = ref access in
@@ -473,7 +496,8 @@ let rec get_global_access scope nodes ~p_pub =
           loop ~access:!access_ref ~i:(i + 1) ()
       | Decl (Import _) -> loop ~i:(i + 1) ()
       | Doc _ -> loop ~i:(i + 1) ()
-      | _ -> failwith "unreachable"
+      | _ ->
+        failwith "unreachable"
     else access |> Array.of_list
   in
   loop ()
@@ -566,14 +590,18 @@ and verify_if_same_access scope scopes =
   loop ();
   !count_errors
 
-and run_import scope ~path ~as_value ~is_pub loc =
+and run_import scope ~path ~access ~as_value ~is_pub loc =
   match Source.read_file path with
   | Ok content -> (
       let scope_buf =
         content |> Source.new_source path |> Lexer.new_lexer
         |> Parser.new_parser |> new_scope
       in
-      run scope_buf;
+      resolve_all_imports scope_buf;
+      scope_buf.global <-
+        get_global_access scope_buf scope_buf.parser.nodes ~p_pub:false;
+      scope_buf.global_pub <-
+        get_global_access scope_buf scope_buf.parser.nodes ~p_pub:true;
       push_buffer scope.buffer ~filename:path ~content
         (scope_buf.parser.lexer.tokens |> Array.map (fun (x, _) -> x))
         (scope_buf.parser.nodes |> Array.map (fun (x, _) -> x))
@@ -606,33 +634,40 @@ and run_import scope ~path ~as_value ~is_pub loc =
   | Error err -> CliError.print_cli_error (CliError.show_cli_error_kind err)
 
 and resolve_import scope ~value ~as_value ~is_pub loc =
-  if value |> String.split_on_char '@' |> List.length >= 1 then
-    if value |> String.split_on_char '.' |> List.length >= 1 then
-      let value_split =
-        List.nth (value |> String.split_on_char '@') 0
-        |> String.split_on_char '.'
-      in
-      let rec loop ?(i = 0) ?(path = "") () =
-        if i < List.length value_split then
-          loop ~i:(i + 1) ~path:(path ^ List.nth value_split i ^ "/") ()
-        else path
-      in
-      let mod_path =
-        List.nth (value |> String.split_on_char '@') 1
-        |> String.split_on_char '.'
-      in
-      let path = loop () ^ List.nth mod_path 0 in
-      run_import scope ~path ~as_value ~is_pub loc
-    else
-      let path = List.nth (value |> String.split_on_char '@') 1 in
-      run_import scope ~path ~as_value ~is_pub loc
-  else if value |> String.split_on_char '#' |> List.length >= 1 then
-    let path =
-      match List.nth (value |> String.split_on_char '#') 1 with
-      | "std" -> "lib/std/std.lily"
-      | _ -> failwith "todo"
+  if value |> String.split_on_char '@' |> List.length > 1 then
+    (* GET PATH *)
+    let arr_filename =
+      scope.parser.lexer.src.filename |> String.split_on_char '/'
+      |> Array.of_list
     in
-    run_import scope ~path ~as_value ~is_pub loc
+    let filename =
+      ((arr_filename |> Array.length) - 1
+      |> Array.sub arr_filename 0 |> Array.to_list |> String.concat "/")
+      ^ "/"
+      ^ (value |> String.split_on_char '@'
+        |> List.filter (fun x -> x <> "")
+        |> String.concat "/")
+    in
+    let access =
+      List.nth (value |> String.split_on_char '@') 1
+      |> String.split_on_char '.'
+    in
+    if access |> List.length > 1 then
+      run_import scope ~path:filename
+        ~access:(access |> String.concat ".")
+        ~as_value ~is_pub loc
+    else run_import scope ~path:filename ~access:"" ~as_value ~is_pub loc
+  else if value |> String.split_on_char '#' |> List.length > 1 then
+    match value |> String.split_on_char '#' with
+    | [ ""; "std" ] ->
+        run_import scope ~path:"lib/std/std.lily" ~access:"" ~as_value
+          ~is_pub loc
+    | [ ""; _ ] as m ->
+        let access = List.nth m 1 in
+        run_import scope ~path:"lib/std/std.lily" ~access ~as_value ~is_pub
+          loc
+    | [ "" ] -> failwith "error"
+    | _ -> failwith "todo"
   else
     loc
     |> Parser.new_diagnostic scope.parser Diagnostic.Error

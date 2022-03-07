@@ -15,6 +15,7 @@ type from_access =
   | `Property
   | `Method
   | `Trait
+  | `Error
   | `None ]
 [@@deriving show]
 
@@ -111,7 +112,13 @@ val emit_unused : scope -> scope_access -> unit
 val verify_if_used : scope -> unit
 
 val run_import :
-  scope -> path:string -> as_value:string -> is_pub:bool -> location -> unit
+  scope ->
+  path:string ->
+  access:string ->
+  as_value:string ->
+  is_pub:bool ->
+  location ->
+  unit
 
 val resolve_import :
   scope -> value:string -> as_value:string -> is_pub:bool -> location -> unit
