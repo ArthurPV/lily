@@ -59,6 +59,8 @@ let change_nodes_visibility nodes ~visibility =
           (Decl (Record { id; poly_args; fields; is_pub = visibility }), l)
       | Decl (Enum { id; poly_args; variants; _ }) ->
           (Decl (Enum { id; poly_args; variants; is_pub = visibility }), l)
+      | Decl (Error { id; poly_args; variant; _ }) ->
+          (Decl (Error { id; poly_args; variant; is_pub = visibility }), l)
       | Decl (Class { id; poly_args; inh; body; _ }) ->
           (Decl (Class { id; poly_args; inh; body; is_pub = visibility }), l)
       | Decl (Trait { id; poly_args; body; _ }) ->
@@ -844,6 +846,7 @@ and parse_primary_expr parser =
     | Literal (Int i) -> Literal (Int (Stdint.Int128.of_string i))
     | Literal (Float f) -> Literal (Float (Float.of_string f))
     | Literal (String s) -> Literal (String s)
+    | Identifier "_" -> Wildcard
     | Identifier s when String.lowercase_ascii s = s -> (
         match parser.current_token with
         | Separator LeftParen ->
@@ -1495,9 +1498,7 @@ and parse_error parser ~is_pub =
   in
   let loc = Location.copy_location parser.current_location in
   let dt =
-    if is_data_type parser ~n:0 then 
-      Some (parse_data_type parser)
-    else None
+    if is_data_type parser ~n:0 then Some (parse_data_type parser) else None
   in
   Location.end_location loc parser.current_location;
   Error { id; poly_args; variant = (dt, loc); is_pub }
@@ -2376,8 +2377,24 @@ and parse_match parser =
   |> expect_token parser (Keyword Do);
   let rec loop ?(case = []) () =
     match parser.current_token with
-    | Identifier s ->
+    | Keyword End ->
         next_token parser;
+        Match { expr; case = case |> List.rev |> Array.of_list }
+    | _ ->
+        let rec loop_expr ?(expr = [parse_expr2 parser]) () =
+          if parser.current_token = Separator Bar then (
+            next_token parser;
+            let e = parse_expr2 parser in
+            loop_expr ~expr:(e :: expr) ())
+          else expr |> List.rev |> Array.of_list
+        in
+        let arr_expr = loop_expr () in
+        let cond =
+          if parser.current_token = Operator Interrogation then (
+            next_token parser;
+            Some (parse_expr2 parser))
+          else None
+        in
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token
             |> Printf.sprintf "expected `->`, found `%s`",
@@ -2388,36 +2405,22 @@ and parse_match parser =
           parse_body parser
             ~closure:(Some (Keyword End), Some (Separator Bar), None)
         in
+        let case_ref = ref case in
+        let rec loop_case ?(i = 0) () =
+          if i < Array.length arr_expr then (
+              case_ref := [ { expr = arr_expr.(i); cond; body } ] @ !case_ref;
+              loop_case ~i:(i+1) ())
+        in
+        loop_case ();
         if
           parser.previous_token = Separator Bar
           && parser.current_token = Keyword End
-        then next_token parser;
-        Match
-          {
-            expr;
-            case = case |> List.rev |> Array.of_list;
-            else_case = Some { expr = Identifier (s, None); body };
-          }
-    | Keyword End ->
-        next_token parser;
-        Match
-          {
-            expr;
-            case = case |> List.rev |> Array.of_list;
-            else_case = None;
-          }
-    | _ ->
-        let matched = parse_expr2 parser in
-        Diagnostic.EmitDiagnostic
-          ( parser.current_token |> show_token
-            |> Printf.sprintf "expected `->`, found `%s`",
-            Diagnostic.Error,
-            parser.current_location )
-        |> expect_token parser (Separator Arrow);
-        let body =
-          parse_body parser ~closure:(Some (Separator Bar), None, None)
-        in
-        loop ~case:({ expr = matched; body } :: case) ()
+        then (
+          next_token parser;
+          Match { expr; case = !case_ref |> List.rev |> Array.of_list })
+        else if parser.current_token = Keyword End then
+            Match { expr; case = !case_ref |> List.rev |> Array.of_list }
+        else loop ~case:!case_ref ()
   in
   loop ()
 

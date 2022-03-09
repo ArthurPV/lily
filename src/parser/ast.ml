@@ -127,6 +127,7 @@ and argument_method = {
 
 and case = {
   expr : expr; [@printer fun fmt e -> fprintf fmt "%s" (show_expr e)]
+  cond : expr option;
   body : (ast * location) array;
       [@printer
         fun fmt body_arr ->
@@ -249,6 +250,7 @@ and expr =
       [@printer
         fun fmt (e1, e2) ->
           fprintf fmt "%s ^= %s" (show_expr e1) (show_expr e2)]
+  | Wildcard [@printer fun fmt _ -> fprintf fmt "_"]
   | FunctionCall of expr * args_fun_call array
       (* TODO: create a function for convert to string expr * (ast * ast
          option) array if it's possible *)
@@ -566,7 +568,7 @@ and stmt =
       catch_body : (ast * location) array;
     }
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
-  | Match of { expr : ast; case : case array; else_case : case option }
+  | Match of { expr : ast; case : case array }
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
   | While of { cond : expr; body : (ast * location) array }
   (* [@printer fun fmt _ -> fprintf fmt "Hello"] *)
