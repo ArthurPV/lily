@@ -2381,7 +2381,7 @@ and parse_match parser =
         next_token parser;
         Match { expr; case = case |> List.rev |> Array.of_list }
     | _ ->
-        let rec loop_expr ?(expr = [parse_expr2 parser]) () =
+        let rec loop_expr ?(expr = [ parse_expr2 parser ]) () =
           if parser.current_token = Separator Bar then (
             next_token parser;
             let e = parse_expr2 parser in
@@ -2408,8 +2408,8 @@ and parse_match parser =
         let case_ref = ref case in
         let rec loop_case ?(i = 0) () =
           if i < Array.length arr_expr then (
-              case_ref := [ { expr = arr_expr.(i); cond; body } ] @ !case_ref;
-              loop_case ~i:(i+1) ())
+            case_ref := [ { expr = arr_expr.(i); cond; body } ] @ !case_ref;
+            loop_case ~i:(i + 1) ())
         in
         loop_case ();
         if
@@ -2419,7 +2419,7 @@ and parse_match parser =
           next_token parser;
           Match { expr; case = !case_ref |> List.rev |> Array.of_list })
         else if parser.current_token = Keyword End then
-            Match { expr; case = !case_ref |> List.rev |> Array.of_list }
+          Match { expr; case = !case_ref |> List.rev |> Array.of_list }
         else loop ~case:!case_ref ()
   in
   loop ()
