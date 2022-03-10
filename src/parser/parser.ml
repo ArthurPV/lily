@@ -18,57 +18,26 @@ type parser = {
 let ast_of_nodes parser ~idx = match parser.nodes.(idx) with n, _ -> n
 let loc_of_nodes parser ~idx = match parser.nodes.(idx) with _, l -> l
 
-let change_nodes_visibility nodes ~visibility =
-  Array.map
-    (fun (x, l) ->
-      match x with
-      | Decl
-          (Fun
-            {
-              id;
-              poly_args;
-              args;
-              return_type;
-              body;
-              is_async;
-              is_test;
-              is_export;
-              _;
-            }) ->
-          ( Decl
-              (Fun
-                 {
-                   id;
-                   poly_args;
-                   args;
-                   return_type;
-                   body;
-                   is_pub = visibility;
-                   is_async;
-                   is_test;
-                   is_export;
-                 }),
-            l )
-      | Decl (Constant { id; data_type; expr; _ }) ->
-          (Decl (Constant { id; data_type; expr; is_pub = visibility }), l)
-      | Decl (Module { id; body; is_test; _ }) ->
-          (Decl (Module { id; body; is_pub = visibility; is_test }), l)
-      | Decl (Alias { id; poly_args; data_type; _ }) ->
-          (Decl (Alias { id; poly_args; data_type; is_pub = visibility }), l)
-      | Decl (Record { id; poly_args; fields; _ }) ->
-          (Decl (Record { id; poly_args; fields; is_pub = visibility }), l)
-      | Decl (Enum { id; poly_args; variants; _ }) ->
-          (Decl (Enum { id; poly_args; variants; is_pub = visibility }), l)
-      | Decl (Error { id; poly_args; variant; _ }) ->
-          (Decl (Error { id; poly_args; variant; is_pub = visibility }), l)
-      | Decl (Class { id; poly_args; inh; body; _ }) ->
-          (Decl (Class { id; poly_args; inh; body; is_pub = visibility }), l)
-      | Decl (Trait { id; poly_args; body; _ }) ->
-          (Decl (Trait { id; poly_args; body; is_pub = visibility }), l)
-      | Decl (Import { import; _as; _ }) ->
-          (Decl (Import { import; is_pub = visibility; _as }), l)
-      | _ -> failwith "unreachable")
-    nodes
+let collect_public_nodes nodes =
+  let rec loop ?(i = 0) ?(pub = []) () =
+    if i < Array.length nodes then
+      match nodes.(i) with
+      | ( Decl (Fun { is_pub; _ }), _
+        | Decl (Constant { is_pub; _ }), _
+        | Decl (Module { is_pub; _ }), _
+        | Decl (Alias { is_pub; _ }), _
+        | Decl (Record { is_pub; _ }), _
+        | Decl (Enum { is_pub; _ }), _
+        | Decl (Error { is_pub; _ }), _
+        | Decl (Class { is_pub; _ }), _
+        | Decl (Trait { is_pub; _ }), _
+        | Decl (Import { is_pub; _ }), _ ) as node
+        when is_pub ->
+          loop ~i:(i + 1) ~pub:(node :: pub) ()
+      | _ -> loop ~i:(i + 1) ~pub ()
+    else pub |> List.rev |> Array.of_list
+  in
+  loop ()
 
 let new_parser lexer =
   Lexer.run lexer;

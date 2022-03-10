@@ -58,11 +58,14 @@ type literal_ast =
         fun fmt b -> if b then fprintf fmt "True" else fprintf fmt "False"]
   | Char of char [@printer fun fmt c -> fprintf fmt "%c" c]
   | Int32 of Stdint.int32
-      [@printer fun fmt i -> fprintf fmt "Int32(%s)" (Stdint.Int32.to_string i)]
+      [@printer
+        fun fmt i -> fprintf fmt "Int32(%s)" (Stdint.Int32.to_string i)]
   | Int64 of Stdint.int64
-      [@printer fun fmt i -> fprintf fmt "Int64(%s)" (Stdint.Int64.to_string i)]
+      [@printer
+        fun fmt i -> fprintf fmt "Int64(%s)" (Stdint.Int64.to_string i)]
   | Int128 of Stdint.int128
-      [@printer fun fmt i -> fprintf fmt "Int128(%s)" (Stdint.Int128.to_string i)]
+      [@printer
+        fun fmt i -> fprintf fmt "Int128(%s)" (Stdint.Int128.to_string i)]
   | Float of float
       [@printer fun fmt f -> fprintf fmt "%s" (Float.to_string f)]
   | String of string [@printer fun fmt s -> fprintf fmt "%s" s]

@@ -609,8 +609,7 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
       | "" ->
           scope.parser.nodes <-
             Array.append
-              (scope_buf.parser.nodes
-              |> Parser.change_nodes_visibility ~visibility:is_pub)
+              (scope_buf.parser.nodes |> Parser.collect_public_nodes)
               scope.parser.nodes
       | s ->
           scope.parser.nodes <-
@@ -622,8 +621,7 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
                          id = s;
                          body =
                            scope_buf.parser.nodes
-                           |> Parser.change_nodes_visibility
-                                ~visibility:is_pub;
+                           |> Parser.collect_public_nodes;
                          is_pub;
                          is_test = false;
                        }),
@@ -646,6 +644,7 @@ and resolve_import scope ~value ~as_value ~is_pub loc =
       ^ (value |> String.split_on_char '@'
         |> List.filter (fun x -> x <> "")
         |> String.concat "/")
+      ^ ".lily"
     in
     let access =
       List.nth (value |> String.split_on_char '@') 1
