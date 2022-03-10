@@ -30,6 +30,14 @@ let is_same_filename buffer filename =
   loop ();
   !same
 
+let get_index_of_buffer_with_same_filename buffer ~filename =
+  let rec loop ?(i = 0) () =
+    if i < Array.length buffer.filenames then
+      if buffer.filenames.(i) = filename then Some i else loop ~i:(i + 1) ()
+    else None
+  in
+  match loop () with Some i -> i | None -> failwith "unreachable"
+
 let push_buffer buffer ~filename ~content tokens nodes scope =
   buffer.filenames <- Array.append buffer.filenames [| filename |];
   buffer.contents <- Array.append buffer.contents [| content |];

@@ -13,6 +13,9 @@ type 'a buffer = {
 val new_buffer : 'a array -> 'a buffer
 val is_same_filename : 'a buffer -> string -> bool
 
+val get_index_of_buffer_with_same_filename :
+  'a buffer -> filename:string -> int
+
 val push_buffer :
   'a buffer ->
   filename:string ->

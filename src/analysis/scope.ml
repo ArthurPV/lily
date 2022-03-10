@@ -590,45 +590,76 @@ and verify_if_same_access scope scopes =
   !count_errors
 
 and run_import scope ~path ~access ~as_value ~is_pub loc =
-  match Source.read_file path with
-  | Ok content -> (
-      let scope_buf =
-        content |> Source.new_source path |> Lexer.new_lexer
-        |> Parser.new_parser |> new_scope
-      in
-      resolve_all_imports scope_buf;
-      scope_buf.global <-
-        get_global_access scope_buf scope_buf.parser.nodes ~p_pub:false;
-      scope_buf.global_pub <-
-        get_global_access scope_buf scope_buf.parser.nodes ~p_pub:true;
-      push_buffer scope.buffer ~filename:path ~content
-        (scope_buf.parser.lexer.tokens |> Array.map (fun (x, _) -> x))
-        (scope_buf.parser.nodes |> Array.map (fun (x, _) -> x))
-        scope_buf;
-      match as_value with
-      | "" ->
-          scope.parser.nodes <-
-            Array.append
-              (scope_buf.parser.nodes |> Parser.collect_public_nodes)
-              scope.parser.nodes
-      | s ->
-          scope.parser.nodes <-
-            Array.append
-              [|
-                ( Decl
-                    (Module
-                       {
-                         id = s;
-                         body =
-                           scope_buf.parser.nodes
-                           |> Parser.collect_public_nodes;
-                         is_pub;
-                         is_test = false;
-                       }),
-                  loc );
-              |]
-              scope.parser.nodes)
-  | Error err -> CliError.print_cli_error (CliError.show_cli_error_kind err)
+  if Buffer.is_same_filename scope.buffer path then
+    let idx =
+      Buffer.get_index_of_buffer_with_same_filename scope.buffer
+        ~filename:path
+    in
+    match as_value with
+    | "" ->
+        scope.parser.nodes <-
+          Array.append
+            (scope.buffer.scopes.(idx).parser.nodes
+           |> Parser.collect_public_nodes)
+            scope.parser.nodes
+    | s ->
+        scope.parser.nodes <-
+          Array.append
+            [|
+              ( Decl
+                  (Module
+                     {
+                       id = s;
+                       body =
+                         scope.buffer.scopes.(idx).parser.nodes
+                         |> Parser.collect_public_nodes;
+                       is_pub;
+                       is_test = false;
+                     }),
+                loc );
+            |]
+            scope.parser.nodes
+  else
+    match Source.read_file path with
+    | Ok content -> (
+        let scope_buf =
+          content |> Source.new_source path |> Lexer.new_lexer
+          |> Parser.new_parser |> new_scope
+        in
+        resolve_all_imports scope_buf;
+        scope_buf.global <-
+          get_global_access scope_buf scope_buf.parser.nodes ~p_pub:false;
+        scope_buf.global_pub <-
+          get_global_access scope_buf scope_buf.parser.nodes ~p_pub:true;
+        push_buffer scope.buffer ~filename:path ~content
+          (scope_buf.parser.lexer.tokens |> Array.map (fun (x, _) -> x))
+          (scope_buf.parser.nodes |> Array.map (fun (x, _) -> x))
+          scope_buf;
+        match as_value with
+        | "" ->
+            scope.parser.nodes <-
+              Array.append
+                (scope_buf.parser.nodes |> Parser.collect_public_nodes)
+                scope.parser.nodes
+        | s ->
+            scope.parser.nodes <-
+              Array.append
+                [|
+                  ( Decl
+                      (Module
+                         {
+                           id = s;
+                           body =
+                             scope_buf.parser.nodes
+                             |> Parser.collect_public_nodes;
+                           is_pub;
+                           is_test = false;
+                         }),
+                    loc );
+                |]
+                scope.parser.nodes)
+    | Error err ->
+        CliError.print_cli_error (CliError.show_cli_error_kind err)
 
 and resolve_import scope ~value ~as_value ~is_pub loc =
   if value |> String.split_on_char '@' |> List.length > 1 then
