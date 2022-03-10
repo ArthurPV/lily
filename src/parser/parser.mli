@@ -18,9 +18,7 @@ type parser = {
 val new_parser : lexer -> parser
 val ast_of_nodes : parser -> idx:int -> ast
 val loc_of_nodes : parser -> idx:int -> location
-
-val change_nodes_visibility :
-  (ast * location) array -> visibility:bool -> (ast * location) array
+val collect_public_nodes : (ast * location) array -> (ast * location) array
 
 val new_diagnostic :
   parser ->
