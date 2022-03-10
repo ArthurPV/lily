@@ -4,9 +4,15 @@ open Lily_analysis.Scope
 (* Lily IR -> LIR *)
 module LIR = struct
   type t =
-    | Int of Stdint.int128
+    | Int32 of Stdint.int32
         [@printer
-          fun fmt i -> fprintf fmt "Int(%s)" (Stdint.Int128.to_string i)]
+          fun fmt i -> fprintf fmt "Int32(%s)" (Stdint.Int32.to_string i)]
+    | Int64 of Stdint.int64
+        [@printer
+          fun fmt i -> fprintf fmt "Int64(%s)" (Stdint.Int64.to_string i)]
+    | Int128 of Stdint.int128
+        [@printer
+          fun fmt i -> fprintf fmt "Int128(%s)" (Stdint.Int128.to_string i)]
     | Float of float [@printer fun fmt f -> fprintf fmt "Float(%f)" f]
     | Bool of bool
         [@printer
@@ -37,7 +43,9 @@ module LIR = struct
     | Nil [@printer fun fmt _ -> fprintf fmt "Nil"]
   [@@deriving show]
 
-  let to_int = function Int i -> i | _ -> failwith "unreachable"
+  let to_int32 = function Int32 i -> i | _ -> failwith "unreachable"
+  let to_int64 = function Int64 i -> i | _ -> failwith "unreachable"
+  let to_int128 = function Int128 i -> i | _ -> failwith "unreachable"
   let to_float = function Float f -> f | _ -> failwith "unreachable"
   let to_bool = function Bool b -> b | _ -> failwith "unreachable"
   let to_string = function String s -> s | _ -> failwith "unreachable"
@@ -51,7 +59,9 @@ type compiler = { scope : scope; nodes_value : LIR.t array }
 (* EVAL expression, fun, class... *)
 let rec compile node =
   match node with
-  | Expr (Literal (Int i)) -> LIR.Int i
+  | Expr (Literal (Int32 i)) -> LIR.Int32 i
+  | Expr (Literal (Int64 i)) -> LIR.Int64 i
+  | Expr (Literal (Int128 i)) -> LIR.Int128 i
   | Expr (Literal (Float f)) -> LIR.Float f
   | Expr (Literal (String s)) -> LIR.String s
   | Expr (Literal (Char c)) -> LIR.Char c

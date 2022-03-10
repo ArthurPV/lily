@@ -3,9 +3,15 @@ open Lily_analysis.Scope
 
 module LIR : sig
   type t =
-    | Int of Stdint.int128
+    | Int32 of Stdint.int32
         [@printer
-          fun fmt i -> fprintf fmt "Int(%s)" (Stdint.Int128.to_string i)]
+          fun fmt i -> fprintf fmt "Int32(%s)" (Stdint.Int32.to_string i)]
+    | Int64 of Stdint.int64
+        [@printer
+          fun fmt i -> fprintf fmt "Int64(%s)" (Stdint.Int64.to_string i)]
+    | Int128 of Stdint.int128
+        [@printer
+          fun fmt i -> fprintf fmt "Int128(%s)" (Stdint.Int128.to_string i)]
     | Float of float [@printer fun fmt f -> fprintf fmt "Float(%f)" f]
     | Bool of bool
         [@printer
@@ -36,7 +42,9 @@ module LIR : sig
     | Nil [@printer fun fmt _ -> fprintf fmt "Nil"]
   [@@deriving show]
 
-  val to_int : t -> Stdint.int128
+  val to_int32 : t -> Stdint.int32
+  val to_int64 : t -> Stdint.int64
+  val to_int128 : t -> Stdint.int128
   val to_float : t -> float
   val to_bool : t -> bool
   val to_string : t -> string

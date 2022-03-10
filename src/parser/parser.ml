@@ -258,6 +258,17 @@ and is_data_type parser ~n =
 [@@@warning "-27"]
 [@@@warning "-39"]
 
+let convert_in_integer (tok : token) =
+  match tok with
+  | Literal (Int s) -> (
+      try Literal (Int32 (s |> Stdint.Int32.of_string))
+      with Invalid_argument _ -> (
+        try Literal (Int64 (s |> Stdint.Int64.of_string))
+        with Invalid_argument _ -> (
+          try Literal (Int128 (s |> Stdint.Int128.of_string))
+          with Invalid_argument _ -> failwith "too long")))
+  | _ -> failwith "unreachable"
+
 let rec run parser =
   (* skip comemnt if is first *)
   (match parser.current_token with
@@ -843,7 +854,7 @@ and parse_primary_expr parser =
     | Keyword True -> Literal (Bool true)
     | Keyword False -> Literal (Bool false)
     | Literal (Char c) -> Literal (Char c)
-    | Literal (Int i) -> Literal (Int (Stdint.Int128.of_string i))
+    | Literal (Int i) -> convert_in_integer parser.previous_token
     | Literal (Float f) -> Literal (Float (Float.of_string f))
     | Literal (String s) -> Literal (String s)
     | Identifier "_" -> Wildcard

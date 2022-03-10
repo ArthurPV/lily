@@ -33,7 +33,9 @@ end
 
 let infer_integer_type node =
   match node with
-  | Expr (Literal (Int i)), _ -> if IsInt.is32 i then `I32 else `I64
+  | Expr (Literal (Int32 _)), _ -> `I32
+  | Expr (Literal (Int64 _)), _ -> `I64
+  | Expr (Literal (Int128 _)), _ -> `I128
   | _ -> failwith "unreachable"
 
 let infer_float_type node = assert false

@@ -260,7 +260,9 @@ and check_expr_type tpc = function
   | Tuple vals, _ -> failwith "not implemented"
   | Array vals, _ -> failwith "not implemented"
   | Variant (id, args), _ -> failwith "not implemented"
-  | Literal (Int i), loc -> infer_integer_type (Expr (Literal (Int i)), loc)
+  | Literal (Int32 i), loc -> infer_integer_type (Expr (Literal (Int32 i)), loc)
+  | Literal (Int64 i), loc -> infer_integer_type (Expr (Literal (Int64 i)), loc)
+  | Literal (Int128 i), loc -> infer_integer_type (Expr (Literal (Int128 i)), loc)
   | Literal (Float f), _ -> failwith "not implemented"
   | Literal (String _), _ -> `String
   | Literal (Char _), _ -> `Char

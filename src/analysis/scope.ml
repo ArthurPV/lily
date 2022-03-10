@@ -496,8 +496,7 @@ let rec get_global_access scope nodes ~p_pub =
           loop ~access:!access_ref ~i:(i + 1) ()
       | Decl (Import _) -> loop ~i:(i + 1) ()
       | Doc _ -> loop ~i:(i + 1) ()
-      | _ ->
-        failwith "unreachable"
+      | _ -> failwith "unreachable"
     else access |> Array.of_list
   in
   loop ()
@@ -1256,8 +1255,7 @@ and check_fun_scope scope args call access nodes loc =
           (* Review this code *)
           loop_body ~i:(i + 1) ()
       | Stmt (For { expr; body }) -> loop_body ~i:(i + 1) () (* TODO *)
-      | Stmt (Match { expr; case; else_case }) ->
-          loop_body ~i:(i + 1) () (* TODO *)
+      | Stmt (Match { expr; case }) -> loop_body ~i:(i + 1) () (* TODO *)
       | Stmt (Return expr) ->
           let check_return_expr =
             !access_in

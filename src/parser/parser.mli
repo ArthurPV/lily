@@ -39,6 +39,7 @@ val parse_data_type : parser -> data_type
 val parse_fun_data_type : parser -> data_type
 val is_binop : parser -> n:int -> bool
 val is_data_type : parser -> n:int -> bool
+val convert_in_integer : token -> expr
 val run : parser -> unit
 
 (* parse function *)
