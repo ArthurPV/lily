@@ -381,13 +381,7 @@ let push_token lexer ~tok =
 
 let get_closing lexer ~c g_token =
   let rec skip_to_closing () =
-    if lexer.src.pos >= lexer.src.len - 2 then (
-      let copy_loc = lexer.loc in
-      let msg = c |> Printf.sprintf "unclosed delimiter: `%c`" in
-      new_diagnostic lexer Diagnostic.Error msg copy_loc
-      |> Diagnostic.emit_diagnostic;
-      exit 1 (* END OF FILE *))
-    else if lexer.src.c <> c then (
+    if lexer.src.c <> c then (
       skip_space lexer;
       start_token lexer;
       try
@@ -406,6 +400,12 @@ let get_closing lexer ~c g_token =
           |> Array.append lexer.errors;
         next_char lexer;
         skip_to_closing ())
+    else if lexer.src.pos >= lexer.src.len - 1 then (
+      let copy_loc = lexer.loc in
+      let msg = c |> Printf.sprintf "unclosed delimiter: `%c`" in
+      new_diagnostic lexer Diagnostic.Error msg copy_loc
+      |> Diagnostic.emit_diagnostic;
+      exit 1 (* END OF FILE *))
     else
       match c with
       | ')' -> Separator RightParen
