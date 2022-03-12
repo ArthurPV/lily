@@ -53,7 +53,16 @@ let get_line_error dgn =
       | '\n' -> loop2 ~i:(i + 1) ~s:(s ^ "\n") ()
       | _ -> loop2 ~i:(i + 1) ~s:(s ^ " ") ()
     else if dgn.loc.col = i + 1 then
-      loop2 ~i:(i + 1) ~s:(s ^ "\x1b[1m\x1b[31m^\x1b[0m\x1b[0m") ()
+      loop2 ~i:(i + 1)
+        ~s:
+          (s
+          ^
+          match dgn.kind with
+          | Error -> "\x1b[1m\x1b[31m^\x1b[0m\x1b[0m"
+          | Warning -> "\x1b[1m\x1b[33m^\x1b[0m\x1b[0m"
+          | Note -> "\x1b[1m\x1b[36m^\x1b[0m\x1b[0m"
+          | Internal -> "\x1b[1m^\x1b[0m")
+        ()
     else s
   in
   line_err ^ "\n" ^ loop2 ()
