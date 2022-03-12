@@ -369,143 +369,199 @@ let get_all_num lexer =
   | '0', Some 'b' -> scan_bin lexer
   | _, _ -> scan_num lexer
 
+let rec skip_space lexer =
+  if lexer.src.c = ' ' || lexer.src.c = '\t' || lexer.src.c = '\n' then (
+    next_char lexer;
+    skip_space lexer)
+
+let push_token lexer ~tok =
+  end_token lexer;
+  let copy_loc = copy_location lexer.loc in
+  lexer.tokens <- [| (tok, copy_loc) |] |> Array.append lexer.tokens
+
+let get_closing lexer ~c g_token =
+  let rec skip_to_closing () =
+    if lexer.src.pos >= lexer.src.len - 2 then (
+      let copy_loc = lexer.loc in
+      let msg = c |> Printf.sprintf "unclosed delimiter: `%c`" in
+      new_diagnostic lexer Diagnostic.Error msg copy_loc
+      |> Diagnostic.emit_diagnostic;
+      exit 1 (* END OF FILE *))
+    else if lexer.src.c <> c then (
+      skip_space lexer;
+      start_token lexer;
+      try
+        let tok = g_token lexer in
+        push_token lexer ~tok;
+        next_char lexer;
+
+        if lexer.src.pos = lexer.src.len - 1 then (
+          start_token lexer;
+          push_token lexer ~tok:(Separator Eof));
+        skip_to_closing ()
+      with Diagnostic.EmitDiagnostic (msg, kind, loc) ->
+        let copy_loc = copy_location loc in
+        lexer.errors <-
+          [| new_diagnostic lexer kind msg copy_loc |]
+          |> Array.append lexer.errors;
+        next_char lexer;
+        skip_to_closing ())
+    else
+      match c with
+      | ')' -> Separator RightParen
+      | '}' -> Separator RightBrace
+      | ']' -> Separator RightHook
+      | _ -> failwith "unreachable"
+  in
+  skip_to_closing ()
+
+let rec get_token lexer =
+  match (lexer.src.c, peek_char lexer ~n:1, peek_char lexer ~n:2) with
+  | '!', Some '=', _ ->
+      next_char lexer;
+      Operator BangEq
+  | '?', _, _ -> Operator Interrogation
+  | '#', _, _ -> Separator Hashtag
+  | '~', _, _ -> Separator Wave
+  | ',', _, _ -> Separator Comma
+  | '&', _, _ -> Operator Ampersand
+  | ':', Some ':', _ ->
+      next_char lexer;
+      Separator ColonColon
+  | ':', Some '=', _ ->
+      next_char lexer;
+      Operator ColonEq
+  | ':', _, _ -> Separator Colon
+  | '|', _, _ -> Separator Bar
+  | '@', _, _ -> Separator At
+  | '(', Some '*', _ -> scan_comment_multi lexer
+  | '(', _, _ ->
+      push_token lexer ~tok:(Separator LeftParen);
+      next_char lexer;
+      get_closing lexer ~c:')' get_token
+  | ')', _, _ ->
+      Diagnostic.EmitDiagnostic
+        ( lexer.src.c |> Printf.sprintf "mismatched closing delimiter: `%c`",
+          Diagnostic.Error,
+          lexer.loc )
+      |> raise
+  | '{', _, _ ->
+      push_token lexer ~tok:(Separator LeftBrace);
+      next_char lexer;
+      get_closing lexer ~c:'}' get_token
+  | '}', _, _ ->
+      Diagnostic.EmitDiagnostic
+        ( lexer.src.c |> Printf.sprintf "mismatched closing delimiter: `%c`",
+          Diagnostic.Error,
+          lexer.loc )
+      |> raise
+  | '[', _, _ ->
+      push_token lexer ~tok:(Separator LeftHook);
+      next_char lexer;
+      get_closing lexer ~c:']' get_token
+  | ']', _, _ ->
+      Diagnostic.EmitDiagnostic
+        ( lexer.src.c |> Printf.sprintf "mismatched closing delimiter: `%c`",
+          Diagnostic.Error,
+          lexer.loc )
+      |> raise
+  | '+', Some '+', _ ->
+      next_char lexer;
+      Operator PlusPlus
+  | '+', Some '=', _ ->
+      next_char lexer;
+      Operator PlusEq
+  | '+', _, _ -> Operator Plus
+  | '-', Some '-', _ ->
+      next_char lexer;
+      Operator MinusMinus
+  | '-', Some '=', _ ->
+      next_char lexer;
+      Operator MinusEq
+  | '-', Some '>', _ ->
+      next_char lexer;
+      Separator Arrow
+  | '-', _, _ -> Operator Minus
+  | '*', Some '*', Some '*' -> scan_comment_doc lexer
+  | '*', Some '*', _ -> scan_comment_one lexer
+  | '*', Some '=', _ ->
+      next_char lexer;
+      Operator StarEq
+  | '*', _, _ -> Operator Star
+  | '/', Some '=', _ ->
+      next_char lexer;
+      Operator SlashEq
+  | '/', _, _ -> Operator Slash
+  | '%', Some '=', _ ->
+      next_char lexer;
+      Operator PercentageEq
+  | '%', _, _ -> Operator Percentage
+  | '^', Some '=', _ ->
+      next_char lexer;
+      Operator HatEq
+  | '^', _, _ -> Operator Hat
+  | '=', Some '=', _ ->
+      next_char lexer;
+      Operator EqEq
+  | '=', Some '>', _ ->
+      next_char lexer;
+      Separator FatArrow
+  | '=', _, _ -> Operator Eq
+  | '<', Some '=', _ ->
+      next_char lexer;
+      Operator LeftShiftEq
+  | '<', Some '-', _ ->
+      next_char lexer;
+      Separator InverseArrow
+  | '<', _, _ -> Operator LeftShift
+  | '>', Some '=', _ ->
+      next_char lexer;
+      Operator RightShiftEq
+  | '>', _, _ -> Operator RightShift
+  | '.', Some '.', Some '.' ->
+      next_char lexer;
+      next_char lexer;
+      Separator DotDotDot
+  | '.', Some '.', _ ->
+      next_char lexer;
+      Operator DotDot
+  | '.', _, _ -> Separator Dot
+  | 'a' .. 'z', _, _ | 'A' .. 'Z', _, _ | '_', _, _ -> scan_identifier lexer
+  | '0' .. '9', _, _ -> get_all_num lexer
+  | '\'', _, _ -> scan_char lexer
+  | '\"', _, _ -> scan_string lexer
+  | _, _, _ ->
+      Diagnostic.EmitDiagnostic
+        ( lexer.src.c |> Printf.sprintf "invalid character: `%c`",
+          Diagnostic.Error,
+          lexer.loc )
+      |> raise
+
 let run lexer =
   if lexer.src.len > 0 then (
-    let rec loop () =
+    let rec loop lexer =
       if lexer.src.pos < lexer.src.len - 1 then (
-        let rec skip_space lexer =
-          if lexer.src.c = ' ' || lexer.src.c = '\t' || lexer.src.c = '\n'
-          then (
-            next_char lexer;
-            skip_space lexer)
-        in
         skip_space lexer;
 
         start_token lexer;
         try
-          let tok =
-            match
-              (lexer.src.c, peek_char lexer ~n:1, peek_char lexer ~n:2)
-            with
-            | '!', Some '=', _ ->
-                next_char lexer;
-                Operator BangEq
-            | '?', _, _ -> Operator Interrogation
-            | '#', _, _ -> Separator Hashtag
-            | '~', _, _ -> Separator Wave
-            | ',', _, _ -> Separator Comma
-            | '&', _, _ -> Operator Ampersand
-            | ':', Some ':', _ ->
-                next_char lexer;
-                Separator ColonColon
-            | ':', Some '=', _ ->
-                next_char lexer;
-                Operator ColonEq
-            | ':', _, _ -> Separator Colon
-            | '|', _, _ -> Separator Bar
-            | '@', _, _ -> Separator At
-            | '(', Some '*', _ -> scan_comment_multi lexer
-            | '(', _, _ -> Separator LeftParen
-            | ')', _, _ -> Separator RightParen
-            | '{', _, _ -> Separator LeftBrace
-            | '}', _, _ -> Separator RightBrace
-            | '[', _, _ -> Separator LeftHook
-            | ']', _, _ -> Separator RightHook
-            | '+', Some '+', _ ->
-                next_char lexer;
-                Operator PlusPlus
-            | '+', Some '=', _ ->
-                next_char lexer;
-                Operator PlusEq
-            | '+', _, _ -> Operator Plus
-            | '-', Some '-', _ ->
-                next_char lexer;
-                Operator MinusMinus
-            | '-', Some '=', _ ->
-                next_char lexer;
-                Operator MinusEq
-            | '-', Some '>', _ ->
-                next_char lexer;
-                Separator Arrow
-            | '-', _, _ -> Operator Minus
-            | '*', Some '*', Some '*' -> scan_comment_doc lexer
-            | '*', Some '*', _ -> scan_comment_one lexer
-            | '*', Some '=', _ ->
-                next_char lexer;
-                Operator StarEq
-            | '*', _, _ -> Operator Star
-            | '/', Some '=', _ ->
-                next_char lexer;
-                Operator SlashEq
-            | '/', _, _ -> Operator Slash
-            | '%', Some '=', _ ->
-                next_char lexer;
-                Operator PercentageEq
-            | '%', _, _ -> Operator Percentage
-            | '^', Some '=', _ ->
-                next_char lexer;
-                Operator HatEq
-            | '^', _, _ -> Operator Hat
-            | '=', Some '=', _ ->
-                next_char lexer;
-                Operator EqEq
-            | '=', Some '>', _ ->
-                next_char lexer;
-                Separator FatArrow
-            | '=', _, _ -> Operator Eq
-            | '<', Some '=', _ ->
-                next_char lexer;
-                Operator LeftShiftEq
-            | '<', Some '-', _ ->
-                next_char lexer;
-                Separator InverseArrow
-            | '<', _, _ -> Operator LeftShift
-            | '>', Some '=', _ ->
-                next_char lexer;
-                Operator RightShiftEq
-            | '>', _, _ -> Operator RightShift
-            | '.', Some '.', Some '.' ->
-                next_char lexer;
-                next_char lexer;
-                Separator DotDotDot
-            | '.', Some '.', _ ->
-                next_char lexer;
-                Operator DotDot
-            | '.', _, _ -> Separator Dot
-            | 'a' .. 'z', _, _ | 'A' .. 'Z', _, _ | '_', _, _ ->
-                scan_identifier lexer
-            | '0' .. '9', _, _ -> get_all_num lexer
-            | '\'', _, _ -> scan_char lexer
-            | '\"', _, _ -> scan_string lexer
-            | _, _, _ ->
-                Diagnostic.EmitDiagnostic
-                  ( lexer.src.c |> Printf.sprintf "invalid character: `%c`",
-                    Diagnostic.Error,
-                    lexer.loc )
-                |> raise
-          in
-          end_token lexer;
-          let copy_loc = copy_location lexer.loc in
-          lexer.tokens <- [| (tok, copy_loc) |] |> Array.append lexer.tokens;
+          let tok = get_token lexer in
+          push_token lexer ~tok;
           next_char lexer;
 
           if lexer.src.pos = lexer.src.len - 1 then (
             start_token lexer;
-            end_token lexer;
-            let copy_loc = copy_location lexer.loc in
-            lexer.tokens <-
-              [| (Separator Eof, copy_loc) |] |> Array.append lexer.tokens)
-          else ();
-          loop ()
+            push_token lexer ~tok:(Separator Eof));
+          loop lexer
         with Diagnostic.EmitDiagnostic (msg, kind, loc) ->
           let copy_loc = copy_location loc in
           lexer.errors <-
             [| new_diagnostic lexer kind msg copy_loc |]
             |> Array.append lexer.errors;
           next_char lexer;
-          loop ())
+          loop lexer)
     in
-    loop ();
+    loop lexer;
 
     lexer.errors |> Array.iter (fun x -> Diagnostic.emit_diagnostic x);
 

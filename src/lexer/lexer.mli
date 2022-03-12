@@ -45,4 +45,8 @@ val scan_oct : lexer -> token
 val scan_bin : lexer -> token
 val scan_num : ?num:char list -> ?is_float:bool -> lexer -> token
 val get_all_num : lexer -> token
+val skip_space : lexer -> unit
+val push_token : lexer -> tok:token -> unit
+val get_token : lexer -> token
+val get_closing : lexer -> c:char -> (lexer -> token) -> token
 val run : lexer -> unit
