@@ -123,6 +123,31 @@ let new_scope parser =
     idx_of_main_fun = -1;
   }
 
+let rec get_is_pub = function
+  | `Fun (_, _, _, _, Some n) -> (
+      match n with
+      | Decl (Fun { is_pub; _ }) -> is_pub
+      | _ -> failwith "unreachable")
+  | `Identifier (_, _, _, Some n) -> (
+      match n with
+      | Decl (Constant { is_pub; _ }) -> is_pub
+      | Decl (Module { is_pub; _ }) -> is_pub
+      | Decl (Method { is_pub; _ }) -> is_pub
+      | Decl (Property (_, _, is_pub)) -> is_pub
+      | Decl (Error { is_pub; _ }) -> is_pub
+      | _ -> failwith "unreachable")
+  | `Type (_, _, _, _, Some n) -> (
+      match n with
+      | Decl (Record { is_pub; _ }) -> is_pub
+      | Decl (Enum { is_pub; _ }) -> is_pub
+      | Decl (Alias { is_pub; _ }) -> is_pub
+      | Decl (Class { is_pub; _ }) -> is_pub
+      | Decl (Trait { is_pub; _ }) -> is_pub
+      | _ -> failwith "unreachable")
+  | `Variant _ -> true
+  | `IdentifierAddr addr -> addr.(Array.length addr - 1) |> get_is_pub
+  | _ -> failwith "unreachable"
+
 let push_used scope access =
   scope.used <- Array.append scope.used [| access |]
 
@@ -174,7 +199,7 @@ let verify_if_used scope =
       (* SKIP MAIN FUNCTION *)
       match scope.global.(i) with
       | `Fun (_, id, _, _, _) when id = "main" -> loop ~i:(i + 1) ()
-      | _ ->
+      | s when get_is_pub s |> Bool.not ->
           let rec loop2 ?(j = 0) () =
             if j < Array.length scope.used && !matched |> Bool.not then (
               if scope.global.(i) = scope.used.(j) then matched := true
@@ -182,9 +207,9 @@ let verify_if_used scope =
               loop2 ~j:(j + 1) ())
           in
           loop2 ();
-
           if !matched |> Bool.not then emit_unused scope scope.global.(i);
           loop ~i:(i + 1) ()
+      | _ -> loop ~i:(i + 1) ()
   in
   loop ()
 
@@ -598,13 +623,18 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
     match as_value with
     | "" ->
         scope.parser.nodes <-
-          Array.append
+          Array.append scope.parser.nodes
             (scope.buffer.scopes.(idx).parser.nodes
-           |> Parser.collect_public_nodes)
-            scope.parser.nodes
+           |> Parser.collect_public_nodes
+            |> Parser.change_nodes_visibility ~visibility:is_pub
+            |> Array.map (fun (x, _) -> (x, loc))
+            |> Array.to_list
+            |> List.filter (fun (x, _) ->
+                match x with Decl (Import {_as = as_value; _}) -> false | _ -> true)
+            |> Array.of_list)
     | s ->
         scope.parser.nodes <-
-          Array.append
+          Array.append scope.parser.nodes
             [|
               ( Decl
                   (Module
@@ -612,13 +642,14 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
                        id = s;
                        body =
                          scope.buffer.scopes.(idx).parser.nodes
-                         |> Parser.collect_public_nodes;
+                         |> Parser.collect_public_nodes
+                         |> Parser.change_nodes_visibility ~visibility:is_pub
+                         |> Array.map (fun (x, _) -> (x, loc));
                        is_pub;
                        is_test = false;
                      }),
                 loc );
             |]
-            scope.parser.nodes
   else
     match Source.read_file path with
     | Ok content -> (
@@ -631,19 +662,22 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
           get_global_access scope_buf scope_buf.parser.nodes ~p_pub:false;
         scope_buf.global_pub <-
           get_global_access scope_buf scope_buf.parser.nodes ~p_pub:true;
+        if verify_if_same_access scope scope.global > 0 then exit 1;
         push_buffer scope.buffer ~filename:path ~content
           (scope_buf.parser.lexer.tokens |> Array.map (fun (x, _) -> x))
           (scope_buf.parser.nodes |> Array.map (fun (x, _) -> x))
           scope_buf;
         match as_value with
         | "" ->
-            scope.parser.nodes <-
-              Array.append
-                (scope_buf.parser.nodes |> Parser.collect_public_nodes)
-                scope.parser.nodes
+            let import_node =
+              scope_buf.parser.nodes
+              |> Parser.collect_public_nodes
+              |> Parser.change_nodes_visibility ~visibility:is_pub
+              |> Array.map (fun (x, _) -> (x, loc)) in
+
         | s ->
             scope.parser.nodes <-
-              Array.append
+              Array.append scope.parser.nodes
                 [|
                   ( Decl
                       (Module
@@ -651,13 +685,15 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
                            id = s;
                            body =
                              scope_buf.parser.nodes
-                             |> Parser.collect_public_nodes;
+                             |> Parser.collect_public_nodes
+                             |> Parser.change_nodes_visibility
+                                  ~visibility:is_pub
+                             |> Array.map (fun (x, _) -> (x, loc));
                            is_pub;
                            is_test = false;
                          }),
                     loc );
-                |]
-                scope.parser.nodes)
+                |])
     | Error err ->
         CliError.print_cli_error (CliError.show_cli_error_kind err)
 
