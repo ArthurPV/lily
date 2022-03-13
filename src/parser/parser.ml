@@ -39,6 +39,59 @@ let collect_public_nodes nodes =
   in
   loop ()
 
+let change_nodes_visibility nodes ~visibility =
+  Array.map
+    (fun x ->
+      match x with
+      | ( Decl
+            (Fun
+              {
+                id;
+                poly_args;
+                args;
+                return_type;
+                body;
+                is_async;
+                is_test;
+                is_export;
+                _;
+              }),
+          l ) ->
+          ( Decl
+              (Fun
+                 {
+                   id;
+                   poly_args;
+                   args;
+                   return_type;
+                   body;
+                   is_pub = visibility;
+                   is_async;
+                   is_test;
+                   is_export;
+                 }),
+            l )
+      | Decl (Constant { id; data_type; expr; _ }), l ->
+          (Decl (Constant { id; data_type; expr; is_pub = visibility }), l)
+      | Decl (Module { id; body; is_test; _ }), l ->
+          (Decl (Module { id; body; is_pub = visibility; is_test }), l)
+      | Decl (Alias { id; poly_args; data_type; _ }), l ->
+          (Decl (Alias { id; poly_args; data_type; is_pub = visibility }), l)
+      | Decl (Record { id; poly_args; fields; _ }), l ->
+          (Decl (Record { id; poly_args; fields; is_pub = visibility }), l)
+      | Decl (Enum { id; poly_args; variants; _ }), l ->
+          (Decl (Enum { id; poly_args; variants; is_pub = visibility }), l)
+      | Decl (Error { id; poly_args; variant; _ }), l ->
+          (Decl (Error { id; poly_args; variant; is_pub = visibility }), l)
+      | Decl (Class { id; poly_args; inh; body; _ }), l ->
+          (Decl (Class { id; poly_args; inh; body; is_pub = visibility }), l)
+      | Decl (Trait { id; poly_args; body; _ }), l ->
+          (Decl (Trait { id; poly_args; body; is_pub = visibility }), l)
+      | Decl (Import { import; _as; _ }), l ->
+          (Decl (Import { import; is_pub = visibility; _as }), l)
+      | _ -> failwith "unreachable")
+    nodes
+
 let new_parser lexer =
   Lexer.run lexer;
   {

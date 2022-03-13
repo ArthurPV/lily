@@ -20,6 +20,9 @@ val ast_of_nodes : parser -> idx:int -> ast
 val loc_of_nodes : parser -> idx:int -> location
 val collect_public_nodes : (ast * location) array -> (ast * location) array
 
+val change_nodes_visibility :
+  (ast * location) array -> visibility:bool -> (ast * location) array
+
 val new_diagnostic :
   parser ->
   Diagnostic.diagnostic_kind ->
