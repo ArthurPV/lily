@@ -674,7 +674,7 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
               |> Parser.collect_public_nodes
               |> Parser.change_nodes_visibility ~visibility:is_pub
               |> Array.map (fun (x, _) -> (x, loc)) in
-
+            ()
         | s ->
             scope.parser.nodes <-
               Array.append scope.parser.nodes
