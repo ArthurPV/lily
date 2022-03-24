@@ -49,4 +49,5 @@ val skip_space : lexer -> unit
 val push_token : lexer -> tok:token -> unit
 val get_token : lexer -> token
 val get_closing : lexer -> c:char -> (lexer -> token) -> token
+val get_end : lexer -> (lexer -> token) -> token
 val run : lexer -> unit

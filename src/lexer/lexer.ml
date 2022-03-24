@@ -20,6 +20,7 @@ let get_keyword id =
   | "self" -> Keyword Self
   | "virtual" -> Keyword Virtual
   | "break" -> Keyword Break
+  | "next" -> Keyword Next
   | "if" -> Keyword If
   | "elif" -> Keyword Elif
   | "else" -> Keyword Else
@@ -414,6 +415,10 @@ let get_closing lexer ~c g_token =
       | _ -> failwith "unreachable"
   in
   skip_to_closing ()
+
+[@@@warning "-27"]
+
+let get_end lexer g_token = assert false
 
 let rec get_token lexer =
   match (lexer.src.c, peek_char lexer ~n:1, peek_char lexer ~n:2) with
