@@ -24,7 +24,6 @@ val change_nodes_visibility :
   (ast * location) array -> visibility:bool -> (ast * location) array
 
 val new_diagnostic :
-  parser ->
   Diagnostic.diagnostic_kind ->
   string ->
   location ->

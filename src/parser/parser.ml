@@ -105,8 +105,8 @@ let new_parser lexer =
     previous_location = Lexer.loc_of_tokens lexer ~idx:0;
   }
 
-let new_diagnostic parser kind msg loc =
-  Diagnostic.new_diagnostic ~msg kind loc ~filename:parser.lexer.src.filename
+let new_diagnostic kind msg loc =
+  Diagnostic.new_diagnostic ~msg kind loc
 
 let advance parser ~add_pos =
   if add_pos && parser.pos < Array.length parser.lexer.tokens - 1 then
@@ -311,15 +311,15 @@ let rec run parser =
           parser.errors <-
             [|
               Location.copy_location parser.previous_location
-              |> new_diagnostic parser Diagnostic.Error
-                   "unexpected end of expression";
+              |> new_diagnostic Diagnostic.Error
+                  "unexpected end of expression";
             |]
             |> Array.append parser.errors
       else ();
       run parser
     with Diagnostic.EmitDiagnostic (msg, kind, loc) ->
       parser.errors <-
-        [| Location.copy_location loc |> new_diagnostic parser kind msg |]
+        [| Location.copy_location loc |> new_diagnostic kind msg |]
         |> Array.append parser.errors;
       next_token parser;
       run parser)
@@ -1094,7 +1094,7 @@ and parse_multiple_variable parser ~ids ~is_mut =
       if List.length vars = 0 then
         (Location.end_location loc parser.current_location;
          loc
-         |> new_diagnostic parser Diagnostic.Warning
+         |> new_diagnostic Diagnostic.Warning
               "please define a simple variable like this: `<id> := <value>`")
         |> Diagnostic.emit_diagnostic;
       vars |> List.rev |> Array.of_list)
@@ -1162,7 +1162,7 @@ and parse_multiple_constant parser ~ids ~is_pub =
       if List.length consts = 0 then (
         Location.end_location loc parser.current_location;
         loc
-        |> new_diagnostic parser Diagnostic.Warning
+        |> new_diagnostic Diagnostic.Warning
              "please define a simple variable like this: `<id> := <value>`"
         |> Diagnostic.emit_diagnostic);
       consts |> List.rev |> Array.of_list)
@@ -2117,7 +2117,7 @@ and parse_argument parser =
           | Identifier s ->
               Diagnostic.emit_diagnostic
                 (parser.current_location
-                |> new_diagnostic parser Diagnostic.Error
+                |> new_diagnostic Diagnostic.Error
                      (s
                      |> Printf.sprintf
                           "use lowercase format for argument named `%s`"));
@@ -2207,7 +2207,7 @@ and parse_method_argument parser =
             | Identifier s ->
                 Diagnostic.emit_diagnostic
                   (parser.current_location
-                  |> new_diagnostic parser Diagnostic.Error
+                  |> new_diagnostic Diagnostic.Error
                        (s
                        |> Printf.sprintf
                             "use lowercase format for argument named `%s`"));

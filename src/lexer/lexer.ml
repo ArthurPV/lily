@@ -10,7 +10,7 @@ type lexer = {
   mutable errors : Diagnostic.diagnostic array;
 }
 
-let new_lexer src = { src; loc = new_location; tokens = [||]; errors = [||] }
+let new_lexer src = { src; loc = new_location src.filename; tokens = [||]; errors = [||] }
 let tok_of_tokens lexer ~idx = match lexer.tokens.(idx) with t, _ -> t
 let loc_of_tokens lexer ~idx = match lexer.tokens.(idx) with _, l -> l
 
@@ -110,7 +110,7 @@ let is_num lexer =
 
 let new_diagnostic lexer kind msg loc =
   end_token lexer;
-  Diagnostic.new_diagnostic ~msg kind loc ~filename:lexer.src.filename
+  Diagnostic.new_diagnostic ~msg kind loc
 
 let get_escape lexer ~c =
   match (c, lexer.src.c) with

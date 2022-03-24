@@ -154,7 +154,7 @@ let push_used scope access =
 let rec emit_unused scope = function
   | `Fun (_, id, _, loc, _) ->
       loc
-      |> Parser.new_diagnostic scope.parser Diagnostic.Warning
+      |> Parser.new_diagnostic Diagnostic.Warning
            (id |> Printf.sprintf "unused function `%s`")
       |> Diagnostic.emit_diagnostic
   | `Identifier (from, id, loc, _) ->
@@ -169,7 +169,7 @@ let rec emit_unused scope = function
         | _ -> failwith "unreachable"
       in
       loc
-      |> Parser.new_diagnostic scope.parser Diagnostic.Warning msg
+      |> Parser.new_diagnostic Diagnostic.Warning msg
       |> Diagnostic.emit_diagnostic
   | `Type (from, id, _, loc, _) ->
       let msg =
@@ -182,11 +182,11 @@ let rec emit_unused scope = function
         | _ -> failwith "unreachable"
       in
       loc
-      |> Parser.new_diagnostic scope.parser Diagnostic.Warning msg
+      |> Parser.new_diagnostic Diagnostic.Warning msg
       |> Diagnostic.emit_diagnostic
   | `Variant (_, ids, loc, _) ->
       loc
-      |> Parser.new_diagnostic scope.parser Diagnostic.Warning
+      |> Parser.new_diagnostic Diagnostic.Warning
            (ids.(Array.length ids - 1)
            |> Printf.sprintf "unused variant `%s`")
       |> Diagnostic.emit_diagnostic
@@ -338,7 +338,7 @@ let rec get_global_access scope nodes ~p_pub =
                     = match lf.(k) with f, _ -> f.id
                   then
                     (match lf.(i) with _, l -> l)
-                    |> Parser.new_diagnostic scope.parser Diagnostic.Error
+                    |> Parser.new_diagnostic Diagnostic.Error
                          (match lf.(i) with
                          | f, _ ->
                              f.id
@@ -493,7 +493,7 @@ and verify_if_same_access scope scopes =
               | `Fun (_, id2, _, loc, _) when id = id2 ->
                   count_errors := !count_errors + 1;
                   loc
-                  |> Parser.new_diagnostic scope.parser Diagnostic.Error
+                  |> Parser.new_diagnostic Diagnostic.Error
                        (Printf.sprintf
                           "you cannot define the same function name in this \
                            scope: `%s`"
@@ -511,7 +511,7 @@ and verify_if_same_access scope scopes =
               | `Type (_, id2, _, loc, _) when id = id2 ->
                   count_errors := !count_errors + 1;
                   loc
-                  |> Parser.new_diagnostic scope.parser Diagnostic.Error
+                  |> Parser.new_diagnostic Diagnostic.Error
                        (Printf.sprintf
                           "you cannot define the same type (record, enum, \
                            alias) name in this scope: `%s`"
@@ -529,7 +529,7 @@ and verify_if_same_access scope scopes =
               | `Identifier (_, id2, loc, _) when id = id2 ->
                   count_errors := !count_errors + 1;
                   loc
-                  |> Parser.new_diagnostic scope.parser Diagnostic.Error
+                  |> Parser.new_diagnostic Diagnostic.Error
                        (Printf.sprintf
                           "you cannot define the same pattern (constant, \
                            module, ...) name in this scope: `%s`"
@@ -553,7 +553,7 @@ and verify_if_same_access scope scopes =
                   | `Variant (_, _, loc, _) ->
                       loc
                   | _ -> failwith "unreachable")
-                  |> Parser.new_diagnostic scope.parser Diagnostic.Error
+                  |> Parser.new_diagnostic Diagnostic.Error
                        (Printf.sprintf
                           "you cannot define the same pattern (constant, \
                            module, ...) name in this scope: `%s`"
@@ -623,20 +623,7 @@ and get_specific_node access loc ~visibility nodes =
           j < Array.length nodes
           && List.nth access i = "*"
           && List.length access - 1 = i
-        then
-          if Array.length nodes = 1 then
-            match nodes.(0) with
-            | Decl (Module { body; _ }), _ -> body
-            | _ ->
-                Diagnostic.EmitDiagnostic
-                  ( Printf.sprintf
-                      "bad import access value: `%s`\n\
-                       help: apply `*` wildcard just if you import module"
-                      (access |> String.concat "."),
-                    Diagnostic.Error,
-                    loc )
-                |> raise
-          else nodes
+        then nodes
         else if List.length access - i <> i && List.nth access i = "*" then
           Diagnostic.EmitDiagnostic
             ( Printf.sprintf
@@ -672,7 +659,6 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
             (scope.buffer.scopes.(idx).parser.nodes
            |> Parser.collect_public_nodes
             |> Parser.change_nodes_visibility ~visibility:is_pub
-            |> Array.map (fun (x, _) -> (x, loc))
             |> Array.to_list
             |> List.filter (fun (x, _) ->
                    match x with
@@ -690,8 +676,7 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
                        body =
                          scope.buffer.scopes.(idx).parser.nodes
                          |> Parser.collect_public_nodes
-                         |> Parser.change_nodes_visibility ~visibility:is_pub
-                         |> Array.map (fun (x, _) -> (x, loc));
+                         |> Parser.change_nodes_visibility ~visibility:is_pub;
                        is_pub;
                        is_test = false;
                      }),
@@ -720,7 +705,6 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
               Array.append scope.parser.nodes
                 (scope_buf.parser.nodes |> Parser.collect_public_nodes
                 |> Parser.change_nodes_visibility ~visibility:is_pub
-                |> Array.map (fun (x, _) -> (x, loc))
                 |> get_specific_node access loc ~visibility:is_pub)
         | s ->
             scope.parser.nodes <-
@@ -735,7 +719,6 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
                              |> Parser.collect_public_nodes
                              |> Parser.change_nodes_visibility
                                   ~visibility:is_pub
-                             |> Array.map (fun (x, _) -> (x, loc))
                              |> get_specific_node access loc
                                   ~visibility:is_pub;
                            is_pub;
@@ -786,7 +769,7 @@ and resolve_import scope ~value ~as_value ~is_pub loc =
     | _ -> failwith "todo"
   else
     loc
-    |> Parser.new_diagnostic scope.parser Diagnostic.Error
+    |> Parser.new_diagnostic Diagnostic.Error
          (Printf.sprintf
             "bad import value: `%s`\n\
              help: if you want import module use this syntax: ```import \
@@ -809,7 +792,7 @@ and resolve_all_imports scope =
       scope.parser.nodes
   with Diagnostic.EmitDiagnostic (msg, kind, loc) ->
     loc
-    |> Parser.new_diagnostic scope.parser kind msg
+    |> Parser.new_diagnostic kind msg
     |> Diagnostic.emit_diagnostic;
     if true then exit 1;
 
@@ -859,7 +842,7 @@ and check_expr scope node loc access =
       loop ();
       if !matched |> Bool.not then
         loc
-        |> Parser.new_diagnostic scope.parser Diagnostic.Error
+        |> Parser.new_diagnostic Diagnostic.Error
              (Printf.sprintf "cannot find identifier `%s` in this scope" s)
         |> Diagnostic.emit_diagnostic;
       !node
@@ -911,7 +894,7 @@ and check_expr scope node loc access =
           loop ();
           if !matched |> Bool.not then
             loc
-            |> Parser.new_diagnostic scope.parser Diagnostic.Error
+            |> Parser.new_diagnostic Diagnostic.Error
                  (Printf.sprintf "cannot find function `%s` in this scope" s)
             |> Diagnostic.emit_diagnostic;
           !node
@@ -1124,7 +1107,7 @@ and search_in scope access ~pos ~value loc =
         match match_value () with
         | [||] ->
             loc
-            |> Parser.new_diagnostic scope.parser Diagnostic.Error
+            |> Parser.new_diagnostic Diagnostic.Error
                  (Printf.sprintf
                     "cannot find this identifier `%s` in identifier access" s)
             |> Diagnostic.emit_diagnostic;
@@ -1184,7 +1167,7 @@ and check_duplicate_argument_name scope args =
             = match args.(j) with { id; _ } -> id
           then
             (match args.(i) with { loc; _ } -> loc)
-            |> Parser.new_diagnostic scope.parser Diagnostic.Error
+            |> Parser.new_diagnostic Diagnostic.Error
                  (Printf.sprintf
                     "the argument have same `%s` name in function definition"
                     (match args.(i) with { id; _ } -> id))
@@ -1201,7 +1184,7 @@ and check_count_argument scope args call loc =
     let n_args = Array.length args in
     let n_call = Array.length call in
     loc
-    |> Parser.new_diagnostic scope.parser Diagnostic.Error
+    |> Parser.new_diagnostic Diagnostic.Error
          (Printf.sprintf "this function takes %d %s but %d %s was supplied"
             n_args
             (if n_args > 1 then "arguments" else "argument")
@@ -1238,7 +1221,7 @@ and get_argument_access scope args call =
               | _ -> loc ~j:(j + 1) ()
             else (
               (match args.(0) with { loc; _ } -> loc)
-              |> Parser.new_diagnostic scope.parser Diagnostic.Error
+              |> Parser.new_diagnostic Diagnostic.Error
                    (Printf.sprintf "cannot find this optional argument `%s`"
                       s)
               |> Diagnostic.emit_diagnostic;
@@ -1439,7 +1422,7 @@ and run scope =
       scope.idx_of_main_fun <- idx;
       (match scope.parser.nodes.(Array.length scope.parser.nodes - 1) with
       | _, l -> l)
-      |> Parser.new_diagnostic scope.parser Diagnostic.Internal
+      |> Parser.new_diagnostic Diagnostic.Internal
            "please add main function.\nhelp: ```fun main = end```"
       |> Diagnostic.emit_diagnostic;
       exit 1);
@@ -1458,7 +1441,7 @@ and run scope =
        scope.parser.lexer.tokens.(Array.length scope.parser.lexer.tokens - 1)
      with
     | _, l -> l)
-    |> Parser.new_diagnostic scope.parser Diagnostic.Internal
+    |> Parser.new_diagnostic Diagnostic.Internal
          "please add main function.\nhelp: ```fun main = end```"
     |> Diagnostic.emit_diagnostic;
     exit 1)
