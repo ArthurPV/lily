@@ -22,7 +22,7 @@ type diagnostic = {
   filename : string;
 }
 
-let new_diagnostic ~msg kind loc ~filename = { msg; kind; loc; filename }
+let new_diagnostic ~msg kind loc = { msg; kind; loc; filename = loc.filename }
 
 let diagnostic_to_string dgn =
   Printf.sprintf "\x1b[1m%s:%d:%d -\x1b[0m %s\x1b[1m: %s\x1b[0m\n"
