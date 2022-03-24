@@ -1404,9 +1404,6 @@ and check_fun_scope scope args call access nodes loc =
 and run scope =
   if Array.length scope.parser.nodes > 0 then (
     resolve_all_imports scope;
-    Array.iter
-      (fun (y, _) -> Printf.printf "%s\n" (show_ast y))
-      scope.parser.nodes;
     scope.global <- get_global_access scope scope.parser.nodes ~p_pub:false;
     scope.global_pub <-
       get_global_access scope scope.parser.nodes ~p_pub:true;
