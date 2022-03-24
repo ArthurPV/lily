@@ -614,25 +614,78 @@ and verify_if_same_access scope scopes =
   loop ();
   !count_errors
 
-and get_specific_node access nodes =
+and get_specific_node access loc nodes =
   let rec loop ?(i = 0) ?(nodes = nodes) () =
     if i < List.length access then
       let rec get_node ?(j = 0) ?(nodes = nodes) () =
-        if j < Array.length nodes then
+        if j < Array.length nodes && List.nth access i <> "*" then
           match nodes.(j) with
-          | (Decl (Fun { id; _ }), _) as node
+          | ( Decl (Fun { id; _ }), _
+            | Decl (Constant { id; _ }), _
+            | Decl (Module { id; _ }), _
+            | Decl (Alias { id; _ }), _
+            | Decl (Record { id; _ }), _
+            | Decl (Enum { id; _ }), _
+            | Decl (Error { id; _ }), _
+            | Decl (Class { id; _ }), _
+            | Decl (Trait { id; _ }), _ ) as node
             when id = List.nth access i && List.length access - 1 = i ->
               [| node |]
-          | Decl (Fun { id; _ }), _ when id = List.nth access i ->
-              failwith "error"
-          | Decl (Fun _), _ -> get_node ~j:(j + 1) ~nodes ()
-          | (Decl (Constant { id; _ }), _) as node
-            when id = List.nth access i && List.length access - 1 = i ->
-              [| node |]
-          | Decl (Constant { id; _ }), _ when id = List.nth access i ->
-              failwith "error"
-          | Decl (Constant _), _ -> get_node ~j:(j + 1) ~nodes ()
+          | Decl (Fun { id; _ }), _
+          | Decl (Constant { id; _ }), _
+          | Decl (Alias { id; _ }), _
+          | Decl (Record { id; _ }), _
+          | Decl (Enum { id; _ }), _
+          | Decl (Error { id; _ }), _
+          | Decl (Class { id; _ }), _
+          | Decl (Trait { id; _ }), _
+            when id = List.nth access i ->
+              Diagnostic.EmitDiagnostic
+                ( Printf.sprintf
+                    "bad import access value: `%s`\n\
+                     help: apply `*` wildcard just if you import module"
+                    (access |> String.concat "."),
+                  Diagnostic.Error,
+                  loc )
+              |> raise
+          | Decl (Fun _), _
+          | Decl (Constant _), _
+          | Decl (Module _), _
+          | Decl (Alias _), _
+          | Decl (Record _), _
+          | Decl (Enum _), _
+          | Decl (Error _), _
+          | Decl (Class _), _
+          | Decl (Trait _), _ ->
+              get_node ~j:(j + 1) ~nodes ()
           | _ -> failwith "unreachable"
+        else if
+          j < Array.length nodes
+          && List.nth access i = "*"
+          && List.length access - 1 = i
+        then
+          if Array.length nodes = 1 then
+            match nodes.(0) with
+            | Decl (Module { body; _ }), _ -> body
+            | _ ->
+                Diagnostic.EmitDiagnostic
+                  ( Printf.sprintf
+                      "bad import access value: `%s`\n\
+                       help: apply `*` wildcard just if you import module"
+                      (access |> String.concat "."),
+                    Diagnostic.Error,
+                    loc )
+                |> raise
+          else nodes
+        else if j < Array.length nodes && List.nth access i = "*" then
+          Diagnostic.EmitDiagnostic
+            ( Printf.sprintf
+                "bad import access value: `%s`\n\
+                 help: apply `*` wildcard as last access value"
+                (access |> String.concat "."),
+              Diagnostic.Error,
+              loc )
+          |> raise
         else nodes
       in
       loop ~i:(i + 1) ~nodes:(get_node ()) ()
@@ -702,7 +755,7 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
                 (scope_buf.parser.nodes |> Parser.collect_public_nodes
                 |> Parser.change_nodes_visibility ~visibility:is_pub
                 |> Array.map (fun (x, _) -> (x, loc))
-                |> get_specific_node access)
+                |> get_specific_node access loc)
         | s ->
             scope.parser.nodes <-
               Array.append scope.parser.nodes
@@ -717,7 +770,7 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
                              |> Parser.change_nodes_visibility
                                   ~visibility:is_pub
                              |> Array.map (fun (x, _) -> (x, loc))
-                             |> get_specific_node access;
+                             |> get_specific_node access loc;
                            is_pub;
                            is_test = false;
                          }),
@@ -777,21 +830,27 @@ and resolve_import scope ~value ~as_value ~is_pub loc =
     |> Diagnostic.emit_diagnostic
 
 and resolve_all_imports scope =
-  Array.iter
-    (fun x ->
-      match x with
-      | Decl (Import { import; _as; is_pub }), loc ->
-          resolve_import scope ~value:import
-            ~as_value:(match _as with None -> "" | Some s -> s)
-            ~is_pub loc
-      | _ -> ())
-    scope.parser.nodes;
+  try
+    Array.iter
+      (fun x ->
+        match x with
+        | Decl (Import { import; _as; is_pub }), loc ->
+            resolve_import scope ~value:import
+              ~as_value:(match _as with None -> "" | Some s -> s)
+              ~is_pub loc
+        | _ -> ())
+      scope.parser.nodes
+  with Diagnostic.EmitDiagnostic (msg, kind, loc) ->
+    loc
+    |> Parser.new_diagnostic scope.parser kind msg
+    |> Diagnostic.emit_diagnostic;
+    if true then exit 1;
 
-  scope.parser.nodes <-
-    scope.parser.nodes |> Array.to_list
-    |> List.filter (fun (x, _) ->
-           match x with Decl (Import _) -> false | _ -> true)
-    |> Array.of_list
+    scope.parser.nodes <-
+      scope.parser.nodes |> Array.to_list
+      |> List.filter (fun (x, _) ->
+             match x with Decl (Import _) -> false | _ -> true)
+      |> Array.of_list
 
 and is_contain_main_fun scope =
   let rec loop ?(i = 0) () =
