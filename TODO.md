@@ -12,7 +12,7 @@
 
 - [x] Syntax
 - [x] Lexer
-- [ ] Parser
+- [x] Parser
 - [ ] Analysis
 - [ ] Compiler
 - [ ] Bytecode
