@@ -18,8 +18,9 @@ let run_bytecode filename =
       Scope.run scope;
       Printf.printf "Compilation time in %f secs\n"
         (Sys.time () -. compile_time);
-      Array.iter (fun y -> Printf.printf "%s\n" (Scope.show_scope_access
-         y)) scope.global_pub;
+      Array.iter
+        (fun y -> Printf.printf "%s\n" (Scope.show_scope_access y))
+        scope.global_pub
       (* Array.iter (fun n -> Printf.printf "%s\n" (Ast.show_ast n))
          (scope.parser.nodes |> Array.map (fun (x, _) -> x)) *)
   | Error err -> CliError.print_cli_error (CliError.show_cli_error_kind err)
