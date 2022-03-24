@@ -614,6 +614,32 @@ and verify_if_same_access scope scopes =
   loop ();
   !count_errors
 
+and get_specific_node access nodes =
+  let rec loop ?(i = 0) ?(nodes = nodes) () =
+    if i < List.length access then
+      let rec get_node ?(j = 0) ?(nodes = nodes) () =
+        if j < Array.length nodes then
+          match nodes.(j) with
+          | (Decl (Fun { id; _ }), _) as node
+            when id = List.nth access i && List.length access - 1 = i ->
+              [| node |]
+          | Decl (Fun { id; _ }), _ when id = List.nth access i ->
+              failwith "error"
+          | Decl (Fun _), _ -> get_node ~j:(j + 1) ~nodes ()
+          | (Decl (Constant { id; _ }), _) as node
+            when id = List.nth access i && List.length access - 1 = i ->
+              [| node |]
+          | Decl (Constant { id; _ }), _ when id = List.nth access i ->
+              failwith "error"
+          | Decl (Constant _), _ -> get_node ~j:(j + 1) ~nodes ()
+          | _ -> failwith "unreachable"
+        else nodes
+      in
+      loop ~i:(i + 1) ~nodes:(get_node ()) ()
+    else nodes
+  in
+  loop ()
+
 and run_import scope ~path ~access ~as_value ~is_pub loc =
   if Buffer.is_same_filename scope.buffer path then
     let idx =
@@ -630,7 +656,9 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
             |> Array.map (fun (x, _) -> (x, loc))
             |> Array.to_list
             |> List.filter (fun (x, _) ->
-                match x with Decl (Import {_as = as_value; _}) -> false | _ -> true)
+                   match x with
+                   | Decl (Import { _as = as_value; _ }) -> true
+                   | _ -> false)
             |> Array.of_list)
     | s ->
         scope.parser.nodes <-
@@ -669,12 +697,12 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
           scope_buf;
         match as_value with
         | "" ->
-            let import_node =
-              scope_buf.parser.nodes
-              |> Parser.collect_public_nodes
-              |> Parser.change_nodes_visibility ~visibility:is_pub
-              |> Array.map (fun (x, _) -> (x, loc)) in
-            ()
+            scope.parser.nodes <-
+              Array.append scope.parser.nodes
+                (scope_buf.parser.nodes |> Parser.collect_public_nodes
+                |> Parser.change_nodes_visibility ~visibility:is_pub
+                |> Array.map (fun (x, _) -> (x, loc))
+                |> get_specific_node access)
         | s ->
             scope.parser.nodes <-
               Array.append scope.parser.nodes
@@ -688,7 +716,8 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
                              |> Parser.collect_public_nodes
                              |> Parser.change_nodes_visibility
                                   ~visibility:is_pub
-                             |> Array.map (fun (x, _) -> (x, loc));
+                             |> Array.map (fun (x, _) -> (x, loc))
+                             |> get_specific_node access;
                            is_pub;
                            is_test = false;
                          }),
@@ -708,27 +737,29 @@ and resolve_import scope ~value ~as_value ~is_pub loc =
       ((arr_filename |> Array.length) - 1
       |> Array.sub arr_filename 0 |> Array.to_list |> String.concat "/")
       ^ "/"
-      ^ (value |> String.split_on_char '@'
-        |> List.filter (fun x -> x <> "")
-        |> String.concat "/")
+      ^ List.nth
+          (value |> String.split_on_char '@'
+          |> List.filter (fun x -> x <> "")
+          |> String.concat "" |> String.split_on_char '.')
+          0
       ^ ".lily"
     in
     let access =
-      List.nth (value |> String.split_on_char '@') 1
-      |> String.split_on_char '.'
+      value |> String.split_on_char '@'
+      |> List.filter (fun x -> x <> "")
+      |> String.concat "" |> String.split_on_char '.' |> List.rev
+      |> list_remove_last |> List.rev
     in
-    if access |> List.length > 1 then
-      run_import scope ~path:filename
-        ~access:(access |> String.concat ".")
-        ~as_value ~is_pub loc
-    else run_import scope ~path:filename ~access:"" ~as_value ~is_pub loc
+    if access |> List.length >= 1 then
+      run_import scope ~path:filename ~access ~as_value ~is_pub loc
+    else failwith "error"
   else if value |> String.split_on_char '#' |> List.length > 1 then
     match value |> String.split_on_char '#' with
     | [ ""; "std" ] ->
-        run_import scope ~path:"lib/std/std.lily" ~access:"" ~as_value
+        run_import scope ~path:"lib/std/std.lily" ~access:[] ~as_value
           ~is_pub loc
     | [ ""; _ ] as m ->
-        let access = List.nth m 1 in
+        let access = m |> List.filter (fun x -> x <> "") in
         run_import scope ~path:"lib/std/std.lily" ~access ~as_value ~is_pub
           loc
     | [ "" ] -> failwith "error"
@@ -754,7 +785,13 @@ and resolve_all_imports scope =
             ~as_value:(match _as with None -> "" | Some s -> s)
             ~is_pub loc
       | _ -> ())
-    scope.parser.nodes
+    scope.parser.nodes;
+
+  scope.parser.nodes <-
+    scope.parser.nodes |> Array.to_list
+    |> List.filter (fun (x, _) ->
+           match x with Decl (Import _) -> false | _ -> true)
+    |> Array.of_list
 
 and is_contain_main_fun scope =
   let rec loop ?(i = 0) () =
@@ -1367,6 +1404,9 @@ and check_fun_scope scope args call access nodes loc =
 and run scope =
   if Array.length scope.parser.nodes > 0 then (
     resolve_all_imports scope;
+    Array.iter
+      (fun (y, _) -> Printf.printf "%s\n" (show_ast y))
+      scope.parser.nodes;
     scope.global <- get_global_access scope scope.parser.nodes ~p_pub:false;
     scope.global_pub <-
       get_global_access scope scope.parser.nodes ~p_pub:true;

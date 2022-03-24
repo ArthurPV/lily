@@ -112,10 +112,13 @@ val push_used : scope -> scope_access -> unit
 val emit_unused : scope -> scope_access -> unit
 val verify_if_used : scope -> unit
 
+val get_specific_node :
+  string list -> (ast * location) array -> (ast * location) array
+
 val run_import :
   scope ->
   path:string ->
-  access:string ->
+  access:string list ->
   as_value:string ->
   is_pub:bool ->
   location ->
