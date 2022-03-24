@@ -266,89 +266,35 @@ let rec get_global_access scope nodes ~p_pub =
               ~i:(i + 1) ()
       | Decl (Module { id = id_m; body; is_pub; _ }) as node ->
           let access_ref = ref access in
-          let rec loop_module ?(j = 0) () =
-            if j < Array.length body then
-              match match body.(j) with n, _ -> n with
-              | Decl (Fun { id = id_f; args; body; is_pub; _ }) as node_f ->
-                  if is_pub then (
-                    access_ref :=
-                      !access_ref
-                      @ [
-                          `IdentifierAddr
-                            [|
-                              `Identifier
-                                ( `Module,
-                                  id_m,
-                                  (match nodes.(i) with _, l -> l),
-                                  Some node );
-                              `Fun
-                                ( `Fun,
-                                  id_f,
-                                  args,
-                                  (match body.(j) with _, l -> l),
-                                  Some node_f );
-                            |];
-                        ];
-                    loop_module ~j:(j + 1) ())
-                  else loop_module ~j:(j + 1) ()
-              | Decl (Module { id = id_m2; body = body_m; is_pub; _ }) as
-                node_m ->
-                  if is_pub then (
-                    let m = get_global_access scope body_m ~p_pub in
-                    let rec loop_module2 ?(k = 0) () =
-                      if j < Array.length m then (
-                        let m_access = ref [ m.(k) ] in
-                        m_access :=
-                          [
-                            `Identifier
-                              ( `Module,
-                                id_m,
-                                (match nodes.(i) with _, l -> l),
-                                Some node );
-                          ]
-                          @ !m_access;
-                        m_access :=
-                          !m_access
-                          |> list_insert
-                               (`Identifier
-                                 ( `Module,
-                                   id_m2,
-                                   (match body.(j) with _, l -> l),
-                                   Some node_m ))
-                               1;
-                        access_ref :=
-                          !access_ref
-                          @ [ `IdentifierAddr (!m_access |> Array.of_list) ];
-                        loop_module2 ~k:(k + 1) ())
-                    in
-                    loop_module2 ();
-                    access_ref :=
-                      !access_ref
-                      @ [
-                          `IdentifierAddr
-                            [|
-                              `Identifier
-                                ( `Module,
-                                  id_m,
-                                  (match nodes.(i) with _, l -> l),
-                                  Some node );
-                              `Identifier
-                                ( `Module,
-                                  id_m2,
-                                  (match body.(j) with _, l -> l),
-                                  Some node_m );
-                            |];
-                        ];
-                    loop_module ~j:(j + 1) ())
-                  else loop_module ~j:(j + 1) ()
-              | _ -> failwith "unreachable"
-          in
-          if p_pub && is_pub then (
-            loop_module ();
-            loop ~access:!access_ref ~i:(i + 1) ())
-          else (
-            loop_module ();
-            loop ~access:!access_ref ~i:(i + 1) ())
+          access_ref :=
+            !access_ref
+            @ (body
+              |> get_global_access scope ~p_pub
+              |> Array.map (fun x ->
+                     match x with
+                     | `IdentifierAddr arr ->
+                         `IdentifierAddr
+                           (Array.append arr
+                              [|
+                                `Identifier
+                                  ( `Module,
+                                    id_m,
+                                    (match nodes.(i) with _, l -> l),
+                                    Some node );
+                              |])
+                     | _ ->
+                         `IdentifierAddr
+                           [|
+                             `Identifier
+                               ( `Module,
+                                 id_m,
+                                 (match nodes.(i) with _, l -> l),
+                                 Some node );
+                             x;
+                           |])
+              |> Array.to_list);
+          if p_pub && is_pub then loop ~access:!access_ref ~i:(i + 1) ()
+          else loop ~access:!access_ref ~i:(i + 1) ()
       | Decl (Alias { id; poly_args; is_pub; _ }) as node_a ->
           if is_pub && p_pub then
             loop
@@ -622,14 +568,15 @@ and get_specific_node access loc nodes =
           match nodes.(j) with
           | ( Decl (Fun { id; _ }), _
             | Decl (Constant { id; _ }), _
-            | Decl (Module { id; _ }), _
             | Decl (Alias { id; _ }), _
             | Decl (Record { id; _ }), _
             | Decl (Enum { id; _ }), _
             | Decl (Error { id; _ }), _
-            | Decl (Class { id; _ }), _
             | Decl (Trait { id; _ }), _ ) as node
             when id = List.nth access i && List.length access - 1 = i ->
+              [| node |]
+          | (Decl (Module { id; _ }), _ | Decl (Class { id; _ }), _) as node
+            when id = List.nth access i ->
               [| node |]
           | Decl (Fun { id; _ }), _
           | Decl (Constant { id; _ }), _
@@ -637,7 +584,6 @@ and get_specific_node access loc nodes =
           | Decl (Record { id; _ }), _
           | Decl (Enum { id; _ }), _
           | Decl (Error { id; _ }), _
-          | Decl (Class { id; _ }), _
           | Decl (Trait { id; _ }), _
             when id = List.nth access i ->
               Diagnostic.EmitDiagnostic
@@ -677,7 +623,7 @@ and get_specific_node access loc nodes =
                     loc )
                 |> raise
           else nodes
-        else if j < Array.length nodes && List.nth access i = "*" then
+        else if List.length access - i <> i && List.nth access i = "*" then
           Diagnostic.EmitDiagnostic
             ( Printf.sprintf
                 "bad import access value: `%s`\n\
