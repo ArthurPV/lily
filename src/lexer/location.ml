@@ -1,4 +1,5 @@
 type location = {
+  filename: string; [@printer fun fmt f -> fprintf fmt "%s" f]
   mutable line : int; [@printer fun fmt l -> fprintf fmt "%d" l]
   mutable col : int; [@printer fun fmt c -> fprintf fmt "%d" c]
   mutable s_line : int; [@printer fun fmt sl -> fprintf fmt "%d" sl]
@@ -8,11 +9,12 @@ type location = {
 }
 [@@deriving show]
 
-let new_location =
-  { line = 1; col = 1; s_line = 1; e_line = 1; s_col = 1; e_col = 1 }
+let new_location filename =
+  { filename; line = 1; col = 1; s_line = 1; e_line = 1; s_col = 1; e_col = 1 }
 
 let copy_location loc =
   {
+    filename = loc.filename;
     line = loc.line;
     col = loc.col;
     s_line = loc.s_line;

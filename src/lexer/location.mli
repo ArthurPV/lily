@@ -1,4 +1,5 @@
 type location = {
+  filename: string; [@printer fun fmt f -> fprintf fmt "%s" f]
   mutable line : int; [@printer fun fmt l -> fprintf fmt "%d" l]
   mutable col : int; [@printer fun fmt c -> fprintf fmt "%d" c]
   mutable s_line : int; [@printer fun fmt sl -> fprintf fmt "%d" sl]
@@ -8,6 +9,6 @@ type location = {
 }
 [@@deriving show]
 
-val new_location : location
+val new_location : string -> location
 val copy_location : location -> location
 val end_location : location -> location -> unit
