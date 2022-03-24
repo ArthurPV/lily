@@ -686,7 +686,13 @@ and get_specific_node access loc nodes =
               Diagnostic.Error,
               loc )
           |> raise
-        else nodes
+        else
+          Diagnostic.EmitDiagnostic
+            ( Printf.sprintf "the import access value is not found: `%s`"
+                (List.nth access i),
+              Diagnostic.Error,
+              loc )
+          |> raise
       in
       loop ~i:(i + 1) ~nodes:(get_node ()) ()
     else nodes
