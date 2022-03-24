@@ -293,6 +293,15 @@ let rec get_global_access scope nodes ~p_pub =
                              x;
                            |])
               |> Array.to_list);
+          access_ref :=
+            !access_ref
+            @ [
+                `Identifier
+                  ( `Module,
+                    id_m,
+                    (match nodes.(i) with _, l -> l),
+                    Some node );
+              ];
           if p_pub && is_pub then loop ~access:!access_ref ~i:(i + 1) ()
           else loop ~access:!access_ref ~i:(i + 1) ()
       | Decl (Alias { id; poly_args; is_pub; _ }) as node_a ->
@@ -560,7 +569,7 @@ and verify_if_same_access scope scopes =
   loop ();
   !count_errors
 
-and get_specific_node access loc nodes =
+and get_specific_node access loc ~visibility nodes =
   let rec loop ?(i = 0) ?(nodes = nodes) () =
     if i < List.length access then
       let rec get_node ?(j = 0) ?(nodes = nodes) () =
@@ -576,8 +585,13 @@ and get_specific_node access loc nodes =
             when id = List.nth access i && List.length access - 1 = i ->
               [| node |]
           | (Decl (Module { id; _ }), _ | Decl (Class { id; _ }), _) as node
-            when id = List.nth access i ->
+            when id = List.nth access i && List.length access - 1 = i ->
               [| node |]
+          | Decl (Module { id; body; _ }), _
+          | Decl (Class { id; body; _ }), _
+            when id = List.nth access i && List.length access - 1 <> i ->
+              body |> Parser.collect_public_nodes
+              |> Parser.change_nodes_visibility ~visibility
           | Decl (Fun { id; _ }), _
           | Decl (Constant { id; _ }), _
           | Decl (Alias { id; _ }), _
@@ -707,7 +721,7 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
                 (scope_buf.parser.nodes |> Parser.collect_public_nodes
                 |> Parser.change_nodes_visibility ~visibility:is_pub
                 |> Array.map (fun (x, _) -> (x, loc))
-                |> get_specific_node access loc)
+                |> get_specific_node access loc ~visibility:is_pub)
         | s ->
             scope.parser.nodes <-
               Array.append scope.parser.nodes
@@ -722,7 +736,8 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
                              |> Parser.change_nodes_visibility
                                   ~visibility:is_pub
                              |> Array.map (fun (x, _) -> (x, loc))
-                             |> get_specific_node access loc;
+                             |> get_specific_node access loc
+                                  ~visibility:is_pub;
                            is_pub;
                            is_test = false;
                          }),

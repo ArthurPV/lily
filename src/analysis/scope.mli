@@ -113,7 +113,11 @@ val emit_unused : scope -> scope_access -> unit
 val verify_if_used : scope -> unit
 
 val get_specific_node :
-  string list -> location -> (ast * location) array -> (ast * location) array
+  string list ->
+  location ->
+  visibility:bool ->
+  (ast * location) array ->
+  (ast * location) array
 
 val run_import :
   scope ->
