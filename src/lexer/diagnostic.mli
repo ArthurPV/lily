@@ -16,9 +16,7 @@ type diagnostic = {
   filename : string;
 }
 
-val new_diagnostic :
-  msg:string -> diagnostic_kind -> location -> diagnostic
-
+val new_diagnostic : msg:string -> diagnostic_kind -> location -> diagnostic
 val diagnostic_to_string : diagnostic -> string
 val get_line_error : diagnostic -> string
 val emit_diagnostic : diagnostic -> unit
