@@ -24,10 +24,7 @@ val change_nodes_visibility :
   (ast * location) array -> visibility:bool -> (ast * location) array
 
 val new_diagnostic :
-  Diagnostic.diagnostic_kind ->
-  string ->
-  location ->
-  Diagnostic.diagnostic
+  Diagnostic.diagnostic_kind -> string -> location -> Diagnostic.diagnostic
 
 val advance : parser -> add_pos:bool -> unit
 val next_token : parser -> unit

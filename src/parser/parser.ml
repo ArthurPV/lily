@@ -105,8 +105,7 @@ let new_parser lexer =
     previous_location = Lexer.loc_of_tokens lexer ~idx:0;
   }
 
-let new_diagnostic kind msg loc =
-  Diagnostic.new_diagnostic ~msg kind loc
+let new_diagnostic kind msg loc = Diagnostic.new_diagnostic ~msg kind loc
 
 let advance parser ~add_pos =
   if add_pos && parser.pos < Array.length parser.lexer.tokens - 1 then
@@ -312,7 +311,7 @@ let rec run parser =
             [|
               Location.copy_location parser.previous_location
               |> new_diagnostic Diagnostic.Error
-                  "unexpected end of expression";
+                   "unexpected end of expression";
             |]
             |> Array.append parser.errors
       else ();
