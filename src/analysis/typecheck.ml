@@ -187,7 +187,12 @@ and check_expr_type tpc = function
       | `F32, dt
       | `F64, dt
       | `Char, dt ->
-          failwith "error"
+          right |> show_data_type
+          |> Printf.sprintf
+               "the expression on the right, has type %s, but the type on \
+                the left has type %s"
+               (dt |> show_data_type)
+          |> failwith
       | dt, `I8
       | dt, `I16
       | dt, `I32
@@ -201,7 +206,15 @@ and check_expr_type tpc = function
       | dt, `F32
       | dt, `F64
       | dt, `Char ->
-          failwith "error"
+          Diagnostic.EmitDiagnostic
+            ( left |> show_data_type
+              |> Printf.sprintf
+                   "the expression on the left, has type %s, but the type \
+                    on the right has type %s"
+                   (dt |> show_data_type),
+              Diagnostic.Error,
+              l )
+          |> raise
       | dt, dt2 ->
           Diagnostic.EmitDiagnostic
             ( dt |> show_data_type
@@ -217,13 +230,30 @@ and check_expr_type tpc = function
       let right = check_expr_type tpc (y, l) in
       match (left, right) with
       | dt, dt2 when dt = dt2 -> `Bool
-      | dt, dt2 -> failwith "error")
+      | dt, dt2 ->
+          Diagnostic.EmitDiagnostic
+            ( dt2 |> show_data_type
+              |> Printf.sprintf
+                   "bad type for comparison expression: [left: %s, right: \
+                    %s]"
+                   (dt |> show_data_type),
+              Diagnostic.Error,
+              l )
+          |> raise)
   | And (x, y), l | Or (x, y), l -> (
       let left = check_expr_type tpc (x, l) in
       let right = check_expr_type tpc (y, l) in
       match (left, right) with
       | `Bool, `Bool -> `Bool
-      | _ -> failwith "error")
+      | dt, dt2 ->
+          Diagnostic.EmitDiagnostic
+            ( dt2 |> show_data_type
+              |> Printf.sprintf
+                   "bad type for logical expression: [left: %s, right: %s]"
+                   (dt |> show_data_type),
+              Diagnostic.Error,
+              l )
+          |> raise)
   | Assign (x, y), l
   | AddAssign (x, y), l
   | SubAssign (x, y), l
@@ -260,9 +290,12 @@ and check_expr_type tpc = function
   | Tuple vals, _ -> failwith "not implemented"
   | Array vals, _ -> failwith "not implemented"
   | Variant (id, args), _ -> failwith "not implemented"
-  | Literal (Int32 i), loc -> infer_integer_type (Expr (Literal (Int32 i)), loc)
-  | Literal (Int64 i), loc -> infer_integer_type (Expr (Literal (Int64 i)), loc)
-  | Literal (Int128 i), loc -> infer_integer_type (Expr (Literal (Int128 i)), loc)
+  | Literal (Int32 i), loc ->
+      infer_integer_type (Expr (Literal (Int32 i)), loc)
+  | Literal (Int64 i), loc ->
+      infer_integer_type (Expr (Literal (Int64 i)), loc)
+  | Literal (Int128 i), loc ->
+      infer_integer_type (Expr (Literal (Int128 i)), loc)
   | Literal (Float f), _ -> failwith "not implemented"
   | Literal (String _), _ -> `String
   | Literal (Char _), _ -> `Char

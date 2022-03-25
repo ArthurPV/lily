@@ -215,7 +215,6 @@ let verify_if_used scope =
 
 [@@@warning "-27"]
 
-(* IMPROVE: rename local rec function *)
 let rec get_global_access scope nodes ~p_pub =
   let rec loop ?(access = []) ?(i = 0) () =
     if i < Array.length nodes then
@@ -477,7 +476,7 @@ let rec get_global_access scope nodes ~p_pub =
       | Decl (Import _) -> loop ~i:(i + 1) ()
       | Doc _ -> loop ~i:(i + 1) ()
       | _ -> failwith "unreachable"
-    else access |> Array.of_list
+    else access |> List.rev |> Array.of_list
   in
   loop ()
 
@@ -624,15 +623,16 @@ and get_specific_node access loc ~visibility nodes =
           && List.nth access i = "*"
           && List.length access - 1 = i
         then nodes
-        else if List.length access - i <> i && List.nth access i = "*" then
+        else if List.length access - 1 <> i && List.nth access i = "*" then
           Diagnostic.EmitDiagnostic
             ( Printf.sprintf
                 "bad import access value: `%s`\n\
-                 help: apply `*` wildcard as last access value"
+                 help: apply `*` wildcard at last access value"
                 (access |> String.concat "."),
               Diagnostic.Error,
               loc )
           |> raise
+        else if Array.length nodes = 0 then [||]
         else
           Diagnostic.EmitDiagnostic
             ( Printf.sprintf "the import access value is not found: `%s`"
@@ -791,9 +791,7 @@ and resolve_all_imports scope =
         | _ -> ())
       scope.parser.nodes
   with Diagnostic.EmitDiagnostic (msg, kind, loc) ->
-    loc
-    |> Parser.new_diagnostic kind msg
-    |> Diagnostic.emit_diagnostic;
+    loc |> Parser.new_diagnostic kind msg |> Diagnostic.emit_diagnostic;
     if true then exit 1;
 
     scope.parser.nodes <-
@@ -1279,21 +1277,26 @@ and check_fun_scope scope args call access nodes loc =
             |> check_expr scope (Expr expr |> ref)
                  (match nodes.(i) with _, l -> l)
           in
-          nodes.(i) <-
-            (match nodes.(i) with
-            | _, l ->
-                ( Decl
-                    (Variable
-                       {
-                         id;
-                         data_type =
-                           Some
-                             (check_expr_type scope.parser
-                                (expr, match nodes.(i) with _, l -> l));
-                         expr = ast_to_expr checked_expr;
-                         is_mut;
-                       }),
-                  l ));
+          (try
+             nodes.(i) <-
+               (match nodes.(i) with
+               | _, l ->
+                   ( Decl
+                       (Variable
+                          {
+                            id;
+                            data_type =
+                              Some
+                                (check_expr_type scope.parser
+                                   (expr, match nodes.(i) with _, l -> l));
+                            expr = ast_to_expr checked_expr;
+                            is_mut;
+                          }),
+                     l ))
+           with Diagnostic.EmitDiagnostic (msg, kind, loc) ->
+             loc
+             |> Diagnostic.new_diagnostic ~msg kind
+             |> Diagnostic.emit_diagnostic);
           push_access_in access_in len
             (`Identifier
               ( `None,
