@@ -1284,9 +1284,9 @@ and parse_function parser ~is_pub ~is_async ~is_test ~is_export =
         })
 
 and parse_body_module parser =
-  let loc = Location.copy_location parser.current_location in
   let rec loop ?(body = []) () =
     if parser.current_token <> Keyword End then
+      let loc = Location.copy_location parser.current_location in
       match parse_decl parser with
       | Decl d ->
           Location.end_location loc parser.current_location;
