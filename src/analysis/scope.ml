@@ -152,7 +152,7 @@ let rec get_is_pub = function
 
 let get_similar_identifier access ~id =
   let rec loop ?(i = 0) () =
-    if i < Array.length access - 1 then
+    if i < Array.length access then
       let rec loop2 ?(j = 0) () =
         if j < Array.length access.(i) then
           match access.(i).(j) with
@@ -161,7 +161,7 @@ let get_similar_identifier access ~id =
           | `Type (_, id2, _, _, _) ->
               let rec loop_string ?(j = 0) ?(count = 0) () =
                 if j < String.length id && j < String.length id2 then
-                  if id.[i] = id2.[i] then
+                  if id.[j] = id2.[j] then
                     loop_string ~j:(j + 1) ~count:(count + 1) ()
                   else (count, id2)
                 else (count, id2)
@@ -892,7 +892,7 @@ and check_expr scope node loc access =
            |> Parser.new_diagnostic Diagnostic.Error
                 (Printf.sprintf
                    "cannot find identifier `%s` in this scope\n\
-                    help: did you mean `%s`" s similar_id)
+                    help: did you mean `%s` ?" s similar_id)
            |> Diagnostic.emit_diagnostic
        | None ->
            loc
@@ -955,7 +955,7 @@ and check_expr scope node loc access =
                |> Parser.new_diagnostic Diagnostic.Error
                     (Printf.sprintf
                        "cannot find function `%s` in this scope\n\
-                        help: did you mean `%s`" s similar_id)
+                        help: did you mean `%s` ?" s similar_id)
                |> Diagnostic.emit_diagnostic
            | None ->
                loc
