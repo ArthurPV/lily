@@ -148,6 +148,54 @@ let rec get_is_pub = function
   | `IdentifierAddr addr -> addr.(Array.length addr - 1) |> get_is_pub
   | _ -> failwith "unreachable"
 
+[@@@warning "-27"]
+
+let get_similar_identifier access ~id =
+  let rec loop ?(i = 0) () =
+    if i < Array.length access - 1 then
+      let rec loop2 ?(j = 0) () =
+        if j < Array.length access.(i) then
+          match access.(i).(j) with
+          | `Fun (_, id2, _, _, _)
+          | `Identifier (_, id2, _, _)
+          | `Type (_, id2, _, _, _) ->
+              let rec loop_string ?(j = 0) ?(count = 0) () =
+                if j < String.length id && j < String.length id2 then
+                  if id.[i] = id2.[i] then
+                    loop_string ~j:(j + 1) ~count:(count + 1) ()
+                  else (count, id2)
+                else (count, id2)
+              in
+              loop_string () :: loop2 ~j:(j + 1) ()
+          | _ -> loop2 ~j:(j + 1) ()
+        else []
+      in
+      loop2 () @ loop ~i:(i + 1) ()
+    else []
+  in
+  let similar_id = loop () in
+  let rec get_more_similar ?(i = 0) ?(similar = None) () =
+    if i < List.length similar_id then
+      if similar = None then
+        get_more_similar ~i:(i + 1)
+          ~similar:(Some (List.nth similar_id i))
+          ()
+      else if
+        (match similar with
+        | Some (count, _) -> count
+        | None -> failwith "unreachable")
+        < match List.nth similar_id i with count, _ -> count
+      then
+        get_more_similar ~i:(i + 1)
+          ~similar:(Some (List.nth similar_id i))
+          ()
+      else get_more_similar ~i:(i + 1) ~similar ()
+    else similar
+  in
+  match get_more_similar () with
+  | Some (count, id) -> if count = 0 then None else Some id
+  | None -> None
+
 let push_used scope access =
   scope.used <- Array.append scope.used [| access |]
 
@@ -212,8 +260,6 @@ let verify_if_used scope =
       | _ -> loop ~i:(i + 1) ()
   in
   loop ()
-
-[@@@warning "-27"]
 
 let rec get_global_access scope nodes ~p_pub =
   let rec loop ?(access = []) ?(i = 0) () =
@@ -838,11 +884,22 @@ and check_expr scope node loc access =
           loop ~i:(i + 1) ())
       in
       loop ();
-      if !matched |> Bool.not then
-        loc
-        |> Parser.new_diagnostic Diagnostic.Error
-             (Printf.sprintf "cannot find identifier `%s` in this scope" s)
-        |> Diagnostic.emit_diagnostic;
+      (if !matched |> Bool.not then
+       let similar = get_similar_identifier access ~id:s in
+       match similar with
+       | Some similar_id ->
+           loc
+           |> Parser.new_diagnostic Diagnostic.Error
+                (Printf.sprintf
+                   "cannot find identifier `%s` in this scope\n\
+                    help: did you mean `%s`" s similar_id)
+           |> Diagnostic.emit_diagnostic
+       | None ->
+           loc
+           |> Parser.new_diagnostic Diagnostic.Error
+                (Printf.sprintf "cannot find identifier `%s` in this scope" s)
+           |> Diagnostic.emit_diagnostic;
+           exit 1);
       !node
   | Expr (IdentifierAccess (_, _)) | Expr (SelfAccess (_, _)) ->
       failwith "todo"
@@ -890,11 +947,22 @@ and check_expr scope node loc access =
               loop ~i:(i + 1) ())
           in
           loop ();
-          if !matched |> Bool.not then
-            loc
-            |> Parser.new_diagnostic Diagnostic.Error
-                 (Printf.sprintf "cannot find function `%s` in this scope" s)
-            |> Diagnostic.emit_diagnostic;
+          (if !matched |> Bool.not then
+           let similar = get_similar_identifier access ~id:s in
+           match similar with
+           | Some similar_id ->
+               loc
+               |> Parser.new_diagnostic Diagnostic.Error
+                    (Printf.sprintf
+                       "cannot find function `%s` in this scope\n\
+                        help: did you mean `%s`" s similar_id)
+               |> Diagnostic.emit_diagnostic
+           | None ->
+               loc
+               |> Parser.new_diagnostic Diagnostic.Error
+                    (Printf.sprintf "cannot find function `%s` in this scope"
+                       s)
+               |> Diagnostic.emit_diagnostic);
           !node
       | IdentifierAccess (id, _) -> (
           let addr =

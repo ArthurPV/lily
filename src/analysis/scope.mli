@@ -108,6 +108,10 @@ type scope = {
 
 val new_scope : parser -> scope
 val get_is_pub : scope_access -> bool
+
+val get_similar_identifier :
+  scope_access array array -> id:string -> string option
+
 val push_used : scope -> scope_access -> unit
 val emit_unused : scope -> scope_access -> unit
 val verify_if_used : scope -> unit
