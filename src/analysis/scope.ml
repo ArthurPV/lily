@@ -151,16 +151,21 @@ let rec get_is_pub = function
 [@@@warning "-27"]
 
 let get_similar_identifier access ~id =
+  let id, from = id in
   let rec loop ?(i = 0) () =
     if i < Array.length access then
       let rec loop2 ?(j = 0) () =
         if j < Array.length access.(i) then
           match access.(i).(j) with
-          | `Fun (_, id2, _, _, _)
-          | `Identifier (_, id2, _, _)
-          | `Type (_, id2, _, _, _) ->
+          | `Fun (from2, id2, _, _, _)
+          | `Identifier (from2, id2, _, _)
+          | `Type (from2, id2, _, _, _) ->
               let rec loop_string ?(j = 0) ?(count = 0) () =
-                if j < String.length id && j < String.length id2 then
+                if
+                  j < String.length id
+                  && j < String.length id2
+                  && from = from2
+                then
                   if id.[j] = id2.[j] then
                     loop_string ~j:(j + 1) ~count:(count + 1) ()
                   else (count, id2)
@@ -885,7 +890,7 @@ and check_expr scope node loc access =
       in
       loop ();
       (if !matched |> Bool.not then
-       let similar = get_similar_identifier access ~id:s in
+       let similar = get_similar_identifier access ~id:(s, `None) in
        match similar with
        | Some similar_id ->
            loc
@@ -948,7 +953,7 @@ and check_expr scope node loc access =
           in
           loop ();
           (if !matched |> Bool.not then
-           let similar = get_similar_identifier access ~id:s in
+           let similar = get_similar_identifier access ~id:(s, `Fun) in
            match similar with
            | Some similar_id ->
                loc
