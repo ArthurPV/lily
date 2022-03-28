@@ -275,7 +275,18 @@ and check_expr_type tpc = function
       match check_expr_type tpc (y, l) with
       | dt when dt = var_dt -> var_dt
       | dt -> failwith "error")
-  | FunctionCall _, _ -> failwith "unreachable"
+  | FunctionCall (id, _), _ -> (
+      match id with
+      | Identifier (s, op) -> (
+          (* TODO *)
+          match op with
+          | Some (Decl (Fun { return_type; _ })) -> (
+              match return_type with
+              | Some t -> t
+              | None -> failwith "unreachable")
+          | _ -> failwith "unreachable")
+      | IdentifierAccess _ -> failwith "todo"
+      | _ -> failwith "unreachable")
   | ClassCall (id, args), _ -> failwith "not implemented"
   | RecordCall (id, args), _ -> failwith "not implemented"
   | Identifier (x, r), l -> (

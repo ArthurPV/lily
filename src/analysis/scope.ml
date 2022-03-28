@@ -918,8 +918,8 @@ and check_expr scope node loc access =
               (match arr.(i) with _, e_call -> e_call |> ref)
               loc access
           with
-          | _ ->
-              ();
+          | n ->
+              arr.(i) <- ((match arr.(i) with id, _ -> id), n);
               loop ~i:(i + 1) ()
       in
       loop ();
@@ -1444,7 +1444,7 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun =
                             data_type =
                               Some
                                 (check_expr_type scope.parser
-                                   (expr, match nodes.(i) with _, l -> l));
+                                   (ast_to_expr checked_expr, match nodes.(i) with _, l -> l));
                             expr = ast_to_expr checked_expr;
                             is_mut;
                           }),
@@ -1550,7 +1550,7 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun =
             |> check_expr scope (Expr expr |> ref)
                  (match nodes.(i) with _, l -> l)
           in
-          (if i + 1 = Array.length nodes then
+          (if i = Array.length nodes - 1 then
            return_expr :=
              Array.append !return_expr
                [| (check_expr, match nodes.(i) with _, l -> l) |]
