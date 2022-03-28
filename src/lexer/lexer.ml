@@ -383,6 +383,7 @@ let push_token lexer ~tok =
   lexer.tokens <- [| (tok, copy_loc) |] |> Array.append lexer.tokens
 
 let get_closing lexer ~c g_token =
+  skip_space lexer;
   let rec skip_to_closing () =
     if lexer.src.c <> c then (
       skip_space lexer;
