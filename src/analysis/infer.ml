@@ -37,7 +37,7 @@ module InferFun = struct
   let infer_return_expr t =
     let ret_dt = ref None in
     let rec loop ?(i = 0) () =
-      if i < Array.length t.dt_of_ret then (
+      if i < Array.length t.dt_of_ret && Array.length t.dt_of_ret > 1 then (
         let rec loop2 ?(j = i + 1) () =
           if j < Array.length t.dt_of_ret then (
             if t.dt_of_ret.(i) = t.dt_of_ret.(j) then
@@ -48,6 +48,8 @@ module InferFun = struct
         in
         loop2 ();
         loop ~i:(i + 1) ())
+      else if i < Array.length t.dt_of_ret && Array.length t.dt_of_ret = 1
+      then ret_dt := Some t.dt_of_ret.(i)
     in
     loop ();
     match t.dt_ret with
