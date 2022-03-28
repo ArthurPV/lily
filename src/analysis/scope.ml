@@ -2,6 +2,7 @@ open Lily_common.Common
 open Lily_lexer.Location
 open Lily_parser.Ast
 open Buffer
+open Infer
 open Typecheck
 module Diagnostic = Lily_lexer.Diagnostic
 module Parser = Lily_parser.Parser
@@ -932,6 +933,12 @@ and check_expr scope node loc access =
                 if j < Array.length access.(i) && !matched |> Bool.not then
                   match access.(i).(j) with
                   | `Fun (_, s2, _, _, ast) when s = s2 ->
+                      let r_dt =
+                        match ast with
+                        | Some (Decl (Fun { return_type; _ })) ->
+                            ref return_type
+                        | _ -> failwith "unreachable"
+                      in
                       matched := true;
                       push_used scope access.(i).(j);
                       check_fun_scope scope
@@ -944,8 +951,41 @@ and check_expr scope node loc access =
                         (match ast with
                         | Some (Decl (Fun { body; _ })) -> body
                         | _ -> failwith "unreachable")
-                        (Some loc);
-                      node := Expr (FunctionCall (Identifier (s, ast), arr))
+                        (Some loc) r_dt ~is_fun:true;
+                      let update_ast =
+                        match ast with
+                        | Some
+                            (Decl
+                              (Fun
+                                {
+                                  id;
+                                  poly_args;
+                                  args;
+                                  return_type;
+                                  body;
+                                  is_pub;
+                                  is_async;
+                                  is_test;
+                                  is_export;
+                                })) ->
+                            Some
+                              (Decl
+                                 (Fun
+                                    {
+                                      id;
+                                      poly_args;
+                                      args;
+                                      return_type = !r_dt;
+                                      body;
+                                      is_pub;
+                                      is_async;
+                                      is_test;
+                                      is_export;
+                                    }))
+                        | _ -> failwith "unreachable"
+                      in
+                      node :=
+                        Expr (FunctionCall (Identifier (s, update_ast), arr))
                   | _ -> loop2 ~j:(j + 1) ()
               in
               loop2 ();
@@ -979,6 +1019,11 @@ and check_expr scope node loc access =
           in
           match addr.(Array.length addr - 1) with
           | `Fun (_, _, _, loc, ast) ->
+              let r_dt =
+                match ast with
+                | Some (Decl (Fun { return_type; _ })) -> ref return_type
+                | _ -> failwith "unreachable"
+              in
               check_fun_scope scope
                 (match ast with
                 | Some (Decl (Fun { args; _ })) -> args
@@ -987,8 +1032,41 @@ and check_expr scope node loc access =
                 (match ast with
                 | Some (Decl (Fun { body; _ })) -> body
                 | _ -> failwith "unreachable")
-                (Some loc);
-              node := Expr (FunctionCall (IdentifierAccess (id, ast), arr));
+                (Some loc) r_dt ~is_fun:true;
+              let update_ast =
+                match ast with
+                | Some
+                    (Decl
+                      (Fun
+                        {
+                          id;
+                          poly_args;
+                          args;
+                          return_type;
+                          body;
+                          is_pub;
+                          is_async;
+                          is_test;
+                          is_export;
+                        })) ->
+                    Decl
+                      (Fun
+                         {
+                           id;
+                           poly_args;
+                           args;
+                           return_type = !r_dt;
+                           body;
+                           is_pub;
+                           is_async;
+                           is_test;
+                           is_export;
+                         })
+                | _ -> failwith "unreachable"
+              in
+              node :=
+                Expr
+                  (FunctionCall (IdentifierAccess (id, Some update_ast), arr));
               !node
           | _ -> failwith "unreachable")
       | _ -> failwith "unreachable")
@@ -1000,7 +1078,12 @@ and check_expr scope node loc access =
             check_expr scope
               (match arr.(i) with
               | _, Some e_call -> Expr e_call |> ref
-              | _ -> failwith "todo")
+              | id, None ->
+                  access
+                  |> check_expr scope
+                       (ref (Expr (Identifier (id, None))))
+                       loc
+                  |> ref)
               loc access
           with
           | _ ->
@@ -1322,7 +1405,7 @@ and get_argument_access scope args call =
   in
   loop ()
 
-and check_fun_scope scope args call access nodes loc =
+and check_fun_scope scope args call access nodes loc dt_op ~is_fun =
   (* List all used access in array *)
   (* let used_access_in = ref [||] in *)
   let return_expr = ref [||] in
@@ -1390,7 +1473,7 @@ and check_fun_scope scope args call access nodes loc =
           let access_in_ref = access_in in
           check_fun_scope scope [||] [||] !access_in_ref
             (match if_ with _, b -> b)
-            None;
+            None (ref None) ~is_fun:false;
           (* ELIF *)
           (match elif_ with
           | Some el ->
@@ -1400,7 +1483,7 @@ and check_fun_scope scope args call access nodes loc =
                   (* check_expr (match el.(i) with e, _ -> e) !access_in; *)
                   check_fun_scope scope [||] [||] !access_in_ref
                     (match el.(i) with _, b -> b)
-                    None;
+                    None (ref None) ~is_fun:false;
                   loop_elif ~i:(i + 1) ())
               in
               loop_elif ()
@@ -1408,7 +1491,7 @@ and check_fun_scope scope args call access nodes loc =
           (* ELSE *)
           check_fun_scope scope [||] [||] !access_in_ref
             (match else_ with Some e -> e | None -> [||])
-            None;
+            None (ref None) ~is_fun:false;
           nodes.(i) <-
             (match nodes.(i) with
             | _, l ->
@@ -1434,7 +1517,8 @@ and check_fun_scope scope args call access nodes loc =
             (* TODO: add location on expression *)
           in
           let access_in_ref = access_in in
-          check_fun_scope scope args [||] !access_in_ref body None;
+          check_fun_scope scope args [||] !access_in_ref body None (ref None)
+            ~is_fun:false;
           nodes.(i) <-
             (match nodes.(i) with
             | _, l ->
@@ -1484,7 +1568,16 @@ and check_fun_scope scope args call access nodes loc =
   in
   loop_body ();
   if verify_if_same_access scope !(!access_in.(0)) > 0 then () else ();
-  ()
+  match !dt_op with
+  | Some t -> ()
+  | None when is_fun ->
+      let infer_fun_t = InferFun.new_t in
+      !return_expr
+      |> Array.map (fun (x, l) -> (ast_to_expr x, l))
+      |> InferFun.get_data_type_from_return_arr infer_fun_t scope.parser
+           check_expr_type;
+      dt_op := Some (InferFun.infer_return_expr infer_fun_t)
+  | None -> ()
 
 and run scope =
   if Array.length scope.parser.nodes > 0 then (
@@ -1509,7 +1602,7 @@ and run scope =
           match n with
           | Decl (Fun { body; _ }) -> body
           | _ -> failwith "unreachable"))
-      None;
+      None (ref None) ~is_fun:true;
     ();
     verify_if_used scope)
   else (

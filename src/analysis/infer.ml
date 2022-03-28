@@ -24,27 +24,36 @@ module IsUint = struct
 end
 
 module InferFun = struct
-  type t = { dt_of_ret : data_type array; mutable dt_ret : data_type option }
+  type t = {
+    mutable dt_of_ret : data_type array;
+    mutable dt_ret : data_type option;
+  }
+
+  let new_t = { dt_of_ret = [||]; dt_ret = None }
+
+  let get_data_type_from_return_arr t typecheck convert arr =
+    t.dt_of_ret <- Array.map (fun x -> convert typecheck x) arr
 
   let infer_return_expr t =
     let ret_dt = ref None in
     let rec loop ?(i = 0) () =
       if i < Array.length t.dt_of_ret then (
-        let rec loop2 ?(j = i+1) () =
+        let rec loop2 ?(j = i + 1) () =
           if j < Array.length t.dt_of_ret then (
-            if t.dt_of_ret.(i) = t.dt_of_ret.(j) then ret_dt := Some t.dt_of_ret.(j)
+            if t.dt_of_ret.(i) = t.dt_of_ret.(j) then
+              ret_dt := Some t.dt_of_ret.(j)
             else if t.dt_of_ret.(j) = `Err then ()
             else failwith "error";
-            loop2 ~j:(j+1) ()
-          ) in
+            loop2 ~j:(j + 1) ())
+        in
         loop2 ();
-        loop ~i:(i+1) ()
-      ) in
+        loop ~i:(i + 1) ())
+    in
     loop ();
     match t.dt_ret with
     | Some v when Some v = !ret_dt -> v
     | Some v -> failwith "error"
-    | None -> match !ret_dt with Some v -> v | None -> failwith "error"
+    | None -> ( match !ret_dt with Some v -> v | None -> `Unit)
 
   let infer_function_type return_expr ~call = assert false
   let infer_arg_type args = assert false

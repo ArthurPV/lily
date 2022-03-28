@@ -180,6 +180,8 @@ val check_fun_scope :
   scope_access array ref array ->
   (ast * location) array ->
   location option ->
+  data_type option ref ->
+  is_fun:bool ->
   unit
 
 val check_alias_scope : scope -> (ast * location) array -> unit

@@ -275,14 +275,18 @@ and check_expr_type tpc = function
       match check_expr_type tpc (y, l) with
       | dt when dt = var_dt -> var_dt
       | dt -> failwith "error")
-  | FunctionCall (id, args), _ -> failwith "not implemented"
+  | FunctionCall _, _ -> failwith "unreachable"
   | ClassCall (id, args), _ -> failwith "not implemented"
   | RecordCall (id, args), _ -> failwith "not implemented"
-  | Identifier (x, r), _ -> (
+  | Identifier (x, r), l -> (
       match r with
       | Some (Decl (Variable { data_type; _ })) -> (
           match data_type with Some t -> t | None -> failwith "unreachable")
       | Some (Decl (Constant { data_type; _ })) -> data_type
+      | Some (Expr (Identifier (_, r2))) -> (
+          match r2 with
+          | Some e -> check_expr_type tpc (ast_to_expr e, l)
+          | None -> failwith "unreachable")
       | _ -> failwith "unreachable")
   | IdentifierAccess (xs, r), _ -> failwith "not implemented"
   | SelfAccess (xs, r), _ -> failwith "not implemented"

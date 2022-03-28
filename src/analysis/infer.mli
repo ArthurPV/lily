@@ -16,11 +16,21 @@ module IsUint : sig
 end
 
 module InferFun : sig
-  (* 
-    dt_of_ret: list of return in function replaced by data type
-    dt: return data type specified in function declaration
-  *)
-  type t = { dt_of_ret : data_type array; mutable dt_ret : data_type option }
+  (* dt_of_ret: list of return in function replaced by data type dt: return
+     data type specified in function declaration *)
+  type t = {
+    mutable dt_of_ret : data_type array;
+    mutable dt_ret : data_type option;
+  }
+
+  val new_t : t
+
+  val get_data_type_from_return_arr :
+    t ->
+    'a ->
+    ('a -> expr * location -> data_type) ->
+    (expr * location) array ->
+    unit
 
   val infer_return_expr : t -> data_type
 
