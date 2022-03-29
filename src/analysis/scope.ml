@@ -1444,7 +1444,8 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun =
                             data_type =
                               Some
                                 (check_expr_type scope.parser
-                                   (ast_to_expr checked_expr, match nodes.(i) with _, l -> l));
+                                   ( ast_to_expr checked_expr,
+                                     match nodes.(i) with _, l -> l ));
                             expr = ast_to_expr checked_expr;
                             is_mut;
                           }),
@@ -1470,6 +1471,19 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun =
                  (match nodes.(i) with _, l -> l)
             (* TODO: add location on if expr *)
           in
+          let infer_if_expr_dt =
+            check_expr_type scope.parser
+              (ast_to_expr checked_if_cond, match nodes.(i) with _, l -> l)
+          in
+          if infer_if_expr_dt = `Bool then ()
+          else
+            (match nodes.(i) with _, l -> l)
+            |> Parser.new_diagnostic Diagnostic.Error
+                 (infer_if_expr_dt |> show_data_type
+                 |> Printf.sprintf
+                      "expected bool data type in if condition, found: `%s`"
+                 )
+            |> Diagnostic.emit_diagnostic;
           let access_in_ref = access_in in
           check_fun_scope scope [||] [||] !access_in_ref
             (match if_ with _, b -> b)
@@ -1480,7 +1494,28 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun =
               let rec loop_elif ?(i = 0) () =
                 if i < Array.length el then (
                   (* check condition *)
-                  (* check_expr (match el.(i) with e, _ -> e) !access_in; *)
+                  let checked_elif_cond =
+                    !access_in
+                    |> Array.map (fun x -> !x)
+                    |> check_expr scope
+                         (Expr (match el.(i) with e, _ -> e) |> ref)
+                         (match nodes.(i) with _, l -> l)
+                    (* TODO: add location on if expr *)
+                  in
+                  let infer_elif_expr_dt =
+                    check_expr_type scope.parser
+                      ( ast_to_expr checked_elif_cond,
+                        match nodes.(i) with _, l -> l )
+                  in
+                  if infer_elif_expr_dt = `Bool then ()
+                  else
+                    (match nodes.(i) with _, l -> l)
+                    |> Parser.new_diagnostic Diagnostic.Error
+                         (infer_elif_expr_dt |> show_data_type
+                         |> Printf.sprintf
+                              "expected bool data type in elif condition, \
+                               found: `%s`")
+                    |> Diagnostic.emit_diagnostic;
                   check_fun_scope scope [||] [||] !access_in_ref
                     (match el.(i) with _, b -> b)
                     None (ref None) ~is_fun:false;
