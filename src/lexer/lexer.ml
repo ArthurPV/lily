@@ -384,9 +384,11 @@ let push_token lexer ~tok =
 
 let get_closing lexer ~c g_token =
   skip_space lexer;
+  let skip_and_verify lexer =
+    skip_space lexer;
+    lexer.src.c <> c in
   let rec skip_to_closing () =
-    if lexer.src.c <> c then (
-      skip_space lexer;
+    if skip_and_verify lexer then (
       start_token lexer;
       try
         let tok = g_token lexer in
@@ -546,7 +548,7 @@ let rec get_token lexer =
       |> raise
 
 let run lexer =
-  if lexer.src.len > 0 then (
+  if lexer.src.len > 1 then (
     let rec loop lexer =
       if lexer.src.pos < lexer.src.len - 1 then (
         skip_space lexer;
