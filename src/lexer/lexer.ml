@@ -349,7 +349,9 @@ let rec scan_num ?(num = []) ?(is_float = false) lexer =
       |> raise
     else (
       next_char lexer;
-      scan_num ~num:(lexer.src.content.[lexer.src.pos - 1] :: num) lexer)
+      scan_num
+        ~num:(lexer.src.content.[lexer.src.pos - 1] :: num)
+        ~is_float lexer)
   else if is_float then (
     previous_char lexer;
     Literal
@@ -386,7 +388,8 @@ let get_closing lexer ~c g_token =
   skip_space lexer;
   let skip_and_verify lexer =
     skip_space lexer;
-    lexer.src.c <> c in
+    lexer.src.c <> c
+  in
   let rec skip_to_closing () =
     if skip_and_verify lexer then (
       start_token lexer;
