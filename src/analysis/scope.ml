@@ -951,7 +951,7 @@ and check_expr scope node loc access =
                         (match ast with
                         | Some (Decl (Fun { body; _ })) -> body
                         | _ -> failwith "unreachable")
-                        (Some loc) r_dt ~is_fun:true;
+                        (Some loc) r_dt ~is_fun:true ~return_expr:(ref [||]);
                       let update_ast =
                         match ast with
                         | Some
@@ -1032,7 +1032,7 @@ and check_expr scope node loc access =
                 (match ast with
                 | Some (Decl (Fun { body; _ })) -> body
                 | _ -> failwith "unreachable")
-                (Some loc) r_dt ~is_fun:true;
+                (Some loc) r_dt ~is_fun:true ~return_expr:(ref [||]);
               let update_ast =
                 match ast with
                 | Some
@@ -1405,10 +1405,10 @@ and get_argument_access scope args call =
   in
   loop ()
 
-and check_fun_scope scope args call access nodes loc dt_op ~is_fun =
+and check_fun_scope scope args call access nodes loc dt_op ~is_fun
+    ~return_expr =
   (* List all used access in array *)
   (* let used_access_in = ref [||] in *)
-  let return_expr = ref [||] in
   (* Add function parameter in access_in *)
   let len = Array.length access in
   (match loc with
@@ -1487,7 +1487,7 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun =
           let access_in_ref = access_in in
           check_fun_scope scope [||] [||] !access_in_ref
             (match if_ with _, b -> b)
-            None (ref None) ~is_fun:false;
+            None (ref None) ~is_fun:false ~return_expr;
           (* ELIF *)
           (match elif_ with
           | Some el ->
@@ -1518,7 +1518,7 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun =
                     |> Diagnostic.emit_diagnostic;
                   check_fun_scope scope [||] [||] !access_in_ref
                     (match el.(i) with _, b -> b)
-                    None (ref None) ~is_fun:false;
+                    None (ref None) ~is_fun:false ~return_expr;
                   loop_elif ~i:(i + 1) ())
               in
               loop_elif ()
@@ -1526,7 +1526,7 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun =
           (* ELSE *)
           check_fun_scope scope [||] [||] !access_in_ref
             (match else_ with Some e -> e | None -> [||])
-            None (ref None) ~is_fun:false;
+            None (ref None) ~is_fun:false ~return_expr;
           nodes.(i) <-
             (match nodes.(i) with
             | _, l ->
@@ -1553,7 +1553,7 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun =
           in
           let access_in_ref = access_in in
           check_fun_scope scope args [||] !access_in_ref body None (ref None)
-            ~is_fun:false;
+            ~is_fun:false ~return_expr;
           nodes.(i) <-
             (match nodes.(i) with
             | _, l ->
@@ -1637,7 +1637,7 @@ and run scope =
           match n with
           | Decl (Fun { body; _ }) -> body
           | _ -> failwith "unreachable"))
-      None (ref None) ~is_fun:true;
+      None (ref None) ~is_fun:true ~return_expr:(ref [||]);
     ();
     verify_if_used scope)
   else (

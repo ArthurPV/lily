@@ -182,6 +182,7 @@ val check_fun_scope :
   location option ->
   data_type option ref ->
   is_fun:bool ->
+  return_expr:(ast * location) array ref ->
   unit
 
 val check_alias_scope : scope -> (ast * location) array -> unit
