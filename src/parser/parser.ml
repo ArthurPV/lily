@@ -2356,7 +2356,10 @@ and parse_if parser =
     If { if_ = (cond, if_); elif_ = None; else_ = None }
   else if parser.previous_token = Keyword Elif then
     let rec parse_elif ?(elif_ = []) () =
-      if parser.current_token = Keyword Elif || parser.previous_token = Keyword Elif then (
+      if
+        parser.current_token = Keyword Elif
+        || parser.previous_token = Keyword Elif
+      then (
         let cond = parse_expr2 parser in
         Diagnostic.EmitDiagnostic
           ( parser.current_token |> show_token
