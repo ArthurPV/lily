@@ -12,7 +12,11 @@ module IsInt = struct
   let is32 i =
     i >= Int128.of_int (-2147483648) && i <= Int128.of_int 2147483647
 
-  let is64 i = i >= Int128.min_int && i <= Int128.max_int
+  let is64 i =
+    i >= (Int64.min_int |> Int128.of_int64)
+    && i <= (Int64.max_int |> Int128.of_int64)
+
+  let is128 i = i >= Int128.min_int && i <= Int128.max_int
 end
 
 module IsUint = struct
@@ -21,7 +25,11 @@ module IsUint = struct
   let is8 i = i >= Int128.of_int 0 && i <= Int128.of_int 255
   let is16 i = i >= Int128.of_int 0 && i <= Int128.of_int 65535
   let is32 i = i >= Int128.of_int 0 && i <= Int128.of_int 4294967295
-  let is64 i = i >= Int128.of_int 0 && i <= Int128.max_int
+
+  let is64 i =
+    i >= Int128.of_int 0 && i <= (Uint64.max_int |> Int128.of_uint64)
+
+  let is128 i = i >= Stdint.Int128.of_int 0
 end
 
 module InferFun = struct
@@ -34,7 +42,7 @@ module InferFun = struct
 
   let get_data_type_from_return_arr t typecheck convert arr =
     t.dt_of_ret <-
-      Array.map (fun x -> convert typecheck ~specified:None x) arr
+      Array.map (fun x -> convert typecheck ~specified:None ~neg:false x) arr
 
   let infer_return_expr t =
     let ret_dt = ref None in
@@ -63,32 +71,49 @@ module InferFun = struct
   let infer_arg_type args = assert false
 end
 
-let infer_integer_type node ~specified =
+let infer_signed_integer_type node ~specified =
   match node with
   | Expr (Literal (Int32 i)), loc -> (
       let i128 = i |> Stdint.Int32.to_int128 in
 
       let is_i8 = i128 |> IsInt.is8 in
       let is_i16 = i128 |> IsInt.is16 in
-      let is_u8 = i128 |> IsUint.is8 in
-      let is_u16 = i128 |> IsUint.is16 in
-      let is_u32 = i128 |> IsUint.is32 in
 
       match specified with
       | Some `I8 when is_i8 -> `I8
       | Some `I16 when is_i16 -> `I16
       | Some `I32 -> `I32
-      | Some `I8 ->
-          Diagnostic.EmitDiagnostic
-            ("literal out of range for `Int8`", Diagnostic.Error, loc)
-          |> raise
-      | Some `I16 ->
-          Diagnostic.EmitDiagnostic
-            ("literal out of range for `Int16`", Diagnostic.Error, loc)
-          |> raise
+      | Some `I64 -> `I64
+      | Some `I128 -> `I128
+      | None | _ -> failwith "unreachable")
+  | Expr (Literal (Int64 i)), loc -> (
+      match specified with
+      | Some `I64 -> `I64
+      | Some `I128 -> `I128
+      | None | _ -> failwith "unreachable")
+  | Expr (Literal (Int128 i)), loc -> (
+      match specified with
+      | Some `I128 -> `I128
+      | None | _ -> failwith "unreachable")
+  | _ -> failwith "unreachable"
+
+let infer_unsigned_integer_type node ~specified =
+  match node with
+  | Expr (Literal (Int32 i)), loc -> (
+      let i128 = i |> Stdint.Int32.to_int128 in
+
+      let is_u8 = i128 |> IsUint.is8 in
+      let is_u16 = i128 |> IsUint.is16 in
+      let is_u32 = i128 |> IsUint.is32 in
+      let is_u64 = i128 |> IsUint.is64 in
+      let is_u128 = i128 |> IsUint.is128 in
+
+      match specified with
       | Some `U8 when is_u8 -> `U8
       | Some `U16 when is_u16 -> `U16
       | Some `U32 when is_u32 -> `U32
+      | Some `U64 when is_u64 -> `U64
+      | Some `U128 when is_u128 -> `U128
       | Some `U8 ->
           Diagnostic.EmitDiagnostic
             ("literal out of range for `Uint8`", Diagnostic.Error, loc)
@@ -101,34 +126,54 @@ let infer_integer_type node ~specified =
           Diagnostic.EmitDiagnostic
             ("literal out of range for `Uint32`", Diagnostic.Error, loc)
           |> raise
-      | None -> `I32
-      | _ -> failwith "error")
-  | Expr (Literal (Int64 i)), loc -> (
-      let i128 = i |> Stdint.Int64.to_int128 in
-
-      let is_u64 = IsUint.is64 i128 in
-
-      match specified with
-      | Some `I64 -> `I64
-      | Some `U64 when is_u64 -> `U64
       | Some `U64 ->
           Diagnostic.EmitDiagnostic
             ("literal out of range for `Uint64`", Diagnostic.Error, loc)
           |> raise
-      | None -> `I64
-      | _ -> failwith "error")
-  | Expr (Literal (Int128 i)), loc -> (
-      let is_u128 = Stdint.Int128.neg i <> i in
-      match specified with
-      | Some `I128 -> `I128
-      | Some `U128 when is_u128 -> `U128
       | Some `U128 ->
           Diagnostic.EmitDiagnostic
             ("literal out of range for `Uint128`", Diagnostic.Error, loc)
           |> raise
-      | None -> `I128
-      | _ -> failwith "error")
+      | None | _ -> failwith "unreachable")
+  | Expr (Literal (Int64 i)), loc -> (
+      let i128 = i |> Stdint.Int64.to_int128 in
+
+      let is_u64 = IsUint.is64 i128 in
+      let is_u128 = IsUint.is128 i128 in
+
+      match specified with
+      | Some `U64 when is_u64 -> `U64
+      | Some `U128 when is_u128 -> `U128
+      | None | _ -> failwith "unreachable")
+  | Expr (Literal (Int128 i)), loc -> (
+      let is_u128 = IsUint.is128 i in
+
+      match specified with
+      | Some `U128 when is_u128 -> `U128
+      | None | _ -> failwith "unreachable")
   | _ -> failwith "unreachable"
+
+let infer_integer_type node ~specified ~neg =
+  match (specified, neg) with
+  | Some `U8, true
+  | Some `U16, true
+  | Some `U32, true
+  | Some `U64, true
+  | Some `U128, true ->
+      failwith "error"
+  | _ -> (
+      match specified with
+      | Some `U8 | Some `U16 | Some `U32 | Some `U64 | Some `U128 ->
+          infer_unsigned_integer_type node ~specified
+      | Some `I8 | Some `I16 | Some `I32 | Some `I64 | Some `I128 ->
+          infer_signed_integer_type node ~specified
+      | None -> (
+          match node with
+          | Expr (Literal (Int32 _)), _ -> `I32
+          | Expr (Literal (Int64 _)), _ -> `I64
+          | Expr (Literal (Int128 _)), _ -> `I128
+          | _ -> failwith "unreachable")
+      | _ -> failwith "error")
 
 let infer_float_type node = assert false
 let infer_tuple_type node = assert false

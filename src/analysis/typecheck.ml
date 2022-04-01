@@ -88,25 +88,36 @@ and check_logical_expr = function
            (dt2 |> show_data_type)
       |> failwith
 
-and check_expr_type tpc ~specified = function
-  | Grouping x, l -> check_expr_type tpc (x, l) ~specified
-  | Positive x, l -> check_expr_type tpc (x, l) ~specified
-  | Negative x, l -> check_expr_type tpc (x, l) ~specified
-  | Not x, l -> check_expr_type tpc (x, l) ~specified
+and check_expr_type tpc ~specified ~neg = function
+  | Grouping x, l -> check_expr_type tpc (x, l) ~specified ~neg
+  | Positive x, l -> (
+      match check_expr_type tpc (x, l) ~specified ~neg with
+      | ( `F32 | `F64 | `I8 | `I16 | `I32 | `I64 | `I128 | `U8 | `U16 | `U32
+        | `U64 | `U128 ) as t ->
+          t
+      | _ -> failwith "error")
+  | Negative x, l -> (
+      match check_expr_type tpc (x, l) ~specified ~neg:true with
+      | (`F32 | `F64 | `I8 | `I16 | `I32 | `I64 | `I128) as t -> t
+      | _ -> failwith "error")
+  | Not x, l -> (
+      match check_expr_type tpc (x, l) ~specified ~neg with
+      | `Bool -> `Bool
+      | _ -> failwith "error")
   | Mul (x, y), l
   | Div (x, y), l
   | Mod (x, y), l
   | Add (x, y), l
   | Sub (x, y), l
   | Exp (x, y), l -> (
-      let left = check_expr_type tpc (x, l) ~specified in
-      let right = check_expr_type tpc (y, l) ~specified in
+      let left = check_expr_type tpc (x, l) ~specified ~neg in
+      let right = check_expr_type tpc (y, l) ~specified ~neg in
       try check_arithmetic_expr (left, right)
       with Failure e ->
         Diagnostic.EmitDiagnostic (e, Diagnostic.Error, l) |> raise)
   | Range (x, y), l -> (
-      let left = check_expr_type tpc (x, l) ~specified in
-      let right = check_expr_type tpc (y, l) ~specified in
+      let left = check_expr_type tpc (x, l) ~specified ~neg in
+      let right = check_expr_type tpc (y, l) ~specified ~neg in
       match (left, right) with
       | `I8, `I8 -> `I8
       | `I16, `I16 -> `I16
@@ -158,8 +169,8 @@ and check_expr_type tpc ~specified = function
                (dt2 |> show_data_type)
           |> failwith)
   | Lt (x, y), l | Gt (x, y), l | Le (x, y), l | Ge (x, y), l -> (
-      let left = check_expr_type tpc (x, l) ~specified in
-      let right = check_expr_type tpc (y, l) ~specified in
+      let left = check_expr_type tpc (x, l) ~specified ~neg in
+      let right = check_expr_type tpc (y, l) ~specified ~neg in
       match (left, right) with
       | `I8, `I8 -> `Bool
       | `I16, `I16 -> `Bool
@@ -226,8 +237,8 @@ and check_expr_type tpc ~specified = function
               l )
           |> raise)
   | Eq (x, y), l | Ne (x, y), l -> (
-      let left = check_expr_type tpc (x, l) ~specified in
-      let right = check_expr_type tpc (y, l) ~specified in
+      let left = check_expr_type tpc (x, l) ~specified ~neg in
+      let right = check_expr_type tpc (y, l) ~specified ~neg in
       match (left, right) with
       | dt, dt2 when dt = dt2 -> `Bool
       | dt, dt2 ->
@@ -241,8 +252,8 @@ and check_expr_type tpc ~specified = function
               l )
           |> raise)
   | And (x, y), l | Or (x, y), l -> (
-      let left = check_expr_type tpc (x, l) ~specified in
-      let right = check_expr_type tpc (y, l) ~specified in
+      let left = check_expr_type tpc (x, l) ~specified ~neg in
+      let right = check_expr_type tpc (y, l) ~specified ~neg in
       match (left, right) with
       | `Bool, `Bool -> `Bool
       | dt, dt2 ->
@@ -273,7 +284,7 @@ and check_expr_type tpc ~specified = function
             | _ -> failwith "unreachable")
         | _ -> failwith "unreachable"
       in
-      match check_expr_type tpc (y, l) ~specified with
+      match check_expr_type tpc (y, l) ~specified ~neg with
       | dt when dt = var_dt -> var_dt
       | dt -> failwith "error")
   | FunctionCall (id, _), _ -> (
@@ -297,7 +308,7 @@ and check_expr_type tpc ~specified = function
       | Some (Decl (Constant { data_type; _ })) -> data_type
       | Some (Expr (Identifier (_, r2))) -> (
           match r2 with
-          | Some e -> check_expr_type tpc (ast_to_expr e, l) ~specified
+          | Some e -> check_expr_type tpc (ast_to_expr e, l) ~specified ~neg
           | None -> failwith "unreachable")
       | _ -> failwith "unreachable")
   | IdentifierAccess (xs, r), _ -> failwith "not implemented"
@@ -307,11 +318,11 @@ and check_expr_type tpc ~specified = function
   | Array vals, _ -> failwith "not implemented"
   | Variant (id, args), _ -> failwith "not implemented"
   | Literal (Int32 i), loc ->
-      infer_integer_type (Expr (Literal (Int32 i)), loc) ~specified
+      infer_integer_type (Expr (Literal (Int32 i)), loc) ~specified ~neg
   | Literal (Int64 i), loc ->
-      infer_integer_type (Expr (Literal (Int64 i)), loc) ~specified
+      infer_integer_type (Expr (Literal (Int64 i)), loc) ~specified ~neg
   | Literal (Int128 i), loc ->
-      infer_integer_type (Expr (Literal (Int128 i)), loc) ~specified
+      infer_integer_type (Expr (Literal (Int128 i)), loc) ~specified ~neg
   | Literal (Float f), _ -> failwith "not implemented"
   | Literal (String _), _ -> `String
   | Literal (Char _), _ -> `Char
@@ -320,9 +331,9 @@ and check_expr_type tpc ~specified = function
   | Nil, _ -> failwith "not implemented"
   | _ -> failwith "not implemented"
 
-and check_type tpc ~specified = function
+and check_type tpc ~specified ~neg = function
   | Decl _, _ -> failwith "not implemented"
-  | Expr e, l -> check_expr_type tpc ~specified (e, l)
+  | Expr e, l -> check_expr_type tpc ~specified ~neg (e, l)
   | _ -> failwith "not implemented"
 
 and check_fun_args_type args = assert false
@@ -331,7 +342,9 @@ and check_fun_type node = assert false
 let check_constant_type tpc access =
   match access with
   | Decl (Constant { id; expr; data_type = dt; _ }), loc ->
-      let dt2 = check_expr_type tpc (expr, loc) ~specified:(Some dt) in
+      let dt2 =
+        check_expr_type tpc (expr, loc) ~specified:(Some dt) ~neg:false
+      in
       if dt <> dt2 then
         Diagnostic.EmitDiagnostic
           ( dt |> show_data_type

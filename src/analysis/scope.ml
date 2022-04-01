@@ -1496,7 +1496,7 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun
                                 (check_expr_type scope.parser
                                    ( ast_to_expr checked_expr,
                                      match nodes.(i) with _, l -> l )
-                                   ~specified:data_type);
+                                   ~specified:data_type ~neg:false);
                             expr = ast_to_expr checked_expr;
                             is_mut;
                           }),
@@ -1525,7 +1525,7 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun
           let infer_if_expr_dt =
             check_expr_type scope.parser
               (ast_to_expr checked_if_cond, match nodes.(i) with _, l -> l)
-              ~specified:None
+              ~specified:None ~neg:false
           in
           if infer_if_expr_dt = `Bool then ()
           else
@@ -1558,7 +1558,7 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun
                     check_expr_type scope.parser
                       ( ast_to_expr checked_elif_cond,
                         match nodes.(i) with _, l -> l )
-                      ~specified:None
+                      ~specified:None ~neg:false
                   in
                   if infer_elif_expr_dt = `Bool then ()
                   else
