@@ -1736,11 +1736,7 @@ and check_decl scope acc =
     if i < Array.length map_arr then
       match map_arr.(i) with
       | Some (Decl (Constant _), _) as const ->
-          let convert =
-            match const with
-            | Some (n, l) -> (n, l)
-            | None -> failwith "unreachable"
-          in
+          let convert = Option.get const in
           (try map_arr.(i) <- Some (check_constant_scope scope convert)
            with Diagnostic.EmitDiagnostic (msg, kind, loc) ->
              loc
