@@ -38,8 +38,8 @@ and check_arithmetic_expr dts =
   | `F64, dt ->
       dt |> show_data_type
       |> Printf.sprintf
-           "the expression on the left has type %s, but the type on the \
-            right has type %s"
+           "the expression on the left has type `%s`, but the type on the \
+            right has type `%s`"
            (match dts with t, _ -> t |> show_data_type)
       |> failwith
   | dt, `I8
@@ -56,14 +56,14 @@ and check_arithmetic_expr dts =
   | dt, `F64 ->
       dt |> show_data_type
       |> Printf.sprintf
-           "the expression on the right, has type %s, but the type on the \
-            left has type %s"
+           "the expression on the right, has type `%s`, but the type on the \
+            left has type `%s`"
            (match dts with _, t -> t |> show_data_type)
       |> failwith
   | dt, dt2 ->
       dt |> show_data_type
       |> Printf.sprintf
-           "bad type for arithmetic expression: [left: %s, right: %s]"
+           "bad type for arithmetic expression: [left: `%s`, right: `%s`]"
            (dt2 |> show_data_type)
       |> failwith
 
@@ -73,18 +73,18 @@ and check_logical_expr = function
       dt |> show_data_type
       |> Printf.sprintf
            "the expression on the left has type Bool, but the type on the \
-            right has type %s"
+            right has type `%s`"
       |> failwith
   | dt, `Bool ->
       dt |> show_data_type
       |> Printf.sprintf
            "the expression on the right has type Bool, but the type on the \
-            left has type %s"
+            left has type `%s`"
       |> failwith
   | dt, dt2 ->
       dt |> show_data_type
       |> Printf.sprintf
-           "bad type for logical expression: [left: %s, right: %s]"
+           "bad type for logical expression: [left: `%s`, right: `%s`]"
            (dt2 |> show_data_type)
       |> failwith
 
@@ -131,8 +131,8 @@ and check_expr_type tpc ~specified = function
       | `U128, dt ->
           dt |> show_data_type
           |> Printf.sprintf
-               "the expression on the right, has type %s, but the type on \
-                the left has type %s"
+               "the expression on the right, has type `%s`, but the type on \
+                the left has type `%s`"
                (left |> show_data_type)
           |> failwith
       | dt, `I8
@@ -147,14 +147,14 @@ and check_expr_type tpc ~specified = function
       | dt, `U128 ->
           dt |> show_data_type
           |> Printf.sprintf
-               "the expression on the left, has type %s, but the type on \
-                the right has type %s"
+               "the expression on the left, has type `%s`, but the type on \
+                the right has type `%s`"
                (right |> show_data_type)
           |> failwith
       | dt, dt2 ->
           dt |> show_data_type
           |> Printf.sprintf
-               "bad type for range expression: [left: %s, right: %s]"
+               "bad type for range expression: [left: `%s`, right: `%s`]"
                (dt2 |> show_data_type)
           |> failwith)
   | Lt (x, y), l | Gt (x, y), l | Le (x, y), l | Ge (x, y), l -> (
@@ -189,8 +189,8 @@ and check_expr_type tpc ~specified = function
       | `Char, dt ->
           right |> show_data_type
           |> Printf.sprintf
-               "the expression on the right, has type %s, but the type on \
-                the left has type %s"
+               "the expression on the right, has type `%s`, but the type on \
+                the left has type `%s`"
                (dt |> show_data_type)
           |> failwith
       | dt, `I8
@@ -209,8 +209,8 @@ and check_expr_type tpc ~specified = function
           Diagnostic.EmitDiagnostic
             ( left |> show_data_type
               |> Printf.sprintf
-                   "the expression on the left, has type %s, but the type \
-                    on the right has type %s"
+                   "the expression on the left, has type `%s`, but the type \
+                    on the right has type `%s`"
                    (dt |> show_data_type),
               Diagnostic.Error,
               l )
@@ -219,8 +219,8 @@ and check_expr_type tpc ~specified = function
           Diagnostic.EmitDiagnostic
             ( dt |> show_data_type
               |> Printf.sprintf
-                   "bad type for comparison expression: [left: %s, right: \
-                    %s]"
+                   "bad type for comparison expression: [left: `%s`, right: \
+                    `%s`]"
                    (dt2 |> show_data_type),
               Diagnostic.Error,
               l )
@@ -234,8 +234,8 @@ and check_expr_type tpc ~specified = function
           Diagnostic.EmitDiagnostic
             ( dt2 |> show_data_type
               |> Printf.sprintf
-                   "bad type for comparison expression: [left: %s, right: \
-                    %s]"
+                   "bad type for comparison expression: [left: `%s`, right: \
+                    `%s`]"
                    (dt |> show_data_type),
               Diagnostic.Error,
               l )
@@ -249,7 +249,8 @@ and check_expr_type tpc ~specified = function
           Diagnostic.EmitDiagnostic
             ( dt2 |> show_data_type
               |> Printf.sprintf
-                   "bad type for logical expression: [left: %s, right: %s]"
+                   "bad type for logical expression: [left: `%s`, right: \
+                    `%s`]"
                    (dt |> show_data_type),
               Diagnostic.Error,
               l )
@@ -331,5 +332,14 @@ let check_constant_type tpc access =
   match access with
   | Decl (Constant { id; expr; data_type = dt; _ }), loc ->
       let dt2 = check_expr_type tpc (expr, loc) ~specified:(Some dt) in
-      if dt <> dt2 then failwith "error"
+      if dt <> dt2 then
+        Diagnostic.EmitDiagnostic
+          ( dt |> show_data_type
+            |> Printf.sprintf
+                 "the inferred `%s` type doesn\'t match the specified `%s` \
+                  type"
+                 (show_data_type dt2),
+            Diagnostic.Error,
+            loc )
+        |> raise
   | _ -> failwith "unreachable"
