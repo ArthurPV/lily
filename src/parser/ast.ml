@@ -1,56 +1,57 @@
 open Lily_lexer.Location
 
 type data_type =
-  [ `I8 [@printer fun fmt _ -> fprintf fmt "Int8"]
-  | `I16 [@printer fun fmt _ -> fprintf fmt "Int16"]
-  | `I32 [@printer fun fmt _ -> fpritnf fmt "Int32"]
-  | `I64 [@printer fun fmt _ -> fprintf fmt "Int64"]
-  | `I128 [@printer fun fmt _ -> fprintf fmt "Int128"]
-  | `U8 [@printer fun fmt _ -> fprintf fmt "Uint8"]
-  | `U16 [@printer fun fmt _ -> fprintf fmt "Uint16"]
-  | `U32 [@printer fun fmt _ -> fprintf fmt "Uint32"]
-  | `U64 [@printer fun fmt _ -> fprintf fmt "Uint64"]
-  | `U128 [@printer fun fmt _ -> fprintf fmt "Uint128"]
-  | `F32 [@printer fun fmt _ -> fprintf fmt "Float32"]
-  | `F64 [@printer fun fmt _ -> fprintf fmt "Float64"]
-  | `String [@printer fun fmt _ -> fprintf fmt "String"]
-  | `Char [@printer fun fmt _ -> fprintf fmt "Char"]
-  | `Usize [@printer fun fmt _ -> fprintf fmt "Usize"]
-  | `Isize [@printer fun fmt _ -> fprintf fmt "Isize"]
-  | `Bool [@printer fun fmt _ -> fprintf fmt "Bool"]
-  | `Unit [@printer fun fmt _ -> fprintf fmt "Unit"]
-  | `SelfArg [@printer fun fmt _ -> fprintf fmt "self"]
-  | `Err [@printer fun fmt _ -> fprintf fmt "err"]
+  [ `I8 
+  | `I16
+  | `I32
+  | `I64
+  | `I128
+  | `U8
+  | `U16
+  | `U32
+  | `U64
+  | `U128
+  | `F32
+  | `F64
+  | `String
+  | `Char
+  | `Usize
+  | `Isize
+  | `Bool
+  | `Unit 
+  | `SelfArg
+  | `Err
   | `Fun of data_type array * data_type
   | `Array of data_type
-    [@printer fun fmt dt -> fprintf fmt "[%s]" (show_data_type dt)]
   | `Tuple of data_type array
-    [@printer
-      fun fmt dt_arr ->
-        let rec loop ?(i = 0) ?(dt = []) () =
-          if i < Array.length dt_arr then
-            loop ~i:(i + 1) ~dt:(show_data_type dt_arr.(i) :: dt) ()
-          else dt |> List.rev |> String.concat ", "
-        in
-        let tp_s = loop () in
-        fprintf fmt "(%s)" tp_s]
   | `GroupingDataType of data_type
-    [@printer fun fmt dt -> fprintf fmt "%s" (show_data_type dt)]
-  | `Generics of string [@printer fun fmt s -> fprintf fmt "%s" s]
-  | `CustomType of string * data_type array option
-    [@printer
-      fun fmt (s, dt_arr) ->
-        match dt_arr with
-        | Some arr ->
-            let rec loop ?(i = 0) ?(dt = []) () =
-              if i < Array.length arr then
-                loop ~i:(i + 1) ~dt:(show_data_type arr.(i) :: dt) ()
-              else dt |> List.rev |> String.concat ", "
-            in
-            let dt = loop () in
-            fprintf fmt "%s[%s]" s dt
-        | None -> fprintf fmt "%s" s] ]
+  | `Generics of string
+  | `CustomType of string * data_type array option ]
 [@@deriving show]
+
+let rec show_data_type = function
+  | `I8 -> "Int8"
+  | `I16 -> "Int16"
+  | `I32 -> "Int32"
+  | `I64 -> "Int64"
+  | `I128 -> "Int128"
+  | `U8 -> "Uint8"
+  | `U16 -> "Uint16"
+  | `U32 -> "Uint32"
+  | `U64 -> "Uint64"
+  | `U128 -> "Uint128"
+  | `F32 -> "Float32"
+  | `F64 -> "Float64"
+  | `String -> "String"
+  | `Char -> "Char"
+  | `Usize -> "Usize"
+  | `Isize -> "Isize"
+  | `Bool -> "Bool"
+  | `Unit -> "Unit"
+  | `SelfArg -> "self"
+  | `Err -> "Err"
+  | `Array dt -> dt |> show_data_type |> Printf.sprintf "[%s]"
+  | _ -> failwith "todo"
 
 type literal_ast =
   | Bool of bool
