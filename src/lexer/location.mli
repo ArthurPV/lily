@@ -10,5 +10,10 @@ type location = {
 [@@deriving show]
 
 val new_location : string -> location
+(** [new_location filename] Init location type. *)
+
 val copy_location : location -> location
+(** [copy_location loc] Copy location from [loc]. *)
+
 val end_location : location -> location -> unit
+(** [end_location loc] Assign line and col to e_line and e_col from [loc]. *)

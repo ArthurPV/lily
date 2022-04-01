@@ -10,7 +10,7 @@ type source = {
 }
 
 val new_source : string -> string -> source
-(** [new_source filename content] Init source type *)
+(** [new_source filename content] Init source type. *)
 
 val read_file : string -> (string, cli_error_kind) result
 (** [read_file filename] Read file from filename. Return Error cli_error_kind
