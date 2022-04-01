@@ -1,7 +1,7 @@
 open Lily_lexer.Location
 
 type data_type =
-  [ `I8 
+  [ `I8
   | `I16
   | `I32
   | `I64
@@ -18,7 +18,7 @@ type data_type =
   | `Usize
   | `Isize
   | `Bool
-  | `Unit 
+  | `Unit
   | `SelfArg
   | `Err
   | `Fun of data_type array * data_type
