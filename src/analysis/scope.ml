@@ -124,6 +124,54 @@ let new_scope parser =
     idx_of_main_fun = -1;
   }
 
+let rec scope_access_to_node = function
+  | `Fun (_, _, _, loc, node)
+  | `Identifier (_, _, loc, node)
+  | `Type (_, _, _, loc, node) -> (
+      match node with Some n -> Some (n, loc) | None -> None)
+  | `Variant _ -> None
+  | `IdentifierAddr acc -> scope_access_to_node acc.(Array.length acc - 1)
+
+let rec insert_node_in_scope_access access nodes =
+  match access with
+  | `Fun (a, b, c, _, _) ->
+      `Fun
+        ( a,
+          b,
+          c,
+          (match nodes with
+          | Some (_, l) -> l
+          | None -> failwith "unreachable"),
+          match nodes with
+          | Some (n, _) -> Some n
+          | None -> failwith "unreachable" )
+  | `Identifier (a, b, _, _) ->
+      `Identifier
+        ( a,
+          b,
+          (match nodes with
+          | Some (_, l) -> l
+          | None -> failwith "unreachable"),
+          match nodes with
+          | Some (n, _) -> Some n
+          | None -> failwith "unreachable" )
+  | `Type (a, b, c, _, _) ->
+      `Type
+        ( a,
+          b,
+          c,
+          (match nodes with
+          | Some (_, l) -> l
+          | None -> failwith "unreachable"),
+          match nodes with
+          | Some (n, _) -> Some n
+          | None -> failwith "unreachable" )
+  | `Variant _ as v -> v
+  | `IdentifierAddr acc ->
+      acc.(Array.length acc - 1) <-
+        insert_node_in_scope_access acc.(Array.length acc - 1) nodes;
+      `IdentifierAddr acc
+
 let rec get_is_pub = function
   | `Fun (_, _, _, _, Some n) -> (
       match n with
@@ -747,6 +795,8 @@ and run_import scope ~path ~access ~as_value ~is_pub loc =
         scope_buf.global_pub <-
           get_global_access scope_buf scope_buf.parser.nodes ~p_pub:true;
         if verify_if_same_access scope scope.global > 0 then exit 1;
+        (* REVIEW this *)
+        scope_buf.global_pub <- check_decl scope_buf scope_buf.global_pub;
         push_buffer scope.buffer ~filename:path ~content
           (scope_buf.parser.lexer.tokens |> Array.map (fun (x, _) -> x))
           (scope_buf.parser.nodes |> Array.map (fun (x, _) -> x))
@@ -1445,7 +1495,8 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun
                               Some
                                 (check_expr_type scope.parser
                                    ( ast_to_expr checked_expr,
-                                     match nodes.(i) with _, l -> l ));
+                                     match nodes.(i) with _, l -> l )
+                                   ~specified:data_type);
                             expr = ast_to_expr checked_expr;
                             is_mut;
                           }),
@@ -1474,6 +1525,7 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun
           let infer_if_expr_dt =
             check_expr_type scope.parser
               (ast_to_expr checked_if_cond, match nodes.(i) with _, l -> l)
+              ~specified:None
           in
           if infer_if_expr_dt = `Bool then ()
           else
@@ -1506,6 +1558,7 @@ and check_fun_scope scope args call access nodes loc dt_op ~is_fun
                     check_expr_type scope.parser
                       ( ast_to_expr checked_elif_cond,
                         match nodes.(i) with _, l -> l )
+                      ~specified:None
                   in
                   if infer_elif_expr_dt = `Bool then ()
                   else
@@ -1621,6 +1674,8 @@ and run scope =
     scope.global_pub <-
       get_global_access scope scope.parser.nodes ~p_pub:true;
     if verify_if_same_access scope scope.global > 0 then exit 1;
+    (* REVIEW this *)
+    scope.global <- check_decl scope scope.global;
     let main_fun, idx = is_contain_main_fun scope in
     if main_fun |> Bool.not then (
       scope.idx_of_main_fun <- idx;
@@ -1650,14 +1705,52 @@ and run scope =
     |> Diagnostic.emit_diagnostic;
     exit 1)
 
-let check_alias_scope scope nodes = assert false
-let check_record_scope scope nodes = assert false
-let check_enum_scope scope nodes = assert false
-let check_variable_scope scope nodes = assert false
-let check_constant_scope scope nodes = assert false
-let check_module_scope scope nodes = assert false
-let check_block_scope scope nodes = assert false
-let check_scope scope nodes = assert false
+and check_alias_scope scope nodes = assert false
+and check_record_scope scope nodes = assert false
+
+and check_constant_scope scope nodes =
+  match nodes with
+  | Decl (Constant { id; expr; is_pub; data_type }), loc ->
+      let update_ast =
+        Decl
+          (Constant
+             {
+               id;
+               expr =
+                 [| scope.global |]
+                 |> check_expr scope (Expr expr |> ref) loc
+                 |> ast_to_expr;
+               is_pub;
+               data_type;
+             })
+      in
+      check_constant_type scope.parser (update_ast, loc);
+      (update_ast, loc)
+  | _ -> failwith "unreachable"
+
+and check_module_scope scope nodes = assert false
+
+and check_decl scope acc =
+  let map_arr = acc |> Array.map (fun x -> scope_access_to_node x) in
+  let rec loop ?(i = 0) () =
+    if i < Array.length map_arr then
+      match map_arr.(i) with
+      | Some (Decl (Constant _), _) as const ->
+          let convert =
+            match const with
+            | Some (n, l) -> (n, l)
+            | None -> failwith "unreachable"
+          in
+          (try map_arr.(i) <- Some (check_constant_scope scope convert)
+           with Diagnostic.EmitDiagnostic (msg, kind, loc) ->
+             loc
+             |> Diagnostic.new_diagnostic ~msg kind
+             |> Diagnostic.emit_diagnostic);
+          loop ~i:(i + 1) ()
+      | _ -> loop ~i:(i + 1) ()
+  in
+  loop ();
+  Array.map2 (fun x y -> insert_node_in_scope_access x y) acc map_arr
 
 (* Example:
 

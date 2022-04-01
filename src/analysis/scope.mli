@@ -107,6 +107,11 @@ type scope = {
 }
 
 val new_scope : parser -> scope
+val scope_access_to_node : scope_access -> (ast * location) option
+
+val insert_node_in_scope_access :
+  scope_access -> (ast * location) option -> scope_access
+
 val get_is_pub : scope_access -> bool
 
 val get_similar_identifier :
@@ -187,10 +192,7 @@ val check_fun_scope :
 
 val check_alias_scope : scope -> (ast * location) array -> unit
 val check_record_scope : scope -> (ast * location) array -> unit
-val check_enum_scope : scope -> (ast * location) array -> unit
-val check_variable_scope : scope -> (ast * location) array -> unit
-val check_constant_scope : scope -> (ast * location) array -> unit
+val check_constant_scope : scope -> ast * location -> ast * location
 val check_module_scope : scope -> (ast * location) array -> unit
-val check_block_scope : scope -> (ast * location) array -> unit
-val check_scope : scope -> (ast * location) array -> unit
+val check_decl : scope -> scope_access array -> scope_access array
 val run : scope -> unit

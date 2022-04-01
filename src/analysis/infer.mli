@@ -28,7 +28,7 @@ module InferFun : sig
   val get_data_type_from_return_arr :
     t ->
     'a ->
-    ('a -> expr * location -> data_type) ->
+    ('a -> specified:data_type option -> expr * location -> data_type) ->
     (expr * location) array ->
     unit
 
@@ -40,7 +40,9 @@ module InferFun : sig
   val infer_arg_type : argument array -> ast
 end
 
-val infer_integer_type : ast * location -> data_type
+val infer_integer_type :
+  ast * location -> specified:data_type option -> data_type
+
 val infer_float_type : ast * location -> data_type
 val infer_tuple_type : ast * location -> data_type
 val infer_array_type : ast * location -> data_type
