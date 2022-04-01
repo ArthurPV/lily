@@ -80,31 +80,54 @@ let infer_integer_type node ~specified =
       | Some `I32 -> `I32
       | Some `I8 ->
           Diagnostic.EmitDiagnostic
-            ("literal out of range for `i8`", Diagnostic.Error, loc)
+            ("literal out of range for `Int8`", Diagnostic.Error, loc)
           |> raise
       | Some `I16 ->
           Diagnostic.EmitDiagnostic
-            ("literal out of range for `i16`", Diagnostic.Error, loc)
+            ("literal out of range for `Int16`", Diagnostic.Error, loc)
           |> raise
       | Some `U8 when is_u8 -> `U8
       | Some `U16 when is_u16 -> `U16
       | Some `U32 when is_u32 -> `U32
       | Some `U8 ->
           Diagnostic.EmitDiagnostic
-            ("literal out of range for `u8`", Diagnostic.Error, loc)
+            ("literal out of range for `Uint8`", Diagnostic.Error, loc)
           |> raise
       | Some `U16 ->
           Diagnostic.EmitDiagnostic
-            ("literal out of range for `u16`", Diagnostic.Error, loc)
+            ("literal out of range for `Uint16`", Diagnostic.Error, loc)
           |> raise
       | Some `U32 ->
           Diagnostic.EmitDiagnostic
-            ("literal out of range for `u32`", Diagnostic.Error, loc)
+            ("literal out of range for `Uint32`", Diagnostic.Error, loc)
           |> raise
       | None -> `I32
       | _ -> failwith "error")
-  | Expr (Literal (Int64 _)), _ -> `I64
-  | Expr (Literal (Int128 _)), _ -> `I128
+  | Expr (Literal (Int64 i)), loc -> (
+      let i128 = i |> Stdint.Int64.to_int128 in
+
+      let is_u64 = IsUint.is64 i128 in
+
+      match specified with
+      | Some `I64 -> `I64
+      | Some `U64 when is_u64 -> `U64
+      | Some `U64 ->
+          Diagnostic.EmitDiagnostic
+            ("literal out of range for `Uint64`", Diagnostic.Error, loc)
+          |> raise
+      | None -> `I64
+      | _ -> failwith "error")
+  | Expr (Literal (Int128 i)), loc -> (
+      let is_u128 = Stdint.Int128.neg i <> i in
+      match specified with
+      | Some `I128 -> `I128
+      | Some `U128 when is_u128 -> `U128
+      | Some `U128 ->
+          Diagnostic.EmitDiagnostic
+            ("literal out of range for `Uint128`", Diagnostic.Error, loc)
+          |> raise
+      | None -> `I128
+      | _ -> failwith "error")
   | _ -> failwith "unreachable"
 
 let infer_float_type node = assert false
