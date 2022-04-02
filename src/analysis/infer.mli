@@ -55,7 +55,9 @@ val infer_unsigned_integer_type :
 val infer_integer_type :
   ast * location -> specified:data_type option -> neg:bool -> data_type
 
-val infer_float_type : ast * location -> data_type
+val infer_float_type :
+  location -> specified:data_type option -> data_type
+
 val infer_tuple_type : ast * location -> data_type
 val infer_array_type : ast * location -> data_type
 val infer_function_type : ast * location -> call:ast * location -> ast

@@ -173,9 +173,26 @@ let infer_integer_type node ~specified ~neg =
           | Expr (Literal (Int64 _)), _ -> `I64
           | Expr (Literal (Int128 _)), _ -> `I128
           | _ -> failwith "unreachable")
-      | _ -> failwith "error")
+      | Some t ->
+          Diagnostic.EmitDiagnostic
+            ( t |> show_data_type
+              |> Printf.sprintf "invalid specified type `%s`",
+              Diagnostic.Error,
+              match node with _, l -> l )
+          |> raise)
 
-let infer_float_type node = assert false
+let infer_float_type loc ~specified =
+  match specified with
+  | Some `F32 -> `F32
+  | Some `F64 -> `F64
+  | None -> `F32
+  | Some t ->
+      Diagnostic.EmitDiagnostic
+        ( t |> show_data_type |> Printf.sprintf "invalid specified type `%s`",
+          Diagnostic.Error,
+          loc )
+      |> raise
+
 let infer_tuple_type node = assert false
 let infer_array_type node = assert false
 let infer_function_type node ~call = assert false
