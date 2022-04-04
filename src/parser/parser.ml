@@ -290,6 +290,37 @@ let convert_in_integer (tok : token) =
           with Invalid_argument _ -> failwith "too long")))
   | _ -> failwith "unreachable"
 
+let verify_if_is_tuple parser =
+  let rec loop ?(n = 0) () =
+    match peek_token parser ~n with
+    | ( Some (Separator LeftParen)
+      | Some (Separator LeftHook)
+      | Some (Separator LeftBrace) ) as sep ->
+        let inv_sep =
+          match sep with
+          | Some (Separator LeftParen) -> Some (Separator RightParen)
+          | Some (Separator LeftHook) -> Some (Separator RightHook)
+          | Some (Separator LeftBrace) -> Some (Separator RightBrace)
+          | _ -> failwith "unrechable"
+        in
+        let rec loop2 ?(n = n+1) ?(count = 1) ?(find = 0) () =
+          if count <> find then
+            match peek_token parser ~n with
+            | s when s = sep -> loop2 ~n:(n + 1) ~count:(count + 1) ~find ()
+            | s when s = inv_sep ->
+                loop2 ~n:(n + 1) ~count ~find:(find + 1) ()
+            | None -> failwith "found eof"
+            | _ -> loop2 ~n:(n + 1) ~count ~find ()
+          else n
+        in
+        loop ~n:(loop2 ()) ()
+    | Some (Separator Comma) -> true
+    | Some (Separator RightParen) -> false
+    | None -> failwith "found eof"
+    | _ -> loop ~n:(n + 1) ()
+  in
+  loop ()
+
 let rec run parser =
   (* skip comemnt if is first *)
   (match parser.current_token with
@@ -783,6 +814,7 @@ and parse_self_access parser =
   else Self
 
 and parse_tuple parser =
+  if verify_if_is_tuple parser then (
   let rec loop ?(tuple = []) () =
     if parser.current_token <> Separator RightParen then (
       let expr = parse_expr2 parser in
@@ -798,7 +830,10 @@ and parse_tuple parser =
       next_token parser;
       Tuple (tuple |> List.rev |> Array.of_list))
   in
-  loop ()
+  loop ()) else (
+    let expr = parse_expr2 parser in
+    next_token parser;
+    Grouping expr)
 
 and parse_array parser =
   let rec loop ?(arr = []) () =
@@ -932,7 +967,14 @@ and parse_primary_expr parser =
 and parse_expr2 parser =
   let loc = Location.copy_location parser.current_location in
   let expr = parse_assign parser loc in
-  expr
+
+  match expr with
+  | Grouping _ ->
+      Diagnostic.new_diagnostic ~msg:"unnecessary parentheses on expr"
+        Diagnostic.Warning loc
+      |> Diagnostic.emit_diagnostic;
+      expr
+  | _ -> expr
 
 and parse_variable parser ~id ~is_mut =
   if parser.current_token <> Operator ColonEq then (
