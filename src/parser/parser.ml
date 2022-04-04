@@ -303,7 +303,7 @@ let verify_if_is_tuple parser =
           | Some (Separator LeftBrace) -> Some (Separator RightBrace)
           | _ -> failwith "unrechable"
         in
-        let rec loop2 ?(n = n+1) ?(count = 1) ?(find = 0) () =
+        let rec loop2 ?(n = n + 1) ?(count = 1) ?(find = 0) () =
           if count <> find then
             match peek_token parser ~n with
             | s when s = sep -> loop2 ~n:(n + 1) ~count:(count + 1) ~find ()
@@ -814,26 +814,27 @@ and parse_self_access parser =
   else Self
 
 and parse_tuple parser =
-  if verify_if_is_tuple parser then (
-  let rec loop ?(tuple = []) () =
-    if parser.current_token <> Separator RightParen then (
-      let expr = parse_expr2 parser in
-      if parser.current_token <> Separator RightParen then
-        Diagnostic.EmitDiagnostic
-          ( parser.current_token |> show_token
-            |> Printf.sprintf "expected `,`, found `%s`",
-            Diagnostic.Error,
-            parser.current_location )
-        |> expect_token parser (Separator Comma);
-      loop ~tuple:(expr :: tuple) ())
-    else (
-      next_token parser;
-      Tuple (tuple |> List.rev |> Array.of_list))
-  in
-  loop ()) else (
+  if verify_if_is_tuple parser then
+    let rec loop ?(tuple = []) () =
+      if parser.current_token <> Separator RightParen then (
+        let expr = parse_expr2 parser in
+        if parser.current_token <> Separator RightParen then
+          Diagnostic.EmitDiagnostic
+            ( parser.current_token |> show_token
+              |> Printf.sprintf "expected `,`, found `%s`",
+              Diagnostic.Error,
+              parser.current_location )
+          |> expect_token parser (Separator Comma);
+        loop ~tuple:(expr :: tuple) ())
+      else (
+        next_token parser;
+        Tuple (tuple |> List.rev |> Array.of_list))
+    in
+    loop ()
+  else
     let expr = parse_expr2 parser in
     next_token parser;
-    Grouping expr)
+    Grouping expr
 
 and parse_array parser =
   let rec loop ?(arr = []) () =
