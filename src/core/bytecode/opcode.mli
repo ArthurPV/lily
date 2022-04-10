@@ -1,46 +1,80 @@
+type value =
+  | True [@printer fun fmt _ -> fprintf fmt "`True"]
+  | False [@printer fun fmt _ -> fprintf fmt "`False"]
+  | String of string [@printer fun fmt s -> fprintf fmt "`String(%s)" s]
+  | Char of char [@printer fun fmt c -> fprintf fmt "`Char(%c)" c]
+  | Int8 of Stdint.int8
+      [@printer
+        fun fmt i -> fprintf fmt "`Int8(%s)" (Stdint.Int8.to_string i)]
+  | Int16 of Stdint.int16
+      [@printer
+        fun fmt i -> fprintf fmt "`Int16(%s)" (Stdint.Int16.to_string i)]
+  | Int32 of Stdint.int32
+      [@printer
+        fun fmt i -> fprintf fmt "`Int32(%s)" (Stdint.Int32.to_string i)]
+  | Int64 of Stdint.int64
+      [@printer
+        fun fmt i -> fprintf fmt "`Int64(%s)" (Stdint.Int64.to_string i)]
+  | Int128 of Stdint.int128
+      [@printer
+        fun fmt i -> fprintf fmt "`Int128(%s)" (Stdint.Int128.to_string i)]
+  | Uint8 of Stdint.uint8
+      [@printer
+        fun fmt i -> fprintf fmt "`Uint8(%s)" (Stdint.Uint8.to_string i)]
+  | Uint16 of Stdint.uint16
+      [@printer
+        fun fmt i -> fprintf fmt "`Uint16(%s)" (Stdint.Uint16.to_string i)]
+  | Uint32 of Stdint.uint32
+      [@printer
+        fun fmt i -> fprintf fmt "`Uint32(%s)" (Stdint.Uint32.to_string i)]
+  | Uint64 of Stdint.uint64
+      [@printer
+        fun fmt i -> fprintf fmt "`Uint64(%s)" (Stdint.Uint64.to_string i)]
+  | Uint128 of Stdint.uint128
+      [@printer
+        fun fmt i -> fprintf fmt "`Uint128(%s)" (Stdint.Uint128.to_string i)]
+  | Float32 of float
+      [@printer fun fmt f -> fprintf fmt "`Float32(%s)" (Float.to_string f)]
+  | Float64 of float
+      [@printer fun fmt f -> fprintf fmt "`Float64(%s)" (Float.to_string f)]
+  | Array [@printer fun fmt _ -> fprintf fmt "Array"]
+  | Tuple [@printer fun fmt _ -> fprintf fmt "Tuple"]
+  | Record [@printer fun fmt _ -> fprintf fmt "Record"]
+  | Object [@printer fun fmt _ -> fprintf fmt "Object"]
+  | Undef [@printer fun fmt _ -> fprintf fmt "Undef"]
+  | Nil [@printer fun fmt _ -> fprintf fmt "Nil"]
+[@@deriving show]
+
 type opcode =
-  | Noop
-  | Add
-  | Sub
-  | Mul
-  | Div
-  | Mod
-  | Lt
-  | Gt
-  | Le
-  | Ge
-  | Jump
-  | JumpIf
-  | Eq
-  | Ne
-  | LoadNil
-  | LoadTrue
-  | LoadFalse
-  | LoadConstant of Stdint.uint8
-      [@printer
-        fun fmt n ->
-          fprintf fmt "LoadConstant(%s)" (Stdint.Uint8.to_string n)]
-  | LoadSelf
-  | Closure
-  | Push
-  | Call
-  | In
-  | Get
-  | Put
-  | Length
-  | MakeArray
-  | MakeString
-  | MakeTuple
-  | MakeRecord
-  | MakeClass
-  | MakeFunction
-  | Construct
-  | And
-  | Or
-  | Not
-  | Return of Stdint.uint8
-      [@printer
-        fun fmt n -> fprintf fmt "Return(%s)" (Stdint.Uint8.to_string n)]
+  | Noop [@printer fun fmt _ -> fprintf fmt "`Noop"]
+  | Add [@printer fun fmt _ -> fprintf fmt "`Add"]
+  | Sub [@printer fun fmt _ -> fprintf fmt "`Sub"]
+  | Div [@printer fun fmt _ -> fprintf fmt "`Div"]
+  | Mul [@printer fun fmt _ -> fprintf fmt "`Mul"]
+  | Exp [@printer fun fmt _ -> fprintf fmt "`Exp"]
+  | Mod [@printer fun fmt _ -> fprintf fmt "`Mod"]
+  | Lt [@printer fun fmt _ -> fprintf fmt "`Lt"]
+  | Gt [@printer fun fmt _ -> fprintf fmt "`Gt"]
+  | Le [@printer fun fmt _ -> fprintf fmt "`Le"]
+  | Ge [@printer fun fmt _ -> fprintf fmt "`Ge"]
+  | Jump [@printer fun fmt _ -> fprintf fmt "`Jump"]
+  | JumpIf [@printer fun fmt _ -> fprintf fmt "`JumpIf"]
+  | Eq [@printer fun fmt _ -> fprintf fmt "`Eq"]
+  | Ne [@printer fun fmt _ -> fprintf fmt "`Ne"]
+  | Or [@printer fun fmt _ -> fprintf fmt "`Or"]
+  | (* | `Xor *)
+    And [@printer fun fmt _ -> fprintf fmt "`And"]
+  | LoadConstant of value
+      [@printer fun fmt v -> fprintf fmt "`LoadConstant(%s)" (show_value v)]
+  | StoreVariable of string
+      [@printer fun fmt var -> fprintf fmt "`StoreVariable(%s)" var]
+  | StoreFunction of string
+      [@printer fun fmt s -> fprintf fmt "`StoreFunction(%s)" s]
+  | LoadVariable of string
+      [@printer fun fmt s -> fprintf fmt "`LoadVariable(%s)" s]
+  | LoadFunction of string
+      [@printer fun fmt s -> fprintf fmt "`LoadFunction(%s)" s]
+  | Return [@printer fun fmt _ -> fprintf fmt "`Return"]
 [@@deriving show]
 
 val opcode_to_u8 : opcode -> Stdint.uint8

@@ -1,46 +1,82 @@
+(* x := 0 -> LoadConstant (LoadInt32 0) StoreVariable x *)
+
+type value =
+  | True [@printer fun fmt _ -> fprintf fmt "`True"]
+  | False [@printer fun fmt _ -> fprintf fmt "`False"]
+  | String of string [@printer fun fmt s -> fprintf fmt "`String(%s)" s]
+  | Char of char [@printer fun fmt c -> fprintf fmt "`Char(%c)" c]
+  | Int8 of Stdint.int8
+      [@printer
+        fun fmt i -> fprintf fmt "`Int8(%s)" (Stdint.Int8.to_string i)]
+  | Int16 of Stdint.int16
+      [@printer
+        fun fmt i -> fprintf fmt "`Int16(%s)" (Stdint.Int16.to_string i)]
+  | Int32 of Stdint.int32
+      [@printer
+        fun fmt i -> fprintf fmt "`Int32(%s)" (Stdint.Int32.to_string i)]
+  | Int64 of Stdint.int64
+      [@printer
+        fun fmt i -> fprintf fmt "`Int64(%s)" (Stdint.Int64.to_string i)]
+  | Int128 of Stdint.int128
+      [@printer
+        fun fmt i -> fprintf fmt "`Int128(%s)" (Stdint.Int128.to_string i)]
+  | Uint8 of Stdint.uint8
+      [@printer
+        fun fmt i -> fprintf fmt "`Uint8(%s)" (Stdint.Uint8.to_string i)]
+  | Uint16 of Stdint.uint16
+      [@printer
+        fun fmt i -> fprintf fmt "`Uint16(%s)" (Stdint.Uint16.to_string i)]
+  | Uint32 of Stdint.uint32
+      [@printer
+        fun fmt i -> fprintf fmt "`Uint32(%s)" (Stdint.Uint32.to_string i)]
+  | Uint64 of Stdint.uint64
+      [@printer
+        fun fmt i -> fprintf fmt "`Uint64(%s)" (Stdint.Uint64.to_string i)]
+  | Uint128 of Stdint.uint128
+      [@printer
+        fun fmt i -> fprintf fmt "`Uint128(%s)" (Stdint.Uint128.to_string i)]
+  | Float32 of float
+      [@printer fun fmt f -> fprintf fmt "`Float32(%s)" (Float.to_string f)]
+  | Float64 of float
+      [@printer fun fmt f -> fprintf fmt "`Float64(%s)" (Float.to_string f)]
+  | Array [@printer fun fmt _ -> fprintf fmt "Array"]
+  | Tuple [@printer fun fmt _ -> fprintf fmt "Tuple"]
+  | Record [@printer fun fmt _ -> fprintf fmt "Record"]
+  | Object [@printer fun fmt _ -> fprintf fmt "Object"]
+  | Undef [@printer fun fmt _ -> fprintf fmt "Undef"]
+  | Nil [@printer fun fmt _ -> fprintf fmt "Nil"]
+[@@deriving show]
+
 type opcode =
-  | Noop
-  | Add
-  | Sub
-  | Mul
-  | Div
-  | Mod
-  | Lt
-  | Gt
-  | Le
-  | Ge
-  | Jump
-  | JumpIf
-  | Eq
-  | Ne
-  | LoadNil
-  | LoadTrue
-  | LoadFalse
-  | LoadConstant of Stdint.uint8
-      [@printer
-        fun fmt n ->
-          fprintf fmt "LoadConstant(%s)" (Stdint.Uint8.to_string n)]
-  | LoadSelf
-  | Closure
-  | Push
-  | Call
-  | In
-  | Get
-  | Put
-  | Length
-  | MakeArray
-  | MakeString
-  | MakeTuple
-  | MakeRecord
-  | MakeClass
-  | MakeFunction
-  | Construct
-  | And
-  | Or
-  | Not
-  | Return of Stdint.uint8
-      [@printer
-        fun fmt n -> fprintf fmt "Return(%s)" (Stdint.Uint8.to_string n)]
+  | Noop [@printer fun fmt _ -> fprintf fmt "`Noop"]
+  | Add [@printer fun fmt _ -> fprintf fmt "`Add"]
+  | Sub [@printer fun fmt _ -> fprintf fmt "`Sub"]
+  | Div [@printer fun fmt _ -> fprintf fmt "`Div"]
+  | Mul [@printer fun fmt _ -> fprintf fmt "`Mul"]
+  | Exp [@printer fun fmt _ -> fprintf fmt "`Exp"]
+  | Mod [@printer fun fmt _ -> fprintf fmt "`Mod"]
+  | Lt [@printer fun fmt _ -> fprintf fmt "`Lt"]
+  | Gt [@printer fun fmt _ -> fprintf fmt "`Gt"]
+  | Le [@printer fun fmt _ -> fprintf fmt "`Le"]
+  | Ge [@printer fun fmt _ -> fprintf fmt "`Ge"]
+  | Jump [@printer fun fmt _ -> fprintf fmt "`Jump"]
+  | JumpIf [@printer fun fmt _ -> fprintf fmt "`JumpIf"]
+  | Eq [@printer fun fmt _ -> fprintf fmt "`Eq"]
+  | Ne [@printer fun fmt _ -> fprintf fmt "`Ne"]
+  | Or [@printer fun fmt _ -> fprintf fmt "`Or"]
+  | (* | `Xor *)
+    And [@printer fun fmt _ -> fprintf fmt "`And"]
+  | LoadConstant of value
+      [@printer fun fmt v -> fprintf fmt "`LoadConstant(%s)" (show_value v)]
+  | StoreVariable of string
+      [@printer fun fmt var -> fprintf fmt "`StoreVariable(%s)" var]
+  | StoreFunction of string
+      [@printer fun fmt s -> fprintf fmt "`StoreFunction(%s)" s]
+  | LoadVariable of string
+      [@printer fun fmt s -> fprintf fmt "`LoadVariable(%s)" s]
+  | LoadFunction of string
+      [@printer fun fmt s -> fprintf fmt "`LoadFunction(%s)" s]
+  | Return [@printer fun fmt _ -> fprintf fmt "`Return"]
 [@@deriving show]
 
 let opcode_to_u8 = function
@@ -50,34 +86,20 @@ let opcode_to_u8 = function
   | Mul -> Stdint.Uint8.of_int 3
   | Div -> Stdint.Uint8.of_int 4
   | Mod -> Stdint.Uint8.of_int 5
-  | Lt -> Stdint.Uint8.of_int 6
-  | Gt -> Stdint.Uint8.of_int 7
-  | Le -> Stdint.Uint8.of_int 8
-  | Ge -> Stdint.Uint8.of_int 9
-  | Jump -> Stdint.Uint8.of_int 10
-  | JumpIf -> Stdint.Uint8.of_int 11
-  | Eq -> Stdint.Uint8.of_int 12
-  | Ne -> Stdint.Uint8.of_int 13
-  | LoadNil -> Stdint.Uint8.of_int 14
-  | LoadTrue -> Stdint.Uint8.of_int 15
-  | LoadFalse -> Stdint.Uint8.of_int 16
+  | Exp -> Stdint.Uint8.of_int 6
+  | Lt -> Stdint.Uint8.of_int 7
+  | Gt -> Stdint.Uint8.of_int 8
+  | Le -> Stdint.Uint8.of_int 9
+  | Ge -> Stdint.Uint8.of_int 10
+  | Jump -> Stdint.Uint8.of_int 11
+  | JumpIf -> Stdint.Uint8.of_int 12
+  | Eq -> Stdint.Uint8.of_int 13
+  | Ne -> Stdint.Uint8.of_int 14
+  | Or -> Stdint.Uint8.of_int 15
+  | And -> Stdint.Uint8.of_int 16
   | LoadConstant _ -> Stdint.Uint8.of_int 17
-  | LoadSelf -> Stdint.Uint8.of_int 18
-  | Closure -> Stdint.Uint8.of_int 19
-  | Push -> Stdint.Uint8.of_int 20
-  | Call -> Stdint.Uint8.of_int 21
-  | In -> Stdint.Uint8.of_int 22
-  | Get -> Stdint.Uint8.of_int 23
-  | Put -> Stdint.Uint8.of_int 24
-  | Length -> Stdint.Uint8.of_int 25
-  | MakeArray -> Stdint.Uint8.of_int 26
-  | MakeString -> Stdint.Uint8.of_int 27
-  | MakeTuple -> Stdint.Uint8.of_int 28
-  | MakeRecord -> Stdint.Uint8.of_int 29
-  | MakeClass -> Stdint.Uint8.of_int 30
-  | MakeFunction -> Stdint.Uint8.of_int 31
-  | Construct -> Stdint.Uint8.of_int 32
-  | And -> Stdint.Uint8.of_int 33
-  | Or -> Stdint.Uint8.of_int 34
-  | Not -> Stdint.Uint8.of_int 35
-  | Return _ -> Stdint.Uint8.of_int 36
+  | StoreVariable _ -> Stdint.Uint8.of_int 18
+  | StoreFunction _ -> Stdint.Uint8.of_int 19
+  | LoadVariable _ -> Stdint.Uint8.of_int 20
+  | LoadFunction _ -> Stdint.Uint8.of_int 21
+  | Return -> Stdint.Uint8.of_int 22

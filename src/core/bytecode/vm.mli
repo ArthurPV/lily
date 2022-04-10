@@ -1,17 +1,13 @@
+open Lily_parser.Ast
+open Lily_lexer.Location
+open Stack
 open Opcode
-open Compile
-
-module Chunk : sig
-  type t = { code : opcode array; constants : LIR.t array (* change that *) }
-
-  val new_chunk : t
-  val get_constant : t -> int -> LIR.t
-end
-
-val stack_size : int
 
 type vm = {
-  chunk : Chunk.t;
-  ip : Stdint.uint8;
-  stack : LIR.t array; (* change that *)
+  main_node : ast * location;
+  stack : value stack;
+  reg : (Stdint.uint8, value) Hashtbl.t;
 }
+
+val new_vm : ast * location -> vm
+val run : vm -> unit

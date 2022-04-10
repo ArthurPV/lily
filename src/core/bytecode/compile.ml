@@ -1,134 +1,135 @@
-open Lily_parser.Ast
-open Lily_analysis.Scope
-
-(* Lily IR -> LIR *)
-module LIR = struct
-  type t =
-    | Int32 of Stdint.int32
-        [@printer
-          fun fmt i -> fprintf fmt "Int32(%s)" (Stdint.Int32.to_string i)]
-    | Int64 of Stdint.int64
-        [@printer
-          fun fmt i -> fprintf fmt "Int64(%s)" (Stdint.Int64.to_string i)]
-    | Int128 of Stdint.int128
-        [@printer
-          fun fmt i -> fprintf fmt "Int128(%s)" (Stdint.Int128.to_string i)]
-    | Float of float [@printer fun fmt f -> fprintf fmt "Float(%f)" f]
-    | Bool of bool
-        [@printer
-          fun fmt b -> fprintf fmt "Bool(%s)" (if b then "True" else "False")]
-    | String of string [@printer fun fmt s -> fprintf fmt "String(%s)" s]
-    | Char of char [@printer fun fmt c -> fprintf fmt "Char(%c)" c]
-    | Unit [@printer fun fmt _ -> fprintf fmt "Unit"]
-    | Object [@printer fun fmt _ -> fprintf fmt "Object"]
-    | Array of t array
-        [@printer
-          fun fmt arr ->
-            let rec loop ?(i = 0) ?(l = []) () =
-              if i < Array.length arr then
-                loop ~i:(i + 1) ~l:(show arr.(i) :: l) ()
-              else String.concat ", " l
-            in
-            fprintf fmt "Array(%s)" (loop ())]
-    | Tuple of t array
-    | Fun of string * t array (* TODO: add args *)
-    | Class of string * t array
-    | Method of string * t array
-    | Variable of string * t
-    | Constant of string * t
-    | Block of t option * t array
-    | Call of t array * t
-    | Ret of t [@printer fun fmt v -> fprintf fmt "Ret(%s)" (show v)]
-    | Undef [@printer fun fmt _ -> fprintf fmt "Undef"]
-    | Nil [@printer fun fmt _ -> fprintf fmt "Nil"]
-  [@@deriving show]
-
-  let to_int32 = function Int32 i -> i | _ -> failwith "unreachable"
-  let to_int64 = function Int64 i -> i | _ -> failwith "unreachable"
-  let to_int128 = function Int128 i -> i | _ -> failwith "unreachable"
-  let to_float = function Float f -> f | _ -> failwith "unreachable"
-  let to_bool = function Bool b -> b | _ -> failwith "unreachable"
-  let to_string = function String s -> s | _ -> failwith "unreachable"
-  let to_char = function Char c -> c | _ -> failwith "unreachable"
-end
-
-type compiler = { scope : scope; nodes_value : LIR.t array }
+module Ast = Lily_parser.Ast
+module Opcode = Opcode
+(* open Lily_lexer.Location open Opcode open Stack *)
 
 [@@@warning "-27"]
+[@@@warning "-26"]
 
-(* EVAL expression, fun, class... *)
-let rec compile node =
+let rec compile_expr ~dt node codes =
   match node with
-  | Expr (Literal (Int32 i)) -> LIR.Int32 i
-  | Expr (Literal (Int64 i)) -> LIR.Int64 i
-  | Expr (Literal (Int128 i)) -> LIR.Int128 i
-  | Expr (Literal (Float f)) -> LIR.Float f
-  | Expr (Literal (String s)) -> LIR.String s
-  | Expr (Literal (Char c)) -> LIR.Char c
-  | Expr (Literal (Bool b)) -> LIR.Bool b
-  | Expr (Identifier (s, ref_ast)) -> (
-      match ref_ast with
-      | Some v -> compile v
-      | None -> failwith "unreachable")
-  | Expr (IdentifierAccess (s, ref_ast)) -> (
-      match ref_ast with
-      | Some v -> compile v
-      | None -> failwith "unreachable")
-  | Expr (Grouping expr) -> compile (Expr expr)
-  | Expr (Positive expr) -> compile (Expr expr)
-  | Expr (Negative expr) -> compile (Expr expr)
-  | Expr (Not expr) -> compile (Expr expr)
-  | Expr Undef -> LIR.Undef
-  | Expr Nil -> LIR.Nil
-  | Decl (Variable { id; data_type; expr; is_mut }) ->
-      LIR.Variable (id, compile (Expr expr))
-  | Decl (Constant { id; data_type; expr; is_pub }) ->
-      LIR.Constant (id, compile (Expr expr))
-  | Expr (Array arr) ->
-      let rec loop ?(i = 0) ?(l = []) () =
-        if i < Array.length arr then
-          loop ~i:(i + 1) ~l:(compile (Expr arr.(i)) :: l) ()
-        else LIR.Array (l |> Array.of_list)
+  | Some (Ast.Add (x, y), l) ->
+      let lhs = compile_expr ~dt (Some (x, l)) [] in
+      let rhs = compile_expr ~dt (Some (y, l)) [] in
+      if get_precedence (Ast.Add (x, y)) < get_precedence y then
+        rhs @ lhs @ [ Opcode.Add ]
+      else rhs @ lhs @ [ Opcode.Add ]
+  | Some (Ast.Sub (x, y), l) ->
+      let lhs = compile_expr ~dt (Some (x, l)) [] in
+      let rhs = compile_expr ~dt (Some (y, l)) [] in
+      if get_precedence (Ast.Sub (x, y)) < get_precedence y then
+        rhs @ lhs @ [ Opcode.Sub ]
+      else rhs @ lhs @ [ Opcode.Sub ]
+  | Some (Ast.Mul (x, y), l) ->
+      let lhs = compile_expr ~dt (Some (x, l)) [] in
+      let rhs = compile_expr ~dt (Some (y, l)) [] in
+      if get_precedence (Ast.Mul (x, y)) < get_precedence y then
+        rhs @ lhs @ [ Opcode.Mul ]
+      else rhs @ lhs @ [ Opcode.Mul ]
+  | Some (Ast.Div (x, y), l) ->
+      let lhs = compile_expr ~dt (Some (x, l)) [] in
+      let rhs = compile_expr ~dt (Some (y, l)) [] in
+      if get_precedence (Ast.Div (x, y)) < get_precedence y then
+        rhs @ lhs @ [ Opcode.Div ]
+      else rhs @ lhs @ [ Opcode.Mul ]
+  | Some (Ast.Exp (x, y), l) ->
+      let lhs = compile_expr ~dt (Some (x, l)) [] in
+      let rhs = compile_expr ~dt (Some (y, l)) [] in
+      if get_precedence (Ast.Exp (x, y)) < get_precedence y then
+        rhs @ lhs @ [ Opcode.Exp ]
+      else rhs @ lhs @ [ Opcode.Exp ]
+  | Some (Ast.Literal (Int32 i), _) ->
+      compile_expr ~dt None
+        (compile_integer ~dt (Ast.Literal (Int32 i)) :: codes)
+  | Some (Ast.Literal (Ast.Int64 i), _) ->
+      compile_expr ~dt None
+        (compile_integer ~dt (Ast.Literal (Int64 i)) :: codes)
+  | Some (Ast.Literal (Int128 i), _) ->
+      compile_expr ~dt None
+        (compile_integer ~dt (Ast.Literal (Int128 i)) :: codes)
+  | Some (Ast.Literal (Float f), _) ->
+      let op =
+        match dt with
+        | Some `F32 -> Opcode.LoadConstant (Float32 f)
+        | Some `F64 -> Opcode.LoadConstant (Float64 f)
+        | _ -> failwith "unreachable"
       in
-      loop ()
-  | Expr (Tuple arr) ->
-      let rec loop ?(i = 0) ?(l = []) () =
-        if i < Array.length arr then
-          loop ~i:(i + 1) ~l:(compile (Expr arr.(i)) :: l) ()
-        else LIR.Tuple (l |> Array.of_list)
-      in
-      loop ()
-  | Decl
-      (Fun
-        {
-          id;
-          args;
-          poly_args;
-          return_type;
-          body;
-          is_pub;
-          is_async;
-          is_export;
-          is_test;
-        }) ->
-      let body_map = body |> Array.map (fun (t, _) -> t) in
-      let rec loop ?(body = []) ?(i = 0) () =
-        if i < Array.length body_map then
-          loop ~body:(compile body_map.(i) :: body) ~i:(i + 1) ()
-        else LIR.Fun (id, body |> Array.of_list)
-      in
-      loop ()
-  | Stmt (Return expr) -> LIR.Ret (compile (Expr expr))
-  | _ -> failwith "not implemented"
+      compile_expr ~dt None (op :: codes)
+  | Some (Ast.Literal (Bool true), _) ->
+      compile_expr ~dt None (Opcode.LoadConstant True :: codes)
+  | Some (Ast.Literal (Bool false), _) ->
+      compile_expr ~dt None (Opcode.LoadConstant False :: codes)
+  | Some (Ast.Literal (Char c), _) ->
+      compile_expr ~dt None (Opcode.LoadConstant (Char c) :: codes)
+  | Some (Ast.Literal (String s), _) ->
+      compile_expr ~dt None (Opcode.LoadConstant (String s) :: codes)
+  | None -> codes
+  | _ -> failwith "todo"
 
-let run compiler =
-  let main = compiler.scope.parser.nodes.(compiler.scope.idx_of_main_fun) in
-  match match main with n, _ -> n with
-  | Decl (Fun { body; _ }) ->
-      let rec loop ?(i = 0) () =
-        if i < Array.length body then (
-          Printf.printf "Hello";
-          loop ~i:(i + 1) ())
+and compile_integer ~dt = function
+  | Literal (Int32 i) -> (
+      match dt with
+      | Some `I8 -> Opcode.LoadConstant (Int8 (Stdint.Int8.of_int32 i))
+      | Some `I16 -> Opcode.LoadConstant (Int16 (Stdint.Int16.of_int32 i))
+      | Some `I32 -> Opcode.LoadConstant (Int32 i)
+      | Some `I64 -> Opcode.LoadConstant (Int64 (Stdint.Int64.of_int32 i))
+      | Some `I128 -> Opcode.LoadConstant (Int128 (Stdint.Int128.of_int32 i))
+      | Some `U8 -> Opcode.LoadConstant (Uint8 (Stdint.Uint8.of_int32 i))
+      | Some `U16 -> Opcode.LoadConstant (Uint16 (Stdint.Uint16.of_int32 i))
+      | Some `U32 -> Opcode.LoadConstant (Uint32 (Stdint.Uint32.of_int32 i))
+      | Some `U64 -> Opcode.LoadConstant (Uint64 (Stdint.Uint64.of_int32 i))
+      | Some `U128 ->
+          Opcode.LoadConstant (Uint128 (Stdint.Uint128.of_int32 i))
+      | _ -> failwith "unreachable")
+  | Literal (Int64 i) -> (
+      match dt with
+      | Some `I64 -> Opcode.LoadConstant (Int64 i)
+      | Some `I128 -> Opcode.LoadConstant (Int128 (Stdint.Int128.of_int64 i))
+      | Some `U64 -> Opcode.LoadConstant (Uint64 (Stdint.Uint64.of_int64 i))
+      | Some `U128 ->
+          Opcode.LoadConstant (Uint128 (Stdint.Uint128.of_int64 i))
+      | _ -> failwith "unreachable")
+  | Literal (Int128 i) -> (
+      match dt with
+      | Some `I128 -> Opcode.LoadConstant (Int128 i)
+      | Some `U128 ->
+          Opcode.LoadConstant (Uint128 (Stdint.Uint128.of_int128 i))
+      | _ -> failwith "unreachable")
+  | _ -> failwith "unreachable"
+
+and get_precedence = function
+  | Ast.AddAssign _ | Ast.SubAssign _ | Ast.MulAssign _ | Ast.DivAssign _
+  | Ast.Assign _ | Ast.ExpAssign _ | Ast.ModAssign _ | Ast.Literal _ ->
+      0
+  | Ast.Or _ -> 1
+  | Ast.And _ -> 2
+  | Ast.Eq _ | Ast.Ne _ -> 3
+  | Ast.Lt _ | Ast.Gt _ | Ast.Le _ | Ast.Ge _ -> 4
+  | Ast.Range _ -> 5
+  | Ast.Add _ | Ast.Sub _ -> 6
+  | Ast.Mul _ | Ast.Div _ | Ast.Mod _ -> 7
+  | Ast.Exp _ -> 8
+  | Ast.Positive _ | Ast.Negative _ | Ast.Not _ -> 9
+  | _ -> failwith "unreachable"
+
+and compile_variable node =
+  match node with
+  | Ast.Decl (Variable { id; expr; data_type = dt; _ }), l ->
+      let l = compile_expr ~dt (Some (expr, l)) [] in
+      l @ [ StoreVariable id ]
+  | _ -> failwith "unreachable"
+
+and compile_function node = assert false
+
+and run node =
+  match node with
+  | Ast.Decl (Fun { body; _ }), _ ->
+      let rec loop ?(codes = []) ?(i = 0) () =
+        if i < Array.length body then
+          match body.(i) with
+          | (Decl (Variable _), _) as var ->
+              loop ~codes:(codes @ compile_variable var) ~i:(i + 1) ()
+          | _ -> failwith "unreachable"
+        else codes
       in
       loop ()
   | _ -> failwith "unreachable"
