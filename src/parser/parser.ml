@@ -187,6 +187,7 @@ let rec parse_data_type parser =
   | Identifier "Uint128" -> `U128
   | Identifier "Float32" -> `F32
   | Identifier "Float64" -> `F64
+  | Identifier "Char" -> `Char
   | Identifier "String" -> `String
   | Identifier "Usize" -> `Usize
   | Identifier "Isize" -> `Isize
@@ -393,72 +394,108 @@ and parse_assign parser loc =
   else node
 
 and parse_logical_or parser =
-  let node = parse_logical_and parser in
-  if matches parser (Keyword Or) then Or (node, parse_logical_or parser)
-  else node
+  let node = parser |> parse_logical_and |> ref in
+  let rec loop () =
+    if matches parser (Keyword Or) then (
+      node := Or (!node, parse_logical_and parser);
+      loop ())
+  in
+  loop ();
+  !node
 
 and parse_logical_and parser =
-  let node = parse_equality parser in
-  if matches parser (Keyword And) then And (node, parse_logical_and parser)
-  else node
+  let node = parser |> parse_equality |> ref in
+  let rec loop () =
+    if matches parser (Keyword And) then (
+      node := And (!node, parse_equality parser);
+      loop ())
+  in
+  loop ();
+  !node
 
 and parse_equality parser =
-  let node = parse_comparison parser in
-  if matches parser (Operator EqEq) || matches parser (Operator BangEq) then
-    match parser.previous_token with
-    | Operator EqEq -> Eq (node, parse_equality parser)
-    | Operator BangEq -> Ne (node, parse_equality parser)
-    | _ -> failwith "unreachable"
-  else node
+  let node = parser |> parse_comparison |> ref in
+  let rec loop () =
+    if matches parser (Operator EqEq) || matches parser (Operator BangEq)
+    then (
+      (match parser.previous_token with
+      | Operator EqEq -> node := Eq (!node, parse_comparison parser)
+      | Operator BangEq -> node := Ne (!node, parse_comparison parser)
+      | _ -> failwith "unreachable");
+      loop ())
+  in
+  loop ();
+  !node
 
 and parse_comparison parser =
-  let node = parse_range parser in
-  if
-    matches parser (Operator LeftShift)
-    || matches parser (Operator RightShift)
-    || matches parser (Operator LeftShiftEq)
-    || matches parser (Operator RightShiftEq)
-  then
-    match parser.previous_token with
-    | Operator LeftShift -> Lt (node, parse_comparison parser)
-    | Operator RightShift -> Gt (node, parse_comparison parser)
-    | Operator LeftShiftEq -> Le (node, parse_comparison parser)
-    | Operator RightShiftEq -> Ge (node, parse_comparison parser)
-    | _ -> failwith "unreachable"
-  else node
+  let node = parser |> parse_range |> ref in
+  let rec loop () =
+    if
+      matches parser (Operator LeftShift)
+      || matches parser (Operator RightShift)
+      || matches parser (Operator LeftShiftEq)
+      || matches parser (Operator RightShiftEq)
+    then (
+      (match parser.previous_token with
+      | Operator LeftShift -> node := Lt (!node, parse_range parser)
+      | Operator RightShift -> node := Gt (!node, parse_range parser)
+      | Operator LeftShiftEq -> node := Le (!node, parse_range parser)
+      | Operator RightShiftEq -> node := Ge (!node, parse_range parser)
+      | _ -> failwith "unreachable");
+      loop ())
+  in
+  loop ();
+  !node
 
 and parse_range parser =
-  let node = parse_term parser in
-  if matches parser (Operator DotDot) then Range (node, parse_range parser)
-  else node
+  let node = parser |> parse_term |> ref in
+  let rec loop () =
+    if matches parser (Operator DotDot) then (
+      node := Range (!node, parse_term parser);
+      loop ())
+  in
+  loop ();
+  !node
 
 and parse_term parser =
-  let node = parse_factor parser in
-  if matches parser (Operator Plus) || matches parser (Operator Minus) then
-    match parser.previous_token with
-    | Operator Plus -> Add (node, parse_term parser)
-    | Operator Minus -> Sub (node, parse_term parser)
-    | _ -> failwith "unreachable"
-  else node
+  let node = parser |> parse_factor |> ref in
+  let rec loop () =
+    if matches parser (Operator Plus) || matches parser (Operator Minus) then (
+      (match parser.previous_token with
+      | Operator Plus -> node := Add (!node, parse_factor parser)
+      | Operator Minus -> node := Sub (!node, parse_factor parser)
+      | _ -> failwith "unreachable");
+      loop ())
+  in
+  loop ();
+  !node
 
 and parse_factor parser =
-  let node = parse_exp parser in
-  if
-    matches parser (Operator Star)
-    || matches parser (Operator Slash)
-    || matches parser (Operator Percentage)
-  then
-    match parser.previous_token with
-    | Operator Star -> Mul (node, parse_factor parser)
-    | Operator Slash -> Div (node, parse_factor parser)
-    | Operator Percentage -> Mod (node, parse_factor parser)
-    | _ -> failwith "unreachable"
-  else node
+  let node = parser |> parse_exp |> ref in
+  let rec loop () =
+    if
+      matches parser (Operator Star)
+      || matches parser (Operator Slash)
+      || matches parser (Operator Percentage)
+    then (
+      (match parser.previous_token with
+      | Operator Star -> node := Mul (!node, parse_exp parser)
+      | Operator Slash -> node := Div (!node, parse_exp parser)
+      | Operator Percentage -> node := Mod (!node, parse_exp parser)
+      | _ -> failwith "unreachable");
+      loop ())
+  in
+  loop ();
+  !node
 
 and parse_exp parser =
-  let node = parse_unary parser in
-  if matches parser (Operator Hat) then Exp (node, parse_exp parser)
-  else node
+  let node = parser |> parse_unary |> ref in
+  let rec loop () =
+    if matches parser (Operator Hat) then (
+      node := Exp (!node, parse_unary parser);
+      loop ()) in
+  loop ();
+  !node
 
 and parse_unary parser =
   if

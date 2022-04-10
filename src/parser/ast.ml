@@ -51,6 +51,10 @@ let rec show_data_type = function
   | `SelfArg -> "self"
   | `Err -> "Err"
   | `Array dt -> dt |> show_data_type |> Printf.sprintf "[%s]"
+  | `Tuple _ -> "Tuple"
+  | `GroupingDataType _ -> "Grouping"
+  | `Generics _ -> "Generics"
+  | `CustomType _ -> "CustomType"
   | _ -> failwith "todo"
 
 type literal_ast =
