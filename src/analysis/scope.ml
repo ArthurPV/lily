@@ -1685,6 +1685,7 @@ and run scope =
            "please add main function.\nhelp: ```fun main = end```"
       |> Diagnostic.emit_diagnostic;
       exit 1);
+    scope.idx_of_main_fun <- idx;
     check_fun_scope scope [||] [||]
       [| ref scope.global |]
       (match scope.parser.nodes.(idx) with

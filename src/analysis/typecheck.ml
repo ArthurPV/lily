@@ -323,8 +323,7 @@ and check_expr_type tpc ~specified ~neg = function
       infer_integer_type (Expr (Literal (Int64 i)), loc) ~specified ~neg
   | Literal (Int128 i), loc ->
       infer_integer_type (Expr (Literal (Int128 i)), loc) ~specified ~neg
-  | Literal (Float f), loc ->
-      infer_float_type loc ~specified
+  | Literal (Float f), loc -> infer_float_type loc ~specified
   | Literal (String _), _ -> `String
   | Literal (Char _), _ -> `Char
   | Literal (Bool _), _ -> `Bool

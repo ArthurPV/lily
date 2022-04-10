@@ -160,7 +160,17 @@ let infer_integer_type node ~specified ~neg =
   | Some `U32, true
   | Some `U64, true
   | Some `U128, true ->
-      failwith "error"
+      Diagnostic.EmitDiagnostic
+        ( (match specified with
+          | Some t -> t
+          | None -> failwith "unreachable")
+          |> show_data_type
+          |> Printf.sprintf
+               "invalid specified type `%s`, expected signed integer (Int8, \
+                Int16, Int32, Int64, Int128)",
+          Diagnostic.Error,
+          match node with _, l -> l )
+      |> raise
   | _ -> (
       match specified with
       | Some `U8 | Some `U16 | Some `U32 | Some `U64 | Some `U128 ->
