@@ -395,11 +395,11 @@ type parser = {
 - [x] Parse return
 - [x] Parse await
 - [x] Parse while
-- [ ] Parse for
+- [x] Parse for
 
 ## Analysis
 
-- [ ] Scope
+- [x] Scope
 - [ ] Type check
 
 ### Scope
