@@ -10,87 +10,59 @@ let rec compile_expr ~dt node codes =
   | Some (Ast.Add (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Add (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Add ]
-      else rhs @ lhs @ [ Opcode.Add ]
+      rhs @ lhs @ [ Opcode.Add ]
   | Some (Ast.Sub (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Sub (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Sub ]
-      else rhs @ lhs @ [ Opcode.Sub ]
+      rhs @ lhs @ [ Opcode.Sub ]
   | Some (Ast.Mul (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Mul (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Mul ]
-      else rhs @ lhs @ [ Opcode.Mul ]
+      rhs @ lhs @ [ Opcode.Mul ]
   | Some (Ast.Div (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Div (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Div ]
-      else rhs @ lhs @ [ Opcode.Mul ]
+      rhs @ lhs @ [ Opcode.Div ]
   | Some (Ast.Exp (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Exp (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Exp ]
-      else rhs @ lhs @ [ Opcode.Exp ]
+      rhs @ lhs @ [ Opcode.Exp ]
 | Some (Ast.Mod (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Mod (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Mod ]
-      else rhs @ lhs @ [ Opcode.Mod ]
+      rhs @ lhs @ [ Opcode.Mod ]
 | Some (Ast.Lt (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Lt (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Lt ]
-      else rhs @ lhs @ [ Opcode.Lt ]
+      rhs @ lhs @ [ Opcode.Lt ]
 | Some (Ast.Gt (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Gt (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Gt ]
-      else rhs @ lhs @ [ Opcode.Gt ]
+      rhs @ lhs @ [ Opcode.Gt ]
 | Some (Ast.Le (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Le (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Le ]
-      else rhs @ lhs @ [ Opcode.Le ]
+      rhs @ lhs @ [ Opcode.Le ]
 | Some (Ast.Ge (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Ge (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Ge ]
-      else rhs @ lhs @ [ Opcode.Ge ]
+      rhs @ lhs @ [ Opcode.Ge ]
 | Some (Ast.Eq (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Eq (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Eq ]
-      else rhs @ lhs @ [ Opcode.Eq ]
+      rhs @ lhs @ [ Opcode.Eq ]
 | Some (Ast.Ne (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Ne (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Ne ]
-      else rhs @ lhs @ [ Opcode.Ne ]
+      rhs @ lhs @ [ Opcode.Ne ]
   | Some (Ast.And (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.And (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.And ]
-      else rhs @ lhs @ [ Opcode.And ]
+      rhs @ lhs @ [ Opcode.And ]
   | Some (Ast.Or (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
-      if get_precedence (Ast.Or (x, y)) < get_precedence y then
-        rhs @ lhs @ [ Opcode.Or ]
-      else rhs @ lhs @ [ Opcode.Or ]
+      rhs @ lhs @ [ Opcode.Or ]
   | Some (Ast.Literal (Int32 i), _) ->
       compile_expr ~dt None
         (compile_integer ~dt (Ast.Literal (Int32 i)) :: codes)
