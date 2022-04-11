@@ -51,7 +51,7 @@
 
 > Defining a function with operator like name.
 ```
-fun (+)(x, y) =
+fun `+`(x, y) =
 	x+y
 end
 ```
