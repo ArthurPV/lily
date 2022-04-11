@@ -122,21 +122,6 @@ and compile_integer ~dt = function
       | _ -> failwith "unreachable")
   | _ -> failwith "unreachable"
 
-and get_precedence = function
-  | Ast.AddAssign _ | Ast.SubAssign _ | Ast.MulAssign _ | Ast.DivAssign _
-  | Ast.Assign _ | Ast.ExpAssign _ | Ast.ModAssign _ | Ast.Literal _ ->
-      0
-  | Ast.Or _ -> 1
-  | Ast.And _ -> 2
-  | Ast.Eq _ | Ast.Ne _ -> 3
-  | Ast.Lt _ | Ast.Gt _ | Ast.Le _ | Ast.Ge _ -> 4
-  | Ast.Range _ -> 5
-  | Ast.Add _ | Ast.Sub _ -> 6
-  | Ast.Mul _ | Ast.Div _ | Ast.Mod _ -> 7
-  | Ast.Exp _ -> 8
-  | Ast.Positive _ | Ast.Negative _ | Ast.Not _ -> 9
-  | _ -> failwith "unreachable"
-
 and compile_variable node =
   match node with
   | Ast.Decl (Variable { id; expr; data_type = dt; _ }), l ->

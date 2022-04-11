@@ -8,7 +8,6 @@ val compile_expr :
   opcode list ->
   opcode list
 
-val get_precedence : expr -> int
 val compile_integer : dt:data_type option -> expr -> opcode
 val compile_variable : ast * location -> opcode list
 val compile_function : ast * location -> opcode list
