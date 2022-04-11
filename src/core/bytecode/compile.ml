@@ -37,6 +37,24 @@ let rec compile_expr ~dt node codes =
       if get_precedence (Ast.Exp (x, y)) < get_precedence y then
         rhs @ lhs @ [ Opcode.Exp ]
       else rhs @ lhs @ [ Opcode.Exp ]
+| Some (Ast.Mod (x, y), l) ->
+      let lhs = compile_expr ~dt (Some (x, l)) [] in
+      let rhs = compile_expr ~dt (Some (y, l)) [] in
+      if get_precedence (Ast.Mod (x, y)) < get_precedence y then
+        rhs @ lhs @ [ Opcode.Mod ]
+      else rhs @ lhs @ [ Opcode.Mod ]
+  | Some (Ast.And (x, y), l) ->
+      let lhs = compile_expr ~dt (Some (x, l)) [] in
+      let rhs = compile_expr ~dt (Some (y, l)) [] in
+      if get_precedence (Ast.And (x, y)) < get_precedence y then
+        rhs @ lhs @ [ Opcode.And ]
+      else rhs @ lhs @ [ Opcode.And ]
+  | Some (Ast.Or (x, y), l) ->
+      let lhs = compile_expr ~dt (Some (x, l)) [] in
+      let rhs = compile_expr ~dt (Some (y, l)) [] in
+      if get_precedence (Ast.Or (x, y)) < get_precedence y then
+        rhs @ lhs @ [ Opcode.Or ]
+      else rhs @ lhs @ [ Opcode.Or ]
   | Some (Ast.Literal (Int32 i), _) ->
       compile_expr ~dt None
         (compile_integer ~dt (Ast.Literal (Int32 i)) :: codes)
