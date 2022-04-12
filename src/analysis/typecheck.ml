@@ -369,7 +369,14 @@ and check_array_type tpc expr ~specified =
   let rec loop ?(i = 0) ?(dt = None) () =
     if i < Array.length exprs then
       let expr_dt =
-        Some (check_expr_type tpc ~specified:dt ~neg:false (exprs.(i), loc))
+        Some
+          (check_expr_type tpc
+             ~specified:
+               (match specified with
+               | Some (`Array dt) -> Some dt
+               | _ -> failwith "unreachable")
+             ~neg:false
+             (exprs.(i), loc))
       in
       if dt = None then loop ~i:(i + 1) ~dt:expr_dt ()
       else if dt = expr_dt then loop ~i:(i + 1) ~dt ()
@@ -380,7 +387,10 @@ and check_array_type tpc expr ~specified =
     `Array
       (match loop () with
       | Some t -> t
-      | None -> failwith "error: specify the data type of array")
+      | None when specified = None ->
+          failwith "error: specify the data type of array"
+      | None -> (
+          match specified with Some t -> t | None -> failwith "unreachable"))
   in
   if Some dt = specified || specified = None then dt else failwith "error"
 
