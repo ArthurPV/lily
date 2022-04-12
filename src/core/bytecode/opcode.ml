@@ -55,6 +55,13 @@ type opcode =
   | Mul [@printer fun fmt _ -> fprintf fmt "`Mul"]
   | Exp [@printer fun fmt _ -> fprintf fmt "`Exp"]
   | Mod [@printer fun fmt _ -> fprintf fmt "`Mod"]
+  | AddTo [@printer fun fmt _ -> fprintf fmt "`AddTo"]
+  | SubTo [@printer fun fmt _ -> fprintf fmt "`SubTo"]
+  | DivTo [@printer fun fmt _ -> fprintf fmt "`DivTo"]
+  | MulTo [@printer fun fmt _ -> fprintf fmt "`MulTo"]
+  | ExpTo [@printer fun fmt _ -> fprintf fmt "`ExpTo"]
+  | ModTo [@printer fun fmt _ -> fprintf fmt "`ModTo"]
+  | To [@printer fun fmt _ -> fprintf fmt "`To"]
   | Lt [@printer fun fmt _ -> fprintf fmt "`Lt"]
   | Gt [@printer fun fmt _ -> fprintf fmt "`Gt"]
   | Le [@printer fun fmt _ -> fprintf fmt "`Le"]
@@ -87,19 +94,26 @@ let opcode_to_u8 = function
   | Div -> Stdint.Uint8.of_int 4
   | Mod -> Stdint.Uint8.of_int 5
   | Exp -> Stdint.Uint8.of_int 6
-  | Lt -> Stdint.Uint8.of_int 7
-  | Gt -> Stdint.Uint8.of_int 8
-  | Le -> Stdint.Uint8.of_int 9
-  | Ge -> Stdint.Uint8.of_int 10
-  | Jump -> Stdint.Uint8.of_int 11
-  | JumpIf -> Stdint.Uint8.of_int 12
-  | Eq -> Stdint.Uint8.of_int 13
-  | Ne -> Stdint.Uint8.of_int 14
-  | Or -> Stdint.Uint8.of_int 15
-  | And -> Stdint.Uint8.of_int 16
-  | LoadConstant _ -> Stdint.Uint8.of_int 17
-  | StoreVariable _ -> Stdint.Uint8.of_int 18
-  | StoreFunction _ -> Stdint.Uint8.of_int 19
-  | LoadVariable _ -> Stdint.Uint8.of_int 20
-  | LoadFunction _ -> Stdint.Uint8.of_int 21
-  | Return -> Stdint.Uint8.of_int 22
+  | AddTo -> Stdint.Uint8.of_int 7
+  | SubTo -> Stdint.Uint8.of_int 8
+  | DivTo -> Stdint.Uint8.of_int 9
+  | MulTo -> Stdint.Uint8.of_int 10
+  | ExpTo -> Stdint.Uint8.of_int 11
+  | ModTo -> Stdint.Uint8.of_int 12
+  | To -> Stdint.Uint8.of_int 13
+  | Lt -> Stdint.Uint8.of_int 14
+  | Gt -> Stdint.Uint8.of_int 15
+  | Le -> Stdint.Uint8.of_int 16
+  | Ge -> Stdint.Uint8.of_int 17
+  | Jump -> Stdint.Uint8.of_int 18
+  | JumpIf -> Stdint.Uint8.of_int 19
+  | Eq -> Stdint.Uint8.of_int 20
+  | Ne -> Stdint.Uint8.of_int 21
+  | Or -> Stdint.Uint8.of_int 22
+  | And -> Stdint.Uint8.of_int 23
+  | LoadConstant _ -> Stdint.Uint8.of_int 24
+  | StoreVariable _ -> Stdint.Uint8.of_int 25
+  | StoreFunction _ -> Stdint.Uint8.of_int 26
+  | LoadVariable _ -> Stdint.Uint8.of_int 27
+  | LoadFunction _ -> Stdint.Uint8.of_int 28
+  | Return -> Stdint.Uint8.of_int 29

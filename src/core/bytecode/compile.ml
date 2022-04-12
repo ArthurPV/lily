@@ -63,6 +63,49 @@ let rec compile_expr ~dt node codes =
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
       rhs @ lhs @ [ Opcode.Or ]
+  | Some (Ast.AddAssign (x, y), l) ->
+      let rhs = compile_expr ~dt (Some (x, l)) [] in
+      rhs
+      @ [
+          Opcode.AddTo;
+          Opcode.StoreVariable (get_string_id_from_identifier x);
+        ]
+  | Some (Ast.SubAssign (x, y), l) ->
+      let rhs = compile_expr ~dt (Some (x, l)) [] in
+      rhs
+      @ [
+          Opcode.SubTo;
+          Opcode.StoreVariable (get_string_id_from_identifier x);
+        ]
+  | Some (Ast.DivAssign (x, y), l) ->
+      let rhs = compile_expr ~dt (Some (x, l)) [] in
+      rhs
+      @ [
+          Opcode.DivTo;
+          Opcode.StoreVariable (get_string_id_from_identifier x);
+        ]
+  | Some (Ast.MulAssign (x, y), l) ->
+      let rhs = compile_expr ~dt (Some (x, l)) [] in
+      rhs
+      @ [
+          Opcode.MulTo;
+          Opcode.StoreVariable (get_string_id_from_identifier x);
+        ]
+  | Some (Ast.ExpAssign (x, y), l) ->
+      let rhs = compile_expr ~dt (Some (x, l)) [] in
+      rhs
+      @ [
+          Opcode.ExpTo;
+          Opcode.StoreVariable (get_string_id_from_identifier x);
+        ]
+  | Some (Ast.ModAssign (x, y), l) ->
+      let rhs = compile_expr ~dt (Some (x, l)) [] in
+      rhs
+      @ [
+          Opcode.ModTo;
+          Opcode.StoreVariable (get_string_id_from_identifier x);
+        ]
+  | Some (Ast.Identifier (id, _), _) -> [ Opcode.LoadVariable id ]
   | Some (Ast.Literal (Int32 i), _) ->
       compile_expr ~dt None
         (compile_integer ~dt (Ast.Literal (Int32 i)) :: codes)
@@ -120,6 +163,14 @@ and compile_integer ~dt = function
       | Some `U128 ->
           Opcode.LoadConstant (Uint128 (Stdint.Uint128.of_int128 i))
       | _ -> failwith "unreachable")
+  | _ -> failwith "unreachable"
+
+and get_string_id_from_identifier = function
+  | Ast.Identifier (id, _) -> id
+  | Ast.IdentifierAccess (id, _) | Ast.SelfAccess (id, _) ->
+      id
+      |> Array.map (fun x -> Ast.show_expr x)
+      |> Array.to_list |> String.concat "."
   | _ -> failwith "unreachable"
 
 and compile_variable node =
