@@ -214,6 +214,39 @@ let rec parse_data_type parser =
             Diagnostic.Error,
             parser.current_location )
         |> raise
+  | Separator LeftParen ->
+      if is_data_type parser ~n:0 then (
+        let rec loop ?(dts = [||]) () =
+          if
+            parser.current_token <> Separator RightParen
+            && parser.current_token <> Separator Eof
+          then (
+            let dt = parse_data_type parser in
+            if parser.current_token <> Separator RightParen then
+              Diagnostic.EmitDiagnostic
+                ( show_token parser.current_token
+                  |> Printf.sprintf "expected `,`, found `%s`",
+                  Diagnostic.Error,
+                  parser.current_location )
+              |> expect_token parser (Separator Comma);
+            loop ~dts:(Array.append dts [| dt |]) ())
+          else dts
+        in
+        let dts = loop () in
+        Diagnostic.EmitDiagnostic
+          ( show_token parser.current_token
+            |> Printf.sprintf "expected `)`, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> expect_token parser (Separator RightParen);
+        `Tuple dts)
+      else
+        Diagnostic.EmitDiagnostic
+          ( show_token parser.current_token
+            |> Printf.sprintf "expected data type, found `%s`",
+            Diagnostic.Error,
+            parser.current_location )
+        |> raise
   | _ ->
       Diagnostic.EmitDiagnostic
         ( show_token parser.previous_token
@@ -274,7 +307,9 @@ and is_binop parser ~n =
 and is_data_type parser ~n =
   match peek_token ~n parser with
   | Some (Identifier _) | Some (Separator Bar) | Some (Keyword Self) -> true
-  | Some (Separator LeftHook) when is_data_type parser ~n:(n + 1) -> true
+  | (Some (Separator LeftHook) | Some (Separator LeftParen))
+    when is_data_type parser ~n:(n + 1) ->
+      true
   | _ -> false
 
 [@@@warning "-27"]
