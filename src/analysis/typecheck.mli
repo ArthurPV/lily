@@ -26,6 +26,9 @@ val check_type :
 val check_tuple_type :
   typecheck -> expr * location -> specified:data_type option -> data_type
 
+val check_array_type :
+  typecheck -> expr * location -> specified:data_type option -> data_type
+
 val check_fun_args_type : argument array -> ast
 val check_fun_type : ast -> ast
 val check_constant_type : typecheck -> ast * location -> unit

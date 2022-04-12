@@ -315,7 +315,7 @@ and check_expr_type tpc ~specified ~neg = function
   | SelfAccess (xs, r), _ -> failwith "not implemented"
   | AnonymousFunction (args, body), _ -> failwith "not implemented"
   | (Tuple _, _) as tuple -> check_tuple_type tpc tuple ~specified
-  | Array vals, _ -> failwith "not implemented"
+  | (Array _, _) as arr -> check_array_type tpc arr ~specified
   | Variant (id, args), _ -> failwith "not implemented"
   | Literal (Int32 i), loc ->
       infer_integer_type (Expr (Literal (Int32 i)), loc) ~specified ~neg
@@ -359,7 +359,30 @@ and check_tuple_type tpc expr ~specified =
     else dts
   in
   let dt = `Tuple (loop ()) in
-  if Some dt = specified || specified <> None then dt else failwith "error"
+  if Some dt = specified || specified = None then dt else failwith "error"
+
+and check_array_type tpc expr ~specified =
+  let _, loc = expr in
+  let exprs =
+    match expr with Array exprs, _ -> exprs | _ -> failwith "unreachable"
+  in
+  let rec loop ?(i = 0) ?(dt = None) () =
+    if i < Array.length exprs then
+      let expr_dt =
+        Some (check_expr_type tpc ~specified:dt ~neg:false (exprs.(i), loc))
+      in
+      if dt = None then loop ~i:(i + 1) ~dt:expr_dt ()
+      else if dt = expr_dt then loop ~i:(i + 1) ~dt ()
+      else failwith "error"
+    else dt
+  in
+  let dt =
+    `Array
+      (match loop () with
+      | Some t -> t
+      | None -> failwith "error: specify the data type of array")
+  in
+  if Some dt = specified || specified = None then dt else failwith "error"
 
 and check_fun_args_type args = assert false
 and check_fun_type node = assert false
