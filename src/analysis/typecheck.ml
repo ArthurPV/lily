@@ -314,7 +314,7 @@ and check_expr_type tpc ~specified ~neg = function
   | IdentifierAccess (xs, r), _ -> failwith "not implemented"
   | SelfAccess (xs, r), _ -> failwith "not implemented"
   | AnonymousFunction (args, body), _ -> failwith "not implemented"
-  | Tuple vals, _ -> failwith "not implemented"
+  | (Tuple _, _) as tuple -> check_tuple_type tpc tuple ~specified
   | Array vals, _ -> failwith "not implemented"
   | Variant (id, args), _ -> failwith "not implemented"
   | Literal (Int32 i), loc ->
@@ -335,6 +335,31 @@ and check_type tpc ~specified ~neg = function
   | Decl _, _ -> failwith "not implemented"
   | Expr e, l -> check_expr_type tpc ~specified ~neg (e, l)
   | _ -> failwith "not implemented"
+
+and check_tuple_type tpc expr ~specified =
+  let _, loc = expr in
+  let exprs =
+    match expr with Tuple exprs, _ -> exprs | _ -> failwith "unreachable"
+  in
+  let rec loop ?(i = 0) ?(dts = [||]) () =
+    if i < Array.length exprs then
+      let dt =
+        match specified with
+        | Some (`Tuple dts) -> Some dts.(i)
+        | None -> None
+        | _ -> failwith "error"
+      in
+      loop ~i:(i + 1)
+        ~dts:
+          (Array.append dts
+             [|
+               check_expr_type tpc ~specified:dt ~neg:false (exprs.(i), loc);
+             |])
+        ()
+    else dts
+  in
+  let dt = `Tuple (loop ()) in
+  if Some dt = specified || specified <> None then dt else failwith "error"
 
 and check_fun_args_type args = assert false
 and check_fun_type node = assert false
