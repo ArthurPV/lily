@@ -105,6 +105,10 @@ let rec compile_expr ~dt node codes =
           Opcode.ModTo;
           Opcode.StoreVariable (get_string_id_from_identifier x);
         ]
+  | Some (Ast.Assign (x, y), l) ->
+      let rhs = compile_expr ~dt (Some (x, l)) [] in
+      rhs
+      @ [ Opcode.To; Opcode.StoreVariable (get_string_id_from_identifier x) ]
   | Some (Ast.Identifier (id, _), _) -> [ Opcode.LoadVariable id ]
   | Some (Ast.Literal (Int32 i), _) ->
       compile_expr ~dt None
