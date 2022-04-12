@@ -33,5 +33,5 @@ let run_bytecode filename =
         (fun x ->
           Printf.printf "[  %d] %s\n" !count (Opcode.show_opcode x);
           count := !count + 1)
-        l 
+        l
   | Error err -> CliError.print_cli_error (CliError.show_cli_error_kind err)
