@@ -359,7 +359,7 @@ and check_tuple_type tpc expr ~specified =
     else dts
   in
   let dt = `Tuple (loop ()) in
-  if Some dt = specified || specified = None then dt else failwith "error"
+  if Some dt = specified then dt else if specified = None then dt else failwith "error"
 
 and check_array_type tpc expr ~specified =
   let _, loc = expr in
@@ -392,7 +392,7 @@ and check_array_type tpc expr ~specified =
       | None -> (
           match specified with Some t -> t | None -> failwith "unreachable"))
   in
-  if Some dt = specified || specified = None then dt else failwith "error"
+  if Some dt = specified then dt else failwith "error"
 
 and check_fun_args_type args = assert false
 and check_fun_type node = assert false
