@@ -359,7 +359,9 @@ and check_tuple_type tpc expr ~specified =
     else dts
   in
   let dt = `Tuple (loop ()) in
-  if Some dt = specified then dt else if specified = None then dt else failwith "error"
+  if Some dt = specified then dt
+  else if specified = None then dt
+  else failwith "error"
 
 and check_array_type tpc expr ~specified =
   let _, loc = expr in
