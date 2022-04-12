@@ -7,8 +7,7 @@ let test () =
     "pub self virtual break next if elif else match and or not while for \
      new undef alias record trait enum fun end in import class try catch \
      type object async await module as do include macro test True False \
-     return nil mut\n" |> Source.new_source ""
-    |> Lexer.new_lexer
+     return nil mut\n" |> Source.new_source "" |> Lexer.new_lexer
   in
   Lexer.run lexer;
   let tokens = lexer.tokens |> Array.map (fun (t, _) -> t) in

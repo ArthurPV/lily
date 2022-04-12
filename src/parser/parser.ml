@@ -493,7 +493,8 @@ and parse_exp parser =
   let rec loop () =
     if matches parser (Operator Hat) then (
       node := Exp (!node, parse_unary parser);
-      loop ()) in
+      loop ())
+  in
   loop ();
   !node
 

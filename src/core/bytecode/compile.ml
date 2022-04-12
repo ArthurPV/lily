@@ -27,31 +27,31 @@ let rec compile_expr ~dt node codes =
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
       rhs @ lhs @ [ Opcode.Exp ]
-| Some (Ast.Mod (x, y), l) ->
+  | Some (Ast.Mod (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
       rhs @ lhs @ [ Opcode.Mod ]
-| Some (Ast.Lt (x, y), l) ->
+  | Some (Ast.Lt (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
       rhs @ lhs @ [ Opcode.Lt ]
-| Some (Ast.Gt (x, y), l) ->
+  | Some (Ast.Gt (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
       rhs @ lhs @ [ Opcode.Gt ]
-| Some (Ast.Le (x, y), l) ->
+  | Some (Ast.Le (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
       rhs @ lhs @ [ Opcode.Le ]
-| Some (Ast.Ge (x, y), l) ->
+  | Some (Ast.Ge (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
       rhs @ lhs @ [ Opcode.Ge ]
-| Some (Ast.Eq (x, y), l) ->
+  | Some (Ast.Eq (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
       rhs @ lhs @ [ Opcode.Eq ]
-| Some (Ast.Ne (x, y), l) ->
+  | Some (Ast.Ne (x, y), l) ->
       let lhs = compile_expr ~dt (Some (x, l)) [] in
       let rhs = compile_expr ~dt (Some (y, l)) [] in
       rhs @ lhs @ [ Opcode.Ne ]
