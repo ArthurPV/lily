@@ -177,6 +177,22 @@ and can_recude_expression = function
   | _ -> false
 
 and reduce_expression ~dt = function
+  | Ast.Positive (Literal (Int32 x)) ->
+      Ast.Literal (Int32 x) |> compile_integer ~dt
+  | Ast.Positive (Literal (Int64 x)) ->
+      Ast.Literal (Int64 x) |> compile_integer ~dt
+  | Ast.Positive (Literal (Int128 x)) ->
+      Ast.Literal (Int128 x) |> compile_integer ~dt
+  | Ast.Positive (Literal (Float x)) ->
+      Ast.Literal (Float x) |> compile_integer ~dt
+  | Ast.Negative (Literal (Int32 x)) ->
+      Ast.Literal (Int32 (Stdint.Int32.neg x)) |> compile_integer ~dt
+  | Ast.Negative (Literal (Int64 x)) ->
+      Ast.Literal (Int64 (Stdint.Int64.neg x)) |> compile_integer ~dt
+  | Ast.Negative (Literal (Int128 x)) ->
+      Ast.Literal (Int128 (Stdint.Int128.neg x)) |> compile_integer ~dt
+  | Ast.Negative (Literal (Float x)) ->
+      Ast.Literal (Float (Float.neg x)) |> compile_float ~dt
   | Ast.Add (Literal (Int32 x), Literal (Int32 y)) ->
       Ast.Literal (Int32 (Stdint.Int32.( + ) x y)) |> compile_integer ~dt
   | Ast.Add (Literal (Int64 x), Literal (Int64 y)) ->
@@ -221,6 +237,19 @@ and reduce_expression ~dt = function
       Ast.Literal (Int64 (Mod.Int64.( mod ) x y)) |> compile_integer ~dt
   | Ast.Mod (Literal (Int128 x), Literal (Int128 y)) ->
       Ast.Literal (Int128 (Mod.Int128.( mod ) x y)) |> compile_integer ~dt
+  | Ast.Exp (Literal (Float x), Literal (Float y)) ->
+      Ast.Literal (Float (Float.pow x y)) |> compile_float ~dt
+  | Ast.And (Literal (Bool x), Literal (Bool y)) ->
+      let const =
+        match x && y with true -> Opcode.True | false -> Opcode.False
+      in
+      Opcode.LoadConstant const
+  | Ast.Or (Literal (Bool x), Literal (Bool y)) ->
+      let const =
+        match x || y with true -> Opcode.True | false -> Opcode.False
+      in
+      Opcode.LoadConstant const
+  (* | Xor *)
   | _ -> failwith "unreachable"
 
 and compile_variable node =
