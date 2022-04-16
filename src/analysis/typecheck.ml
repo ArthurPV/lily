@@ -104,12 +104,96 @@ and check_expr_type tpc ~specified ~neg = function
       match check_expr_type tpc (x, l) ~specified ~neg with
       | `Bool -> `Bool
       | _ -> failwith "error")
-  | Mul (x, y), l
-  | Div (x, y), l
-  | Mod (x, y), l
-  | Add (x, y), l
-  | Sub (x, y), l
-  | Exp (x, y), l -> (
+  | Div (x, y), l -> (
+      let left = check_expr_type tpc (x, l) ~specified ~neg in
+      let right = check_expr_type tpc (y, l) ~specified ~neg in
+      let dt =
+        match specified with
+        | Some `F32 -> `F32
+        | Some `F64 -> `F64
+        | None -> `F32
+        | _ -> failwith "error"
+      in
+      match (left, right) with
+      | `I8, `I8
+      | `I16, `I16
+      | `I32, `I32
+      | `I64, `I64
+      | `I128, `I128
+      | `U8, `U8
+      | `U16, `U16
+      | `U32, `U32
+      | `U64, `U64
+      | `U128, `U128
+      | `F32, `F32 ->
+          dt
+      | `F64, `F64 -> `F64
+      | `I8, _
+      | `I16, _
+      | `I32, _
+      | `I64, _
+      | `I128, _
+      | `U8, _
+      | `U16, _
+      | `U32, _
+      | `U64, _
+      | `U128, _
+      | `F32, _
+      | `F64, _ ->
+          failwith "error"
+      | _, `I8
+      | _, `I16
+      | _, `I32
+      | _, `I64
+      | _, `I128
+      | _, `U8
+      | _, `U16
+      | _, `U32
+      | _, `U64
+      | _, `U128
+      | _, `F32
+      | _, `F64 ->
+          failwith "error"
+      | _ -> failwith "error")
+  | Mod (x, y), l -> (
+      let left = check_expr_type tpc (x, l) ~specified ~neg in
+      let right = check_expr_type tpc (y, l) ~specified ~neg in
+
+      match (left, right) with
+      | `I8, `I8 -> `I8
+      | `I16, `I16 -> `I16
+      | `I32, `I32 -> `I32
+      | `I64, `I64 -> `I64
+      | `I128, `I128 -> `I128
+      | `U8, `U8 -> `U8
+      | `U16, `U16 -> `U16
+      | `U32, `U32 -> `U32
+      | `U64, `U64 -> `U64
+      | `U128, `U128 -> `U128
+      | `I8, _
+      | `I16, _
+      | `I32, _
+      | `I64, _
+      | `I128, _
+      | `U8, _
+      | `U16, _
+      | `U32, _
+      | `U64, _
+      | `U128, _ ->
+          failwith "error"
+      | _, `I8
+      | _, `I16
+      | _, `I32
+      | _, `I64
+      | _, `I128
+      | _, `U8
+      | _, `U16
+      | _, `U32
+      | _, `U64
+      | _, `U128 ->
+          failwith "error"
+      | _ -> failwith "error")
+  | Mul (x, y), l | Add (x, y), l | Sub (x, y), l | Exp (x, y), l -> (
       let left = check_expr_type tpc (x, l) ~specified ~neg in
       let right = check_expr_type tpc (y, l) ~specified ~neg in
       try check_arithmetic_expr (left, right)
