@@ -1,5 +1,6 @@
 module Ast = Lily_parser.Ast
 module Opcode = Opcode
+module Mod = Lily_common.Mod
 (* open Lily_lexer.Location open Opcode open Stack *)
 
 [@@@warning "-27"]
@@ -64,51 +65,33 @@ let rec compile_expr ~dt node codes =
       let rhs = compile_expr ~dt (Some (y, l)) [] in
       rhs @ lhs @ [ Opcode.Or ]
   | Some (Ast.AddAssign (x, y), l) ->
+      let id = get_string_id_from_identifier x in
       let rhs = compile_expr ~dt (Some (x, l)) [] in
-      rhs
-      @ [
-          Opcode.AddTo;
-          Opcode.StoreVariable (get_string_id_from_identifier x);
-        ]
+      rhs @ [ Opcode.AddTo id; Opcode.StoreVariable id ]
   | Some (Ast.SubAssign (x, y), l) ->
+      let id = get_string_id_from_identifier x in
       let rhs = compile_expr ~dt (Some (x, l)) [] in
-      rhs
-      @ [
-          Opcode.SubTo;
-          Opcode.StoreVariable (get_string_id_from_identifier x);
-        ]
+      rhs @ [ Opcode.SubTo id ]
   | Some (Ast.DivAssign (x, y), l) ->
+      let id = get_string_id_from_identifier x in
       let rhs = compile_expr ~dt (Some (x, l)) [] in
-      rhs
-      @ [
-          Opcode.DivTo;
-          Opcode.StoreVariable (get_string_id_from_identifier x);
-        ]
+      rhs @ [ Opcode.DivTo id ]
   | Some (Ast.MulAssign (x, y), l) ->
+      let id = get_string_id_from_identifier x in
       let rhs = compile_expr ~dt (Some (x, l)) [] in
-      rhs
-      @ [
-          Opcode.MulTo;
-          Opcode.StoreVariable (get_string_id_from_identifier x);
-        ]
+      rhs @ [ Opcode.MulTo id ]
   | Some (Ast.ExpAssign (x, y), l) ->
+      let id = get_string_id_from_identifier x in
       let rhs = compile_expr ~dt (Some (x, l)) [] in
-      rhs
-      @ [
-          Opcode.ExpTo;
-          Opcode.StoreVariable (get_string_id_from_identifier x);
-        ]
+      rhs @ [ Opcode.ExpTo id ]
   | Some (Ast.ModAssign (x, y), l) ->
+      let id = get_string_id_from_identifier x in
       let rhs = compile_expr ~dt (Some (x, l)) [] in
-      rhs
-      @ [
-          Opcode.ModTo;
-          Opcode.StoreVariable (get_string_id_from_identifier x);
-        ]
+      rhs @ [ Opcode.ModTo id ]
   | Some (Ast.Assign (x, y), l) ->
+      let id = get_string_id_from_identifier x in
       let rhs = compile_expr ~dt (Some (x, l)) [] in
-      rhs
-      @ [ Opcode.To; Opcode.StoreVariable (get_string_id_from_identifier x) ]
+      rhs @ [ Opcode.To id ]
   | Some (Ast.Identifier (id, _), _) -> [ Opcode.LoadVariable id ]
   | Some (Ast.Literal (Int32 i), _) ->
       compile_expr ~dt None
@@ -120,13 +103,8 @@ let rec compile_expr ~dt node codes =
       compile_expr ~dt None
         (compile_integer ~dt (Ast.Literal (Int128 i)) :: codes)
   | Some (Ast.Literal (Float f), _) ->
-      let op =
-        match dt with
-        | Some `F32 -> Opcode.LoadConstant (Float32 f)
-        | Some `F64 -> Opcode.LoadConstant (Float64 f)
-        | _ -> failwith "unreachable"
-      in
-      compile_expr ~dt None (op :: codes)
+      compile_expr ~dt None
+        (compile_float ~dt (Ast.Literal (Float f)) :: codes)
   | Some (Ast.Literal (Bool true), _) ->
       compile_expr ~dt None (Opcode.LoadConstant True :: codes)
   | Some (Ast.Literal (Bool false), _) ->
@@ -169,12 +147,80 @@ and compile_integer ~dt = function
       | _ -> failwith "unreachable")
   | _ -> failwith "unreachable"
 
+and compile_float ~dt = function
+  | Ast.Literal (Float f) -> (
+      match dt with
+      | Some `F32 -> Opcode.LoadConstant (Float32 f)
+      | Some `F64 -> Opcode.LoadConstant (Float64 f)
+      | _ -> failwith "unreachable")
+  | _ -> failwith "unreachable"
+
 and get_string_id_from_identifier = function
   | Ast.Identifier (id, _) -> id
   | Ast.IdentifierAccess (id, _) | Ast.SelfAccess (id, _) ->
       id
       |> Array.map (fun x -> Ast.show_expr x)
       |> Array.to_list |> String.concat "."
+  | _ -> failwith "unreachable"
+
+and can_recude_expression = function
+  | Ast.Add (Literal _, Literal _)
+  | Ast.Sub (Literal _, Literal _)
+  | Ast.Mul (Literal _, Literal _)
+  | Ast.Div (Literal _, Literal _)
+  | Ast.Exp (Literal _, Literal _)
+  | Ast.Mod (Literal _, Literal _)
+  | Ast.And (Literal _, Literal _)
+  | Ast.Or (Literal _, Literal _)
+  | Ast.Negative _ | Ast.Positive _ ->
+      true
+  | _ -> false
+
+and reduce_expression ~dt = function
+  | Ast.Add (Literal (Int32 x), Literal (Int32 y)) ->
+      Ast.Literal (Int32 (Stdint.Int32.( + ) x y)) |> compile_integer ~dt
+  | Ast.Add (Literal (Int64 x), Literal (Int64 y)) ->
+      Ast.Literal (Int64 (Stdint.Int64.( + ) x y)) |> compile_integer ~dt
+  | Ast.Add (Literal (Int128 x), Literal (Int128 y)) ->
+      Ast.Literal (Int128 (Stdint.Int128.( + ) x y)) |> compile_integer ~dt
+  | Ast.Add (Literal (Float x), Literal (Float y)) ->
+      Ast.Literal (Float (x +. y)) |> compile_float ~dt
+  | Ast.Sub (Literal (Int32 x), Literal (Int32 y)) ->
+      Ast.Literal (Int32 (Stdint.Int32.( - ) x y)) |> compile_integer ~dt
+  | Ast.Sub (Literal (Int64 x), Literal (Int64 y)) ->
+      Ast.Literal (Int64 (Stdint.Int64.( - ) x y)) |> compile_integer ~dt
+  | Ast.Sub (Literal (Int128 x), Literal (Int128 y)) ->
+      Ast.Literal (Int128 (Stdint.Int128.( - ) x y)) |> compile_integer ~dt
+  | Ast.Sub (Literal (Float x), Literal (Float y)) ->
+      Ast.Literal (Float (x -. y)) |> compile_float ~dt
+  | Ast.Mul (Literal (Int32 x), Literal (Int32 y)) ->
+      Ast.Literal (Int32 (Stdint.Int32.( * ) x y)) |> compile_integer ~dt
+  | Ast.Mul (Literal (Int64 x), Literal (Int64 y)) ->
+      Ast.Literal (Int64 (Stdint.Int64.( * ) x y)) |> compile_integer ~dt
+  | Ast.Mul (Literal (Int128 x), Literal (Int128 y)) ->
+      Ast.Literal (Int128 (Stdint.Int128.( * ) x y)) |> compile_integer ~dt
+  | Ast.Mul (Literal (Float x), Literal (Float y)) ->
+      Ast.Literal (Float (x *. y)) |> compile_float ~dt
+  | Ast.Div (Literal (Int32 x), Literal (Int32 y)) ->
+      let f1 = Stdint.Int32.to_float x in
+      let f2 = Stdint.Int32.to_float y in
+      Ast.Literal (Float (f1 /. f2)) |> compile_float ~dt
+  | Ast.Div (Literal (Int64 x), Literal (Int64 y)) ->
+      let f1 = Stdint.Int64.to_float x in
+      let f2 = Stdint.Int64.to_float y in
+      Ast.Literal (Float (f1 /. f2)) |> compile_float ~dt
+  | Ast.Div (Literal (Int128 x), Literal (Int128 y)) ->
+      let f1 = Stdint.Int128.to_float x in
+      let f2 = Stdint.Int128.to_float y in
+      Ast.Literal (Float (f1 /. f2)) |> compile_float ~dt
+  | Ast.Div (Literal (Float x), Literal (Float y)) ->
+      Ast.Literal (Float (x /. y)) |> compile_integer ~dt
+  | Ast.Mod (Literal (Int32 x), Literal (Int32 y)) ->
+      Ast.Literal (Int32 (Mod.Int32.( mod ) x y)) |> compile_integer ~dt
+  | Ast.Mod (Literal (Int64 x), Literal (Int64 y)) ->
+      Ast.Literal (Int64 (Mod.Int64.( mod ) x y)) |> compile_integer ~dt
+  | Ast.Mod (Literal (Int128 x), Literal (Int128 y)) ->
+      Ast.Literal (Int128 (Mod.Int128.( mod ) x y)) |> compile_integer ~dt
   | _ -> failwith "unreachable"
 
 and compile_variable node =

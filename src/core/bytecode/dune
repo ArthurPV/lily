@@ -1,4 +1,4 @@
 (library
-  (libraries stdint lily_parser lily_analysis)
+  (libraries stdint lily_parser lily_analysis lily_common)
   (preprocess (pps ppx_deriving.show))
   (name lily_bytecode))
