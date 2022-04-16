@@ -55,13 +55,13 @@ type opcode =
   | Mul [@printer fun fmt _ -> fprintf fmt "`Mul"]
   | Exp [@printer fun fmt _ -> fprintf fmt "`Exp"]
   | Mod [@printer fun fmt _ -> fprintf fmt "`Mod"]
-  | AddTo [@printer fun fmt _ -> fprintf fmt "`AddTo"]
-  | SubTo [@printer fun fmt _ -> fprintf fmt "`SubTo"]
-  | DivTo [@printer fun fmt _ -> fprintf fmt "`DivTo"]
-  | MulTo [@printer fun fmt _ -> fprintf fmt "`MulTo"]
-  | ExpTo [@printer fun fmt _ -> fprintf fmt "`ExpTo"]
-  | ModTo [@printer fun fmt _ -> fprintf fmt "`ModTo"]
-  | To [@printer fun fmt _ -> fprintf fmt "`To"]
+  | AddTo of string [@printer fun fmt s -> fprintf fmt "`AddTo(%s)" s]
+  | SubTo of string [@printer fun fmt s -> fprintf fmt "`SubTo(%s)" s]
+  | DivTo of string [@printer fun fmt s -> fprintf fmt "`DivTo(%s)" s]
+  | MulTo of string [@printer fun fmt s -> fprintf fmt "`MulTo(%s)" s]
+  | ExpTo of string [@printer fun fmt s -> fprintf fmt "`ExpTo(%s)" s]
+  | ModTo of string [@printer fun fmt s -> fprintf fmt "`ModTo(%s)" s]
+  | To of string [@printer fun fmt s -> fprintf fmt "`To(%s)" s]
   | Lt [@printer fun fmt _ -> fprintf fmt "`Lt"]
   | Gt [@printer fun fmt _ -> fprintf fmt "`Gt"]
   | Le [@printer fun fmt _ -> fprintf fmt "`Le"]
@@ -94,13 +94,13 @@ let opcode_to_u8 = function
   | Div -> Stdint.Uint8.of_int 4
   | Mod -> Stdint.Uint8.of_int 5
   | Exp -> Stdint.Uint8.of_int 6
-  | AddTo -> Stdint.Uint8.of_int 7
-  | SubTo -> Stdint.Uint8.of_int 8
-  | DivTo -> Stdint.Uint8.of_int 9
-  | MulTo -> Stdint.Uint8.of_int 10
-  | ExpTo -> Stdint.Uint8.of_int 11
-  | ModTo -> Stdint.Uint8.of_int 12
-  | To -> Stdint.Uint8.of_int 13
+  | AddTo _ -> Stdint.Uint8.of_int 7
+  | SubTo _ -> Stdint.Uint8.of_int 8
+  | DivTo _ -> Stdint.Uint8.of_int 9
+  | MulTo _ -> Stdint.Uint8.of_int 10
+  | ExpTo _ -> Stdint.Uint8.of_int 11
+  | ModTo _ -> Stdint.Uint8.of_int 12
+  | To _ -> Stdint.Uint8.of_int 13
   | Lt -> Stdint.Uint8.of_int 14
   | Gt -> Stdint.Uint8.of_int 15
   | Le -> Stdint.Uint8.of_int 16
