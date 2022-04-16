@@ -1,5 +1,6 @@
 (dirs c)
 
 (library
+  (libraries stdint)
 	(preprocess (pps ppx_deriving.show))
 	(name lily_common))
