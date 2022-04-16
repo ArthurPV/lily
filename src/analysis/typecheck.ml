@@ -104,7 +104,7 @@ and check_expr_type tpc ~specified ~neg = function
       match check_expr_type tpc (x, l) ~specified ~neg with
       | `Bool -> `Bool
       | _ -> failwith "error")
-  | Div (x, y), l -> (
+  | Div (x, y), l | Exp (x, y), l -> (
       let left = check_expr_type tpc (x, l) ~specified ~neg in
       let right = check_expr_type tpc (y, l) ~specified ~neg in
       let dt =
@@ -193,7 +193,7 @@ and check_expr_type tpc ~specified ~neg = function
       | _, `U128 ->
           failwith "error"
       | _ -> failwith "error")
-  | Mul (x, y), l | Add (x, y), l | Sub (x, y), l | Exp (x, y), l -> (
+  | Mul (x, y), l | Add (x, y), l | Sub (x, y), l -> (
       let left = check_expr_type tpc (x, l) ~specified ~neg in
       let right = check_expr_type tpc (y, l) ~specified ~neg in
       try check_arithmetic_expr (left, right)
