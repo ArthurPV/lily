@@ -1,6 +1,7 @@
 module Ast = Lily_parser.Ast
 module Opcode = Opcode
 module Mod = Lily_common.Mod
+module Typecheck = Lily_analysis.Typecheck
 (* open Lily_lexer.Location open Opcode open Stack *)
 
 [@@@warning "-27"]
@@ -121,7 +122,7 @@ and compile_integer ~dt = function
       match dt with
       | Some `I8 -> Opcode.LoadConstant (Int8 (Stdint.Int8.of_int32 i))
       | Some `I16 -> Opcode.LoadConstant (Int16 (Stdint.Int16.of_int32 i))
-      | Some `I32 -> Opcode.LoadConstant (Int32 i)
+      | Some `I32 | None -> Opcode.LoadConstant (Int32 i)
       | Some `I64 -> Opcode.LoadConstant (Int64 (Stdint.Int64.of_int32 i))
       | Some `I128 -> Opcode.LoadConstant (Int128 (Stdint.Int128.of_int32 i))
       | Some `U8 -> Opcode.LoadConstant (Uint8 (Stdint.Uint8.of_int32 i))
@@ -133,7 +134,7 @@ and compile_integer ~dt = function
       | _ -> failwith "unreachable")
   | Literal (Int64 i) -> (
       match dt with
-      | Some `I64 -> Opcode.LoadConstant (Int64 i)
+      | Some `I64 | None -> Opcode.LoadConstant (Int64 i)
       | Some `I128 -> Opcode.LoadConstant (Int128 (Stdint.Int128.of_int64 i))
       | Some `U64 -> Opcode.LoadConstant (Uint64 (Stdint.Uint64.of_int64 i))
       | Some `U128 ->
@@ -141,7 +142,7 @@ and compile_integer ~dt = function
       | _ -> failwith "unreachable")
   | Literal (Int128 i) -> (
       match dt with
-      | Some `I128 -> Opcode.LoadConstant (Int128 i)
+      | Some `I128 | None -> Opcode.LoadConstant (Int128 i)
       | Some `U128 ->
           Opcode.LoadConstant (Uint128 (Stdint.Uint128.of_int128 i))
       | _ -> failwith "unreachable")
@@ -172,6 +173,10 @@ and can_recude_expression = function
   | Ast.Mod (Literal _, Literal _)
   | Ast.And (Literal _, Literal _)
   | Ast.Or (Literal _, Literal _)
+  | Ast.Lt (Literal _, Literal _)
+  | Ast.Gt (Literal _, Literal _)
+  | Ast.Le (Literal _, Literal _)
+  | Ast.Ge (Literal _, Literal _)
   | Ast.Negative _ | Ast.Positive _ ->
       true
   | _ -> false
@@ -193,6 +198,11 @@ and reduce_expression ~dt = function
       Ast.Literal (Int128 (Stdint.Int128.neg x)) |> compile_integer ~dt
   | Ast.Negative (Literal (Float x)) ->
       Ast.Literal (Float (Float.neg x)) |> compile_float ~dt
+  | Ast.Not (Literal (Bool x)) ->
+      let const =
+        match Bool.not x with true -> Opcode.True | false -> Opcode.False
+      in
+      Opcode.LoadConstant const
   | Ast.Add (Literal (Int32 x), Literal (Int32 y)) ->
       Ast.Literal (Int32 (Stdint.Int32.( + ) x y)) |> compile_integer ~dt
   | Ast.Add (Literal (Int64 x), Literal (Int64 y)) ->
@@ -239,6 +249,70 @@ and reduce_expression ~dt = function
       Ast.Literal (Int128 (Mod.Int128.( mod ) x y)) |> compile_integer ~dt
   | Ast.Exp (Literal (Float x), Literal (Float y)) ->
       Ast.Literal (Float (Float.pow x y)) |> compile_float ~dt
+  | Ast.Lt (x, y) -> (
+      let left = reduce_expression x ~dt:None in
+      let right = reduce_expression y ~dt:None in
+      let const =
+        match (left, right) with
+        | Opcode.LoadConstant (Int32 l), Opcode.LoadConstant (Int32 r) ->
+            l < r
+        | Opcode.LoadConstant (Int64 l), Opcode.LoadConstant (Int64 r) ->
+            l < r
+        | Opcode.LoadConstant (Int128 l), Opcode.LoadConstant (Int128 r) ->
+            l < r
+        | _ -> failwith "unreachable"
+      in
+      match const with
+      | true -> Opcode.LoadConstant True
+      | false -> Opcode.LoadConstant False)
+  | Ast.Gt (x, y) -> (
+      let left = reduce_expression x ~dt:None in
+      let right = reduce_expression y ~dt:None in
+      let const =
+        match (left, right) with
+        | Opcode.LoadConstant (Int32 l), Opcode.LoadConstant (Int32 r) ->
+            l > r
+        | Opcode.LoadConstant (Int64 l), Opcode.LoadConstant (Int64 r) ->
+            l > r
+        | Opcode.LoadConstant (Int128 l), Opcode.LoadConstant (Int128 r) ->
+            l > r
+        | _ -> failwith "unreachable"
+      in
+      match const with
+      | true -> Opcode.LoadConstant True
+      | false -> Opcode.LoadConstant False)
+  | Ast.Le (x, y) -> (
+      let left = reduce_expression x ~dt:None in
+      let right = reduce_expression y ~dt:None in
+      let const =
+        match (left, right) with
+        | Opcode.LoadConstant (Int32 l), Opcode.LoadConstant (Int32 r) ->
+            l <= r
+        | Opcode.LoadConstant (Int64 l), Opcode.LoadConstant (Int64 r) ->
+            l <= r
+        | Opcode.LoadConstant (Int128 l), Opcode.LoadConstant (Int128 r) ->
+            l <= r
+        | _ -> failwith "unreachable"
+      in
+      match const with
+      | true -> Opcode.LoadConstant True
+      | false -> Opcode.LoadConstant False)
+  | Ast.Ge (x, y) -> (
+      let left = reduce_expression x ~dt:None in
+      let right = reduce_expression y ~dt:None in
+      let const =
+        match (left, right) with
+        | Opcode.LoadConstant (Int32 l), Opcode.LoadConstant (Int32 r) ->
+            l >= r
+        | Opcode.LoadConstant (Int64 l), Opcode.LoadConstant (Int64 r) ->
+            l >= r
+        | Opcode.LoadConstant (Int128 l), Opcode.LoadConstant (Int128 r) ->
+            l >= r
+        | _ -> failwith "unreachable"
+      in
+      match const with
+      | true -> Opcode.LoadConstant True
+      | false -> Opcode.LoadConstant False)
   | Ast.And (Literal (Bool x), Literal (Bool y)) ->
       let const =
         match x && y with true -> Opcode.True | false -> Opcode.False
@@ -250,7 +324,18 @@ and reduce_expression ~dt = function
       in
       Opcode.LoadConstant const
   (* | Xor *)
-  | _ -> failwith "unreachable"
+  | Ast.Literal (Bool x) ->
+      let const =
+        match x with true -> Opcode.True | false -> Opcode.False
+      in
+      Opcode.LoadConstant const
+  | Ast.Literal (Char c) -> Opcode.LoadConstant (Opcode.Char c)
+  | Ast.Literal (Int32 x) as i -> i |> compile_integer ~dt
+  | Ast.Literal (Int64 x) as i -> i |> compile_integer ~dt
+  | Ast.Literal (Int128 x) as i -> i |> compile_integer ~dt
+  | Ast.Literal (Float x) as f -> f |> compile_float ~dt
+  | Ast.Literal (String x) -> Opcode.LoadConstant (Opcode.String x)
+  | _ -> failwith "haven\'t only literal expression"
 
 and compile_variable node =
   match node with
