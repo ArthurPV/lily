@@ -598,5 +598,43 @@ and ast =
   | Doc of string [@printer fun fmt -> fprintf fmt "%s"]
 [@@deriving show]
 
+let get_left_from_binary_expr = function
+  | Mul (l, _)
+  | Div (l, _)
+  | Mod (l, _)
+  | Add (l, _)
+  | Sub (l, _)
+  | Exp (l, _)
+  | Range (l, _)
+  | Lt (l, _)
+  | Gt (l, _)
+  | Le (l, _)
+  | Ge (l, _)
+  | Eq (l, _)
+  | Ne (l, _)
+  | And (l, _)
+  | Or (l, _) ->
+      l
+  | _ -> failwith "unreachable"
+
+let get_right_from_binary_expr = function
+  | Mul (_, r)
+  | Div (_, r)
+  | Mod (_, r)
+  | Add (_, r)
+  | Sub (_, r)
+  | Exp (_, r)
+  | Range (_, r)
+  | Lt (_, r)
+  | Gt (_, r)
+  | Le (_, r)
+  | Ge (_, r)
+  | Eq (_, r)
+  | Ne (_, r)
+  | And (_, r)
+  | Or (_, r) ->
+      r
+  | _ -> failwith "unreachable"
+
 let ast_to_expr = function Expr e -> e | _ -> failwith "unreachable"
 let expr_to_ast = function e -> Expr e
